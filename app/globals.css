@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top right, rgba(0, 255, 255, 0.12), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(253, 104, 179, 0.1), transparent 24%),
+    linear-gradient(180deg, #0a0b0b 0%, #0e0e0e 52%, #090909 100%);
+  color: #ffffff;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0, 255, 255, 0) 0%, rgba(0, 255, 255, 0.02) 50%, rgba(0, 255, 255, 0) 100%);
+  background-size: 100% 4px;
+  opacity: 0.35;
+  z-index: 0;
+}
+
+@layer components {
+  .shell {
+    @apply relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .glass {
+    @apply rounded-xl3 border border-white/10 bg-white/[0.04] backdrop-blur-xl;
+  }
+
+  .panel {
+    @apply glass shadow-[inset_0_1px_0_rgba(255,255,255,0.03)];
+  }
+
+  .section-title {
+    @apply font-headline text-4xl font-bold tracking-[-0.04em] text-white sm:text-5xl;
+  }
+
+  .section-copy {
+    @apply max-w-2xl text-base leading-7 text-muted;
+  }
+
+  .eyebrow {
+    @apply mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-extrabold uppercase tracking-[0.24em] text-secondary;
+  }
+
+  .primary-button {
+    @apply inline-flex items-center justify-center rounded-2xl bg-secondary px-5 py-3 font-bold text-black transition hover:-translate-y-0.5 hover:shadow-pink;
+  }
+
+  .secondary-button {
+    @apply inline-flex items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 px-5 py-3 font-bold text-primary transition hover:-translate-y-0.5 hover:bg-primary/15 hover:shadow-cyan;
+  }
+
+  .ghost-button {
+    @apply inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white transition hover:-translate-y-0.5 hover:bg-white/[0.06];
+  }
+
+  .top-link {
+    @apply text-sm font-bold tracking-tight text-muted transition hover:text-white;
+  }
+
+  .top-link-active {
+    @apply text-primary;
+  }
+
+  .metric-card {
+    @apply panel p-6;
+  }
+
+  .metric-label {
+    @apply text-xs font-extrabold uppercase tracking-[0.22em] text-muted;
+  }
+
+  .metric-value {
+    @apply mt-2 font-headline text-4xl font-bold tracking-[-0.06em] text-white;
+  }
+
+  .field-label {
+    @apply text-xs font-extrabold uppercase tracking-[0.2em] text-muted;
+  }
+
+  .field-input {
+    @apply mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15;
+  }
+}
