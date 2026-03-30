@@ -19,6 +19,11 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: "Lunio Web",
   description: "The web control surface for the Lunio Discord music bot.",
+  icons: {
+    icon: "/lunio-logo.png",
+    shortcut: "/lunio-logo.png",
+    apple: "/lunio-logo.png",
+  },
 };
 
 const themeBootScript = `
