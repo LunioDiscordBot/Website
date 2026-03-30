@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import { Manrope, Space_Grotesk } from "next/font/google";
+import { CookieNotice } from "@/components/cookie-notice";
+import { SiteLanguageProvider } from "@/components/site-language-provider";
+import { ThemeProvider } from "@/components/theme-provider";
+import { getServerSiteLanguage } from "@/lib/server-site-language";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -17,15 +21,46 @@ export const metadata: Metadata = {
   description: "The web control surface for the Lunio Discord music bot.",
 };
 
-export default function RootLayout({
+const themeBootScript = `
+(() => {
+  try {
+    const storageKey = 'lunio.theme.preference';
+    const stored = window.localStorage.getItem(storageKey);
+    const preference = stored === 'dark' || stored === 'light' || stored === 'system' ? stored : 'system';
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const resolvedTheme = preference === 'system' ? (systemPrefersDark ? 'dark' : 'light') : preference;
+    const root = document.documentElement;
+    root.dataset.themePreference = preference;
+    root.dataset.theme = resolvedTheme;
+    root.style.colorScheme = resolvedTheme;
+  } catch {
+    const root = document.documentElement;
+    root.dataset.themePreference = 'system';
+    root.dataset.theme = 'dark';
+    root.style.colorScheme = 'dark';
+  }
+})();
+`;
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialLanguage = await getServerSiteLanguage();
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={initialLanguage} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      </head>
       <body className={`${manrope.variable} ${spaceGrotesk.variable} bg-background text-text antialiased`}>
-        {children}
+        <SiteLanguageProvider initialLanguage={initialLanguage}>
+          <ThemeProvider>
+            {children}
+            <CookieNotice />
+          </ThemeProvider>
+        </SiteLanguageProvider>
       </body>
     </html>
   );

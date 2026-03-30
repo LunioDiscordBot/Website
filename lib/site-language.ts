@@ -1,0 +1,362 @@
+export const SITE_LANGUAGE_STORAGE_KEY = "lunio.site.language";
+export const SITE_LANGUAGE_COOKIE_KEY = "lunio.site.language";
+
+export const SITE_LANGUAGE_OPTIONS = [
+  { value: "en", label: "English" },
+  { value: "de", label: "Deutsch" },
+] as const;
+
+export type SiteLanguage = (typeof SITE_LANGUAGE_OPTIONS)[number]["value"];
+
+export function isSiteLanguage(value: string | null | undefined): value is SiteLanguage {
+  return value === "en" || value === "de";
+}
+
+export const siteMessages = {
+  en: {
+    nav: {
+      home: "Home",
+      commands: "Commands",
+      status: "Status",
+      dashboard: "Dashboard",
+    },
+    footer: {
+      summary:
+        "Discord music, playlists, custom request channels, and a live dashboard designed to feel intentional from invite to playback.",
+      navigation: "Navigation",
+      product: "Product",
+      legal: "Legal",
+      inviteBot: "Invite Bot",
+      exploreFeatures: "Explore Features",
+      tos: "Terms of Service",
+      privacy: "Privacy Policy",
+      withdrawal: "Right of Withdrawal",
+      copyright: "© 2026 Lunio. Not affiliated with Discord Inc.",
+    },
+    home: {
+      eyebrow: "Discord music, but treated like a real product",
+      heroLead: "Lunio is the",
+      heroHighlight: "full music stack",
+      heroTail: "for your server",
+      heroCopy:
+        "Run music from Discord, manage it from the dashboard, keep custom request channels polished, and switch between multiple Lunio bots without losing the feel of one coherent system.",
+      openDashboard: "Open Dashboard",
+      exploreCommands: "Explore Commands",
+      featureCards: [
+        {
+          title: "Music that stays under control",
+          copy:
+            "Play, pause, replay, seek, skip, shuffle, repeat, clear, and leave without turning your server into a command graveyard.",
+        },
+        {
+          title: "Custom request channels",
+          copy:
+            "Lunio can run as a dedicated music panel with its own request channel, modern embed modes, queue display, and button controls.",
+        },
+        {
+          title: "Real playlists",
+          copy:
+            "Create, save, load, share, reorder, and manage playlists directly from Discord while keeping defaults and limits per bot.",
+        },
+      ],
+      nowPlaying: "Now playing",
+      customPanel: "Custom panel",
+      customRequestSurfaces: "Custom request surfaces",
+      customRequestSurfacesCopy:
+        "Build the setup around a dedicated request channel instead of spamming normal text chat.",
+      premiumLayer: "Premium layer",
+      filtersHeading: "Filters and 24/7",
+      seeCommands: "See what Lunio can do",
+      whatCovers: "What Lunio actually covers",
+      coversHeading: "Everything from queue control to guild configuration",
+      coversCopy:
+        "The dashboard is only one layer. Under it, Lunio already has a broad Discord command surface, a playlist system, broker-backed controls, and guild settings that mirror the real bot instead of a fake web demo.",
+    },
+    commands: {
+      eyebrow: "Command Guide",
+      title: "What Lunio actually ships with",
+      intro:
+        "Lunio already covers day-to-day music playback, DJ queue control, playlist management, server setup, premium filters, and a broker-backed web dashboard. This page is meant to show the real surface area, not just a few placeholder slash commands.",
+      dashboardEyebrow: "Dashboard controls",
+      dashboardTitle: "The web dashboard is part of Lunio, not a separate toy",
+      getStartedEyebrow: "Get started",
+      getStartedTitle: "Use Discord for music, then keep the big picture on the web",
+      getStartedCopy:
+        "The intended flow is simple: invite Lunio, set up your guild once, run music from Discord, and use the dashboard when you want cleaner queue control, bot switching, or live guild settings.",
+      backToHomepage: "Back to homepage",
+    },
+    login: {
+      eyebrow: "Access",
+      title: "Sign in with Discord",
+      intro:
+        "Connect your Discord account to unlock your guild list, switch between bots, and open the dashboard with your account context already attached.",
+      notSignedIn: "You are not signed in yet.",
+      unableToLoad: "Unable to load account",
+      rememberMe:
+        "Keep me signed in on this device for up to 30 days. If unchecked, the session ends when the browser is closed or after a shorter timeout.",
+      openServers: "Open Servers",
+      signOut: "Sign Out",
+      loggingOut: "Logging out...",
+      continueWithDiscord: "Continue with Discord",
+    },
+    servers: {
+      eyebrow: "Server Picker",
+      title: "Choose a Lunio-enabled guild",
+      connectedCopy:
+        "{count} shared guild{suffix} already have Lunio connected.",
+      manageableCopy:
+        "Choose a server to open its dashboard or invite Lunio where you can manage it.",
+      emptyCopy:
+        "Browse your shared servers and jump directly into the dashboard when Lunio is available.",
+      allBots: "All Bots",
+      refreshing: "Refreshing",
+      refresh: "Refresh",
+      lastRefresh: "Last refresh",
+      notRefreshed: "Not refreshed yet",
+      searchPlaceholder: "Search server or ID",
+      unauthorized: "Sign in with Discord to load your shared guilds.",
+      live: "Live",
+      invite: "Invite",
+      inviteAvailable: "Invite available",
+      owner: "Owner",
+      manageable: "Manageable",
+      member: "Member",
+      openDashboard: "Open Dashboard",
+      inviteBot: "Invite {label}",
+      noGuildsSearch: "No shared guilds match that search.",
+      noGuildsBot: "No shared guilds are available for the selected bot yet.",
+      guildId: "Guild ID",
+      botCount: "{count} bot{suffix}",
+    },
+    routeState: {
+      eyebrow: "Dashboard",
+      returnToServers: "Return to servers",
+      returnHome: "Return home",
+    },
+    legal: {
+      eyebrow: "Legal",
+      effectiveDate: "Effective date: 29 March 2026",
+      tosTitle: "Terms of Service",
+      tosIntro:
+        "These terms explain how Lunio may be used, how premium access works, and what operational limits apply to the website, dashboard, and Discord bot.",
+      privacyTitle: "Privacy Policy",
+      privacyIntro:
+        "This policy describes what data Lunio may process, why it is used, and what rights you may have in relation to your personal data.",
+      withdrawalTitle: "Right of Withdrawal",
+      withdrawalIntro:
+        "This page explains how withdrawal rights may apply to Lunio premium and other paid digital services offered to consumers.",
+    },
+    settings: {
+      eyebrow: "Site settings",
+      title: "Personal preferences",
+      intro:
+        "Appearance and language are stored on this device and applied across the public site, server picker, dashboard, and status pages.",
+      themePreference: "Theme preference",
+      activeTheme: "Active theme",
+      language: "Site language",
+      appliesTo: "Applies to",
+      wholeWebsite: "Whole website",
+      appearance: "Appearance",
+      theme: "Theme",
+      themeCopy:
+        "Choose a fixed theme or let Lunio follow your operating system automatically.",
+      active: "Active",
+      select: "Select",
+      useRightNow: "Use {theme} right now",
+      mode: "{label} mode",
+      languageEyebrow: "Language",
+      languageTitle: "Website language",
+      languageCopy:
+        "Choose the language used by Lunio's public website and browser-based controls.",
+      storedOn: "Stored on",
+      thisBrowserAndCookie: "Browser + cookie",
+      currentPreference: "Current preference",
+      currentLanguage: "Current language",
+      systemReaction: "System reaction",
+      live: "Live",
+      locked: "Locked",
+      howItWorks: "How it works",
+      themeBehavior: "Theme behavior",
+      languageBehavior: "Language behavior",
+      themeSystemCopy:
+        "System mode updates automatically when your OS appearance changes.",
+      languageSystemCopy:
+        "Language is saved to local storage and a cookie so the site can render your choice immediately on the next visit.",
+    },
+  },
+  de: {
+    nav: {
+      home: "Start",
+      commands: "Befehle",
+      status: "Status",
+      dashboard: "Dashboard",
+    },
+    footer: {
+      summary:
+        "Discord-Musik, Playlists, eigene Anfragekanäle und ein Live-Dashboard, das sich vom Invite bis zur Wiedergabe wie ein echtes Produkt anfühlt.",
+      navigation: "Navigation",
+      product: "Produkt",
+      legal: "Rechtliches",
+      inviteBot: "Bot einladen",
+      exploreFeatures: "Funktionen ansehen",
+      tos: "Nutzungsbedingungen",
+      privacy: "Datenschutz",
+      withdrawal: "Widerrufsrecht",
+      copyright: "© 2026 Lunio. Nicht mit Discord Inc. verbunden.",
+    },
+    home: {
+      eyebrow: "Discord-Musik, aber wie ein echtes Produkt gedacht",
+      heroLead: "Lunio ist der",
+      heroHighlight: "komplette Musik-Stack",
+      heroTail: "für deinen Server",
+      heroCopy:
+        "Starte Musik direkt in Discord, verwalte alles im Dashboard, halte eigene Anfragekanäle sauber und wechsle zwischen mehreren Lunio-Bots, ohne dass sich das System zersplittert anfühlt.",
+      openDashboard: "Dashboard öffnen",
+      exploreCommands: "Befehle ansehen",
+      featureCards: [
+        {
+          title: "Musik bleibt kontrollierbar",
+          copy:
+            "Play, Pause, Replay, Seek, Skip, Shuffle, Repeat, Clear und Leave, ohne deinen Server in einen Command-Friedhof zu verwandeln.",
+        },
+        {
+          title: "Eigene Anfragekanäle",
+          copy:
+            "Lunio kann als eigener Musik-Panel-Kanal mit modernen Embed-Modi, Queue-Anzeige und Button-Steuerung laufen.",
+        },
+        {
+          title: "Echte Playlists",
+          copy:
+            "Erstellen, speichern, laden, teilen, sortieren und verwalten direkt in Discord, inklusive bot-spezifischer Standards und Limits.",
+        },
+      ],
+      nowPlaying: "Gerade läuft",
+      customPanel: "Eigenes Panel",
+      customRequestSurfaces: "Eigene Anfrageflächen",
+      customRequestSurfacesCopy:
+        "Baue das Setup um einen dedizierten Anfragekanal statt normalen Textchat zu überladen.",
+      premiumLayer: "Premium-Ebene",
+      filtersHeading: "Filter und 24/7",
+      seeCommands: "Lunio-Funktionen ansehen",
+      whatCovers: "Was Lunio wirklich abdeckt",
+      coversHeading: "Von Queue-Steuerung bis Guild-Konfiguration",
+      coversCopy:
+        "Das Dashboard ist nur eine Ebene. Darunter hat Lunio bereits eine breite Discord-Befehlsfläche, ein Playlist-System, brokerbasierte Steuerung und Guild-Einstellungen, die den echten Bot widerspiegeln statt nur eine Web-Demo.",
+    },
+    commands: {
+      eyebrow: "Befehlsübersicht",
+      title: "Was Lunio wirklich mitbringt",
+      intro:
+        "Lunio deckt bereits den Musikalltag, DJ-Queue-Steuerung, Playlist-Management, Server-Setup, Premium-Filter und ein brokerbasiertes Web-Dashboard ab. Diese Seite zeigt die echte Oberfläche, nicht nur ein paar Platzhalter-Slash-Commands.",
+      dashboardEyebrow: "Dashboard-Steuerung",
+      dashboardTitle: "Das Web-Dashboard ist Teil von Lunio, kein separates Spielzeug",
+      getStartedEyebrow: "Loslegen",
+      getStartedTitle: "Musik in Discord steuern, den Rest im Web behalten",
+      getStartedCopy:
+        "Der gedachte Ablauf ist einfach: Lunio einladen, den Server einmal einrichten, Musik in Discord nutzen und das Dashboard öffnen, wenn du sauberere Queue-Steuerung, Bot-Wechsel oder Live-Einstellungen brauchst.",
+      backToHomepage: "Zur Startseite",
+    },
+    login: {
+      eyebrow: "Zugang",
+      title: "Mit Discord anmelden",
+      intro:
+        "Verbinde dein Discord-Konto, um deine Serverliste freizuschalten, zwischen Bots zu wechseln und das Dashboard direkt mit deinem Account-Kontext zu öffnen.",
+      notSignedIn: "Du bist aktuell nicht angemeldet.",
+      unableToLoad: "Konto konnte nicht geladen werden",
+      rememberMe:
+        "Auf diesem Gerät bis zu 30 Tage angemeldet bleiben. Wenn deaktiviert, endet die Sitzung beim Schließen des Browsers oder nach einer kürzeren Zeit.",
+      openServers: "Server öffnen",
+      signOut: "Abmelden",
+      loggingOut: "Abmeldung...",
+      continueWithDiscord: "Mit Discord fortfahren",
+    },
+    servers: {
+      eyebrow: "Server-Auswahl",
+      title: "Wähle eine Lunio-fähige Guild",
+      connectedCopy:
+        "{count} gemeinsame Guild{suffix} haben Lunio bereits verbunden.",
+      manageableCopy:
+        "Wähle einen Server, um sein Dashboard zu öffnen oder Lunio dort einzuladen, wo du ihn verwalten kannst.",
+      emptyCopy:
+        "Durchsuche deine gemeinsamen Server und springe direkt ins Dashboard, sobald Lunio verfügbar ist.",
+      allBots: "Alle Bots",
+      refreshing: "Lädt neu",
+      refresh: "Aktualisieren",
+      lastRefresh: "Letzte Aktualisierung",
+      notRefreshed: "Noch nicht aktualisiert",
+      searchPlaceholder: "Server oder ID suchen",
+      unauthorized: "Melde dich mit Discord an, um gemeinsame Guilds zu laden.",
+      live: "Live",
+      invite: "Einladen",
+      inviteAvailable: "Einladung verfügbar",
+      owner: "Besitzer",
+      manageable: "Verwaltbar",
+      member: "Mitglied",
+      openDashboard: "Dashboard öffnen",
+      inviteBot: "{label} einladen",
+      noGuildsSearch: "Keine gemeinsame Guild passt zu dieser Suche.",
+      noGuildsBot: "Für den ausgewählten Bot sind noch keine gemeinsamen Guilds verfügbar.",
+      guildId: "Guild-ID",
+      botCount: "{count} Bot{suffix}",
+    },
+    routeState: {
+      eyebrow: "Dashboard",
+      returnToServers: "Zurück zu den Servern",
+      returnHome: "Zur Startseite",
+    },
+    legal: {
+      eyebrow: "Rechtliches",
+      effectiveDate: "Gültig ab: 29. März 2026",
+      tosTitle: "Nutzungsbedingungen",
+      tosIntro:
+        "Diese Bedingungen erklären, wie Lunio genutzt werden darf, wie Premium-Zugänge funktionieren und welche betrieblichen Grenzen für Website, Dashboard und Discord-Bot gelten.",
+      privacyTitle: "Datenschutzerklärung",
+      privacyIntro:
+        "Diese Richtlinie beschreibt, welche Daten Lunio verarbeiten kann, warum sie genutzt werden und welche Rechte du in Bezug auf deine personenbezogenen Daten haben kannst.",
+      withdrawalTitle: "Widerrufsrecht",
+      withdrawalIntro:
+        "Diese Seite erklärt, wie Widerrufsrechte für Lunio Premium und andere kostenpflichtige digitale Leistungen für Verbraucher gelten können.",
+    },
+    settings: {
+      eyebrow: "Website-Einstellungen",
+      title: "Persönliche Präferenzen",
+      intro:
+        "Darstellung und Sprache werden auf diesem Gerät gespeichert und auf die öffentliche Website, den Server-Picker, das Dashboard und die Statusseiten angewendet.",
+      themePreference: "Theme-Präferenz",
+      activeTheme: "Aktives Theme",
+      language: "Website-Sprache",
+      appliesTo: "Gilt für",
+      wholeWebsite: "Gesamte Website",
+      appearance: "Darstellung",
+      theme: "Theme",
+      themeCopy:
+        "Wähle ein festes Theme oder lass Lunio deinem Betriebssystem automatisch folgen.",
+      active: "Aktiv",
+      select: "Auswählen",
+      useRightNow: "Aktuell {theme} verwenden",
+      mode: "{label}-Modus",
+      languageEyebrow: "Sprache",
+      languageTitle: "Website-Sprache",
+      languageCopy:
+        "Wähle die Sprache für Lunios öffentliche Website und browserbasierte Oberflächen.",
+      storedOn: "Gespeichert in",
+      thisBrowserAndCookie: "Browser + Cookie",
+      currentPreference: "Aktuelle Präferenz",
+      currentLanguage: "Aktuelle Sprache",
+      systemReaction: "System-Reaktion",
+      live: "Live",
+      locked: "Fixiert",
+      howItWorks: "So funktioniert es",
+      themeBehavior: "Theme-Verhalten",
+      languageBehavior: "Sprachverhalten",
+      themeSystemCopy:
+        "Der Systemmodus aktualisiert sich automatisch, wenn sich das OS-Theme ändert.",
+      languageSystemCopy:
+        "Die Sprache wird in Local Storage und einem Cookie gespeichert, damit die Website deine Auswahl direkt beim nächsten Besuch korrekt rendert.",
+    },
+  },
+} as const;
+
+export function getSiteMessages(language: SiteLanguage) {
+  return siteMessages[language];
+}

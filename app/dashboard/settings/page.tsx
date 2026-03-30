@@ -1,23 +1,23 @@
 import { SiteShell } from "@/components/site-shell";
-import { DashboardClient } from "./dashboard-client";
+import { DashboardSettingsClient } from "@/app/dashboard/settings/settings-client";
 import { redirect } from "next/navigation";
 import { buildDashboardPath } from "@/lib/dashboard-routes";
 
-export default async function DashboardPage({
+export default async function DashboardSettingsPage({
   searchParams,
 }: {
   searchParams: Promise<{ guildId?: string; botId?: string }>;
 }) {
   const params = await searchParams;
   if (params.botId && params.guildId) {
-    redirect(buildDashboardPath(params.botId, params.guildId));
+    redirect(buildDashboardPath(params.botId, params.guildId, "settings"));
   }
 
   return (
     <SiteShell currentPath="/dashboard">
-      <section className="py-8 sm:py-10">
+      <section className="py-12 sm:py-16">
         <div className="shell">
-          <DashboardClient />
+          <DashboardSettingsClient />
         </div>
       </section>
     </SiteShell>
