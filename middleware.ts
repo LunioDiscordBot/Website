@@ -50,6 +50,10 @@ export function middleware(request: NextRequest) {
 		return NextResponse.next();
 	}
 
+	if (dashboardHost === publicHost) {
+		return NextResponse.next();
+	}
+
 	const { pathname, search } = request.nextUrl;
 	const isDashboardHost = requestHost === dashboardHost;
 	const isPublicHost = requestHost === publicHost;

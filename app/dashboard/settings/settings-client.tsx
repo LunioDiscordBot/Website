@@ -77,8 +77,34 @@ const EMPTY_FORM: SettingsForm = {
 
 const LANGUAGE_OPTIONS = ['de', 'en-GB', 'en-US', 'es-ES', 'es-419', 'fr', 'hr', 'it', 'lt', 'hu', 'nl', 'no', 'pl', 'pt-BR', 'ro', 'fi', 'sv-SE', 'tr', 'cs', 'el'];
 
+function isUninitializedDashboardSettings(settings: GuildSettings | null) {
+	if (!settings) return true;
+
+	return (
+		settings.Language === 'en-US' &&
+		settings.Announce === true &&
+		settings.DelAnnounce === false &&
+		settings.Playlists === true &&
+		settings.Ephemeral === true &&
+		settings.Requester === true &&
+		settings.PlayerControls === false &&
+		settings.VoiceStatus === false &&
+		Number(settings.DefaultVol ?? 100) === 100 &&
+		settings.MusicDJ === false &&
+		(settings.MusicDJRole?.length ?? 0) === 0 &&
+		settings.VCToggle === false &&
+		(settings.VCs?.length ?? 0) === 0 &&
+		settings.CustomChannel === false &&
+		settings.mChannelID == null &&
+		settings.mEmbedMode === 'v1' &&
+		Number(settings.SongUserLimit ?? 0) === 0 &&
+		Number(settings.SongTimeLimitMS ?? 0) === 0 &&
+		settings.twentyFourSeven === false
+	);
+}
+
 function mergeSettings(settings: GuildSettings | null, metadata: GuildMetadata | null): SettingsForm {
-	const source = settings ?? metadata?.settings;
+	const source = metadata?.settings && isUninitializedDashboardSettings(settings) ? metadata.settings : (settings ?? metadata?.settings);
 	if (!source) return EMPTY_FORM;
 	const customChannelEnabled = Boolean(source.CustomChannel);
 

@@ -533,8 +533,28 @@ html[data-theme='light'] .text-white\/70 {
 	color: rgb(var(--color-text) / 0.72) !important;
 }
 
+html[data-theme='light'] .text-white\/74,
+html[data-theme='light'] .text-white\/72,
+html[data-theme='light'] .text-white\/68,
+html[data-theme='light'] .text-white\/65,
+html[data-theme='light'] .text-white\/64 {
+	color: rgb(var(--color-text) / 0.66) !important;
+}
+
 html[data-theme='light'] .text-white\/60,
-html[data-theme='light'] .text-white\/55 {
+html[data-theme='light'] .text-white\/58,
+html[data-theme='light'] .text-white\/56,
+html[data-theme='light'] .text-white\/55,
+html[data-theme='light'] .text-white\/54,
+html[data-theme='light'] .text-white\/52,
+html[data-theme='light'] .text-white\/48,
+html[data-theme='light'] .text-white\/45,
+html[data-theme='light'] .text-white\/38,
+html[data-theme='light'] .text-white\/35,
+html[data-theme='light'] .text-white\/34,
+html[data-theme='light'] .text-white\/32,
+html[data-theme='light'] .text-white\/28,
+html[data-theme='light'] .text-white\/25 {
 	color: rgb(var(--color-text) / 0.58) !important;
 }
 
@@ -543,9 +563,12 @@ html[data-theme='light'] .text-cyan-100 {
 }
 
 html[data-theme='light'] .bg-white\/10,
+html[data-theme='light'] .bg-white\/\[0\.05\],
 html[data-theme='light'] .bg-white\/\[0\.06\],
 html[data-theme='light'] .bg-white\/\[0\.04\],
-html[data-theme='light'] .bg-white\/\[0\.03\] {
+html[data-theme='light'] .bg-white\/\[0\.035\],
+html[data-theme='light'] .bg-white\/\[0\.03\],
+html[data-theme='light'] .bg-white\/\[0\.02\] {
 	background-color: rgba(255, 255, 255, 0.76) !important;
 }
 
@@ -557,12 +580,20 @@ html[data-theme='light'] .bg-black\/40,
 html[data-theme='light'] .bg-black\/35,
 html[data-theme='light'] .bg-black\/30,
 html[data-theme='light'] .bg-black\/25,
-html[data-theme='light'] .bg-black\/20 {
+html[data-theme='light'] .bg-black\/22,
+html[data-theme='light'] .bg-black\/20,
+html[data-theme='light'] .bg-black\/18,
+html[data-theme='light'] .bg-black\/10 {
 	background-color: rgba(231, 237, 244, 0.82) !important;
 }
 
 html[data-theme='light'] .border-white\/20,
-html[data-theme='light'] .border-white\/10 {
+html[data-theme='light'] .border-white\/12,
+html[data-theme='light'] .border-white\/10,
+html[data-theme='light'] .border-white\/8,
+html[data-theme='light'] .border-white\/7,
+html[data-theme='light'] .border-white\/6,
+html[data-theme='light'] .border-white\/5 {
 	border-color: rgba(15, 23, 42, 0.09) !important;
 }
 

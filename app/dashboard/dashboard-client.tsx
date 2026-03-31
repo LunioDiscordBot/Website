@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { buildDashboardPath } from '@/lib/dashboard-routes';
 import { getPreferredBotId as getPreferredBotFromList } from '@/lib/bot-preference';
 import { DashboardRouteState } from '@/components/dashboard-route-state';
+import { DashboardPlayerLayout } from './dashboard-player-layout';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -51,6 +52,7 @@ const STORAGE_KEYS = {
 	botId: 'lunio:web:botId',
 	guildId: 'lunio:web:guildId',
 	userId: 'lunio:web:userId',
+	sidebarCollapsed: 'lunio:web:dashboardSidebarCollapsed',
 };
 
 const DEFAULT_STATE: DashboardState = {
@@ -93,8 +95,9 @@ const PREMIUM_ACTION_COMMAND_TYPES: Record<PremiumControlAction, BrokerCommandTy
 };
 
 type PlayerIconName = 'previous' | 'pause' | 'play' | 'skip' | 'shuffle' | 'repeat' | 'stop' | 'leave' | 'close';
+type DashboardSidebarIconName = 'overview' | 'servers' | 'settings' | 'playlists' | 'commands' | 'status' | 'account' | 'support' | 'chevron' | 'collapse';
 
-function PlayerControlIcon({ name, className = 'h-5 w-5' }: { name: PlayerIconName; className?: string }) {
+export function PlayerControlIcon({ name, className = 'h-5 w-5' }: { name: PlayerIconName; className?: string }) {
 	const sharedProps = {
 		className,
 		viewBox: '0 0 24 24',
@@ -174,6 +177,102 @@ function PlayerControlIcon({ name, className = 'h-5 w-5' }: { name: PlayerIconNa
 				<svg {...sharedProps}>
 					<path d="M6 6l12 12" />
 					<path d="M18 6L6 18" />
+				</svg>
+			);
+	}
+}
+
+export function DashboardSidebarIcon({ name, className = 'h-5 w-5' }: { name: DashboardSidebarIconName; className?: string }) {
+	const sharedProps = {
+		className,
+		viewBox: '0 0 24 24',
+		fill: 'none',
+		stroke: 'currentColor',
+		strokeWidth: 1.9,
+		strokeLinecap: 'round' as const,
+		strokeLinejoin: 'round' as const,
+		'aria-hidden': true,
+	};
+
+	switch (name) {
+		case 'overview':
+			return (
+				<svg {...sharedProps}>
+					<path d="M4.75 10.5 12 4l7.25 6.5" />
+					<path d="M6.5 9.5v9h11v-9" />
+				</svg>
+			);
+		case 'servers':
+			return (
+				<svg {...sharedProps}>
+					<rect x="4.5" y="5" width="15" height="4.5" rx="1.5" />
+					<rect x="4.5" y="14.5" width="15" height="4.5" rx="1.5" />
+					<path d="M8 7.25h.01" />
+					<path d="M8 16.75h.01" />
+				</svg>
+			);
+		case 'settings':
+			return (
+				<svg {...sharedProps}>
+					<path d="M5 7h8" />
+					<path d="M15 7h4" />
+					<path d="M11 17h8" />
+					<path d="M5 17h2" />
+					<circle cx="11" cy="7" r="2" />
+					<circle cx="9" cy="17" r="2" />
+				</svg>
+			);
+		case 'playlists':
+			return (
+				<svg {...sharedProps}>
+					<path d="M8 6h10" />
+					<path d="M8 10h10" />
+					<path d="M8 14h6" />
+					<path d="M7 18a2 2 0 1 1-2-2 2 2 0 0 1 2 2Z" />
+					<path d="M17 17a2 2 0 1 1-2-2 2 2 0 0 1 2 2Z" />
+				</svg>
+			);
+		case 'commands':
+			return (
+				<svg {...sharedProps}>
+					<rect x="4.5" y="5" width="15" height="14" rx="2" />
+					<path d="m8 10 2.75 2L8 14.75" />
+					<path d="M13.5 14.75H16" />
+				</svg>
+			);
+		case 'status':
+			return (
+				<svg {...sharedProps}>
+					<path d="M5 14h2.5l2-5 3 8 2-5H19" />
+				</svg>
+			);
+		case 'account':
+			return (
+				<svg {...sharedProps}>
+					<circle cx="12" cy="8" r="3.25" />
+					<path d="M5.5 18.5c1.8-3 4.15-4.5 6.5-4.5s4.7 1.5 6.5 4.5" />
+				</svg>
+			);
+		case 'support':
+			return (
+				<svg {...sharedProps}>
+					<path d="M5 13.5v-1a7 7 0 1 1 14 0v1" />
+					<path d="M5.5 13.5h-.25A1.75 1.75 0 0 0 3.5 15.25v.5A1.75 1.75 0 0 0 5.25 17.5H7v-4Z" />
+					<path d="M19 13.5h.25A1.75 1.75 0 0 1 21 15.25v.5A1.75 1.75 0 0 1 19.25 17.5H17v-4Z" />
+					<path d="M9.5 20h5" />
+				</svg>
+			);
+		case 'collapse':
+			return (
+				<svg {...sharedProps}>
+					<rect x="4.5" y="5" width="15" height="14" rx="2.5" />
+					<path d="M9 5v14" />
+				</svg>
+			);
+		case 'chevron':
+			return (
+				<svg {...sharedProps}>
+					<path d="m9 6 6 6-6 6" />
 				</svg>
 			);
 	}
@@ -287,6 +386,8 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 	const [bassboostDraft, setBassboostDraft] = useState(0);
 	const [speedDraft, setSpeedDraft] = useState(1);
 	const [isBotMenuOpen, setIsBotMenuOpen] = useState(false);
+	const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+	const [showSidebarNotice, setShowSidebarNotice] = useState(true);
 	const [hasLoadedBotOptions, setHasLoadedBotOptions] = useState(false);
 	const { triggerRef: botMenuTriggerRef, position: botMenuPosition } = useSelectMenuPosition(isBotMenuOpen);
 
@@ -336,6 +437,14 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 			userId: window.localStorage.getItem(STORAGE_KEYS.userId) || '',
 		});
 	}, [botIdFromQuery, guildIdFromQuery]);
+
+	useEffect(() => {
+		setIsSidebarCollapsed(window.localStorage.getItem(STORAGE_KEYS.sidebarCollapsed) === '1');
+	}, []);
+
+	useEffect(() => {
+		window.localStorage.setItem(STORAGE_KEYS.sidebarCollapsed, isSidebarCollapsed ? '1' : '0');
+	}, [isSidebarCollapsed]);
 
 	useEffect(() => {
 		let active = true;
@@ -735,6 +844,18 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 
 	const selectedGuild = useMemo(() => guildOptions.find((guild) => guild.guildId === form.guildId.trim()) ?? null, [guildOptions, form.guildId]);
 	const selectedBot = useMemo(() => botOptions.find((bot) => bot.botId === form.botId.trim()) ?? null, [botOptions, form.botId]);
+	const botMenuStyle = botMenuPosition
+		? {
+				left: `${botMenuPosition.left}px`,
+				top: `${botMenuPosition.top}px`,
+				width: `${botMenuPosition.width}px`,
+			}
+		: undefined;
+	const authDisplayName = authUser ? authUser.globalName || authUser.username : 'Not signed in';
+	const authProfileName = authUser?.globalName || authUser?.username || 'Guest';
+	const authProfileHandle = authUser?.username ? `@${authUser.username}` : 'Sign in to attach your Discord identity.';
+	const commandAckTime = typeof commandFeedback.ackTimestamp === 'number' ? new Date(commandFeedback.ackTimestamp).toLocaleTimeString() : '--';
+	const commandFinishedTime = typeof commandFeedback.resultTimestamp === 'number' ? new Date(commandFeedback.resultTimestamp).toLocaleTimeString() : '--';
 	const dashboardRouteMissingGuild = Boolean(form.guildId.trim()) && hasLoadedGuildOptions && !selectedGuild;
 	const dashboardRouteMissingBot = Boolean(form.botId.trim()) && hasLoadedBotOptions && !selectedBot;
 	const dashboardRouteBotNotInGuild =
@@ -785,7 +906,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 		playerFilters.pitch.enabled ? `Pitch ${playerFilters.pitch.level ?? 1}` : null,
 	].filter(Boolean) as string[];
 
-	return (
+	const legacyView = false ? (
 		<div className="grid gap-6">
 			<section className="dashboard-hero-card">
 				<div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
@@ -815,7 +936,11 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 							<div className="mt-4 flex items-center gap-4">
 								{selectedGuild?.iconUrl ? (
 									// eslint-disable-next-line @next/next/no-img-element
-									<img alt={selectedGuild.name} className="h-14 w-14 rounded-2xl border border-white/10 object-cover" src={selectedGuild.iconUrl} />
+									<img
+										alt={selectedGuild?.name ?? 'Selected guild'}
+										className="h-14 w-14 rounded-2xl border border-white/10 object-cover"
+										src={selectedGuild?.iconUrl ?? undefined}
+									/>
 								) : (
 									<div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] font-headline text-lg font-bold text-primary">
 										{(selectedGuild?.name ?? 'L').slice(0, 1).toUpperCase()}
@@ -839,7 +964,11 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 							<div className="mt-4 flex items-center gap-4">
 								{selectedBot?.avatarUrl ? (
 									// eslint-disable-next-line @next/next/no-img-element
-									<img alt={selectedBot.label} className="h-14 w-14 rounded-full border border-primary/20 object-cover" src={selectedBot.avatarUrl} />
+									<img
+										alt={selectedBot?.label ?? 'Selected bot'}
+										className="h-14 w-14 rounded-full border border-primary/20 object-cover"
+										src={selectedBot?.avatarUrl ?? undefined}
+									/>
 								) : (
 									<div className="flex h-14 w-14 items-center justify-center rounded-full border border-primary/20 bg-primary/10 font-headline text-lg font-bold text-primary">
 										{(selectedBot?.label ?? 'B').slice(0, 1).toUpperCase()}
@@ -860,15 +989,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 										</button>
 										{isBotMenuOpen && botMenuPosition
 											? createPortal(
-													<div
-														className="dashboard-select-menu max-h-72 overflow-y-auto"
-														role="listbox"
-														style={{
-															left: `${botMenuPosition.left}px`,
-															top: `${botMenuPosition.top}px`,
-															width: `${botMenuPosition.width}px`,
-														}}
-													>
+													<div className="dashboard-select-menu max-h-72 overflow-y-auto" role="listbox" style={botMenuStyle}>
 														{botOptions.map((bot) => (
 															<button
 																className={`dashboard-select-option ${form.botId === bot.botId ? 'dashboard-select-option-active' : ''}`}
@@ -895,7 +1016,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 						<div className="mt-4 grid gap-4 sm:grid-cols-4">
 							<div>
 								<div className="text-xs font-extrabold uppercase tracking-[0.22em] text-muted">User</div>
-								<div className="mt-2 text-sm font-bold text-white">{authUser ? authUser.globalName || authUser.username : 'Not signed in'}</div>
+								<div className="mt-2 text-sm font-bold text-white">{authDisplayName}</div>
 							</div>
 							<div>
 								<div className="text-xs font-extrabold uppercase tracking-[0.22em] text-muted">Autoplay</div>
@@ -931,7 +1052,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 							<div className="dashboard-art-card">
 								{currentTrack?.artworkUrl ? (
 									// eslint-disable-next-line @next/next/no-img-element
-									<img alt={currentTrack.title} className="h-full w-full object-cover" src={currentTrack.artworkUrl} />
+									<img alt={currentTrack?.title ?? 'Current track artwork'} className="h-full w-full object-cover" src={currentTrack?.artworkUrl ?? undefined} />
 								) : (
 									<div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_center,rgba(0,255,255,0.16),transparent_32%),linear-gradient(180deg,#0b0d0d_0%,#141616_100%)]">
 										<div className="rounded-full border border-primary/20 bg-primary/10 px-5 py-3 text-xs font-extrabold uppercase tracking-[0.22em] text-primary">
@@ -1051,7 +1172,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 													<button
 														aria-label={`Repeat mode: ${player?.repeatMode ?? 'off'}`}
 														className={`dashboard-control-button dashboard-control-icon relative ${
-															player?.repeatMode && player.repeatMode !== 'off' ? 'dashboard-control-primary' : ''
+															player?.repeatMode && player?.repeatMode !== 'off' ? 'dashboard-control-primary' : ''
 														}`}
 														disabled={isBusy || !currentTrack || !canUsePlayerDjControls}
 														onClick={() => void sendCommand('repeat')}
@@ -1238,11 +1359,11 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 									</div>
 									<div className="dashboard-stat-row">
 										<span>Received</span>
-										<strong>{commandFeedback.ackTimestamp ? new Date(commandFeedback.ackTimestamp).toLocaleTimeString() : '--'}</strong>
+										<strong>{commandAckTime}</strong>
 									</div>
 									<div className="dashboard-stat-row">
 										<span>Finished</span>
-										<strong>{commandFeedback.resultTimestamp ? new Date(commandFeedback.resultTimestamp).toLocaleTimeString() : '--'}</strong>
+										<strong>{commandFinishedTime}</strong>
 									</div>
 								</div>
 							</div>
@@ -1437,20 +1558,92 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 						<div className="mt-4 flex items-center gap-4">
 							{authUser?.avatarUrl ? (
 								// eslint-disable-next-line @next/next/no-img-element
-								<img alt={authUser.username} className="h-14 w-14 rounded-full border border-white/10 object-cover" src={authUser.avatarUrl} />
+								<img
+									alt={authUser?.username ?? 'Signed in user'}
+									className="h-14 w-14 rounded-full border border-white/10 object-cover"
+									src={authUser?.avatarUrl ?? undefined}
+								/>
 							) : (
 								<div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] font-headline text-lg font-bold text-primary">
 									{(authUser?.username ?? 'U').slice(0, 1).toUpperCase()}
 								</div>
 							)}
 							<div className="min-w-0">
-								<div className="truncate font-bold text-white">{authUser ? authUser.globalName || authUser.username : 'Guest'}</div>
-								<div className="mt-1 truncate text-sm text-muted">{authUser?.username ? `@${authUser.username}` : 'Sign in to attach your Discord identity.'}</div>
+								<div className="truncate font-bold text-white">{authProfileName}</div>
+								<div className="mt-1 truncate text-sm text-muted">{authProfileHandle}</div>
 							</div>
 						</div>
 					</article>
 				</aside>
 			</section>
 		</div>
+	) : null;
+	void legacyView;
+
+	const handleVolumeDraftChange = (next: number) => {
+		setVolumeDraft(next);
+		setForm((current) => ({
+			...current,
+			volume: String(next),
+		}));
+	};
+
+	return (
+		<DashboardPlayerLayout
+			activePremiumFilters={activePremiumFilters}
+			activityState={activityState}
+			authUser={authUser}
+			autoplayModeEnabled={autoplayModeEnabled}
+			bassboostDraft={bassboostDraft}
+			botMenuPosition={botMenuPosition}
+			botMenuTriggerRef={botMenuTriggerRef}
+			botOptions={botOptions}
+			canUseAutoplayControl={canUseAutoplayControl}
+			canUseDjControls={canUseDjControls}
+			canUseJoinControl={canUseJoinControl}
+			canUsePlayerDjControls={canUsePlayerDjControls}
+			canUsePremiumControls={canUsePremiumControls}
+			canUsePremiumDjControls={canUsePremiumDjControls}
+			commandFeedback={commandFeedback}
+			currentTrack={currentTrack}
+			currentTrackFromAutoplay={currentTrackFromAutoplay}
+			currentTrackRequester={currentTrackRequester}
+			formBotId={form.botId}
+			formGuildId={form.guildId}
+			hasVoiceChannelContext={hasVoiceChannelContext}
+			isBotMenuOpen={isBotMenuOpen}
+			isBusy={isBusy}
+			isSidebarCollapsed={isSidebarCollapsed}
+			player={player}
+			playerError={playerError}
+			playerFilters={playerFilters}
+			playerSurfaceKey={playerSurfaceKey}
+			progressPercent={progressPercent}
+			queueCount={queueCount}
+			queueDuration={queueDuration}
+			queueTracks={queueTracks}
+			selectedBot={selectedBot}
+			selectedGuild={selectedGuild}
+			showSidebarNotice={showSidebarNotice}
+			speedDraft={speedDraft}
+			syncedDisplayPosition={syncedDisplayPosition}
+			trackDuration={trackDuration}
+			volumeDraft={volumeDraft}
+			onBassboostDraftChange={setBassboostDraft}
+			onDismissNotice={() => setShowSidebarNotice(false)}
+			onRefreshState={() => void refreshPlayerState()}
+			onRemoveQueuedTrack={(index) => void removeQueuedTrack(index)}
+			onScrubChange={setScrubValue}
+			onScrubStart={() => setIsScrubbing(true)}
+			onSendCommand={(action) => void sendCommand(action)}
+			onSendPremiumControl={(action, body) => void sendPremiumControl(action, body)}
+			onSidebarToggle={() => setIsSidebarCollapsed((current) => !current)}
+			onSpeedDraftChange={setSpeedDraft}
+			onSubmitSeek={() => void submitSliderSeek()}
+			onSubmitVolume={() => void submitVolume()}
+			onSwitchBot={switchBot}
+			onToggleBotMenu={() => setIsBotMenuOpen((current) => !current)}
+			onVolumeDraftChange={handleVolumeDraftChange}
+		/>
 	);
 }

@@ -16,6 +16,14 @@ type NavigationItem = {
 const PUBLIC_SITE_URL = process.env.NEXT_PUBLIC_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://luniobot.com';
 const DASHBOARD_SITE_URL = process.env.NEXT_PUBLIC_DASHBOARD_BASE_URL?.replace(/\/$/, '') || 'https://dashboard.luniobot.com';
 
+function getNavigationPathname(href: string) {
+	try {
+		return new URL(href).pathname || '/';
+	} catch {
+		return href || '/';
+	}
+}
+
 function DiscordIcon({ className = 'h-6 w-6' }: { className?: string }) {
 	return (
 		<svg aria-hidden="true" className={className} fill="currentColor" viewBox="0 0 24 24">
@@ -41,6 +49,7 @@ export function SiteShell({ currentPath, children, home = false }: SiteShellProp
 			activePaths: ['/servers', '/dashboard'],
 		},
 	] satisfies NavigationItem[];
+	const normalizedCurrentPath = currentPath || '/';
 
 	return (
 		<div className="relative min-h-screen overflow-hidden font-body text-text">
@@ -53,16 +62,16 @@ export function SiteShell({ currentPath, children, home = false }: SiteShellProp
 					</Link>
 
 					<nav className="hidden items-center gap-6 md:flex">
-						{navigation.map((item) => (
-							<Link
-								key={item.href}
-								className={cn('top-link', (item.activePaths?.includes(currentPath) || currentPath === item.href) && 'top-link-active')}
-								href={item.href}
-								prefetch={false}
-							>
-								{item.label}
-							</Link>
-						))}
+						{navigation.map((item) => {
+							const itemPath = getNavigationPathname(item.href);
+							const isActive = item.activePaths?.includes(normalizedCurrentPath) || normalizedCurrentPath === itemPath;
+
+							return (
+								<Link key={item.href} className={cn('top-link', isActive && 'top-link-active')} href={item.href} prefetch={false}>
+									{item.label}
+								</Link>
+							);
+						})}
 					</nav>
 
 					<div className="hidden items-center gap-3 sm:flex">
@@ -153,19 +162,24 @@ export function SiteShell({ currentPath, children, home = false }: SiteShellProp
 			</footer>
 
 			<nav className="fixed bottom-4 left-1/2 z-40 flex w-[min(calc(100%-1rem),34rem)] -translate-x-1/2 rounded-full border border-white/10 bg-black/60 p-2 backdrop-blur-xl md:hidden">
-				{navigation.map((item) => (
-					<Link
-						key={item.href}
-						className={cn(
-							'flex-1 rounded-full px-3 py-2 text-center text-xs font-bold uppercase tracking-[0.18em] text-muted transition',
-							(item.activePaths?.includes(currentPath) || currentPath === item.href) && 'bg-primary/10 text-primary shadow-[inset_0_0_0_1px_rgba(112,0,255,0.14)]'
-						)}
-						href={item.href}
-						prefetch={false}
-					>
-						{item.label}
-					</Link>
-				))}
+				{navigation.map((item) => {
+					const itemPath = getNavigationPathname(item.href);
+					const isActive = item.activePaths?.includes(normalizedCurrentPath) || normalizedCurrentPath === itemPath;
+
+					return (
+						<Link
+							key={item.href}
+							className={cn(
+								'flex-1 rounded-full px-3 py-2 text-center text-xs font-bold uppercase tracking-[0.18em] text-muted transition',
+								isActive && 'bg-primary/10 text-primary shadow-[inset_0_0_0_1px_rgba(112,0,255,0.14)]'
+							)}
+							href={item.href}
+							prefetch={false}
+						>
+							{item.label}
+						</Link>
+					);
+				})}
 			</nav>
 		</div>
 	);
