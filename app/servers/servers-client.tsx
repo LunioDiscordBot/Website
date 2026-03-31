@@ -244,9 +244,19 @@ export function ServersClient() {
 			</div>
 
 			{guildsError ? (
-				<div className="rounded-[1.5rem] border border-danger/30 bg-danger/10 p-5 text-sm text-red-100">
-					{guildsError === 'Unauthorized' ? messages.servers.unauthorized : guildsError}
-				</div>
+				guildsError === 'Unauthorized' ? (
+					<div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-6">
+						<div className="text-sm leading-7 text-muted">{messages.servers.unauthorized}</div>
+						<a
+							className="secondary-button mt-5"
+							href={`${process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || 'https://api.luniobot.com'}/api/auth/discord/login`}
+						>
+							Sign in with Discord
+						</a>
+					</div>
+				) : (
+					<div className="rounded-[1.5rem] border border-danger/30 bg-danger/10 p-5 text-sm text-red-100">{guildsError}</div>
+				)
 			) : null}
 
 			<div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
