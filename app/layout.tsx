@@ -1,29 +1,29 @@
-import type { Metadata } from "next";
-import { Manrope, Space_Grotesk } from "next/font/google";
-import { CookieNotice } from "@/components/cookie-notice";
-import { SiteLanguageProvider } from "@/components/site-language-provider";
-import { ThemeProvider } from "@/components/theme-provider";
-import { getServerSiteLanguage } from "@/lib/server-site-language";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Manrope, Space_Grotesk } from 'next/font/google';
+import { CookieNotice } from '@/components/cookie-notice';
+import { SiteLanguageProvider } from '@/components/site-language-provider';
+import { ThemeProvider } from '@/components/theme-provider';
+import { getServerSiteLanguage } from '@/lib/server-site-language';
+import './globals.css';
 
 const manrope = Manrope({
-  subsets: ["latin"],
-  variable: "--font-manrope",
+	subsets: ['latin'],
+	variable: '--font-manrope',
 });
 
 const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-space",
+	subsets: ['latin'],
+	variable: '--font-space',
 });
 
 export const metadata: Metadata = {
-  title: "Lunio Web",
-  description: "The web control surface for the Lunio Discord music bot.",
-  icons: {
-    icon: "/lunio-logo.png",
-    shortcut: "/lunio-logo.png",
-    apple: "/lunio-logo.png",
-  },
+	title: 'Lunio Web',
+	description: 'The web control surface for the Lunio Discord music bot.',
+	icons: {
+		icon: '/lunio-logo.png',
+		shortcut: '/lunio-logo.png',
+		apple: '/lunio-logo.png',
+	},
 };
 
 const themeBootScript = `
@@ -48,25 +48,25 @@ const themeBootScript = `
 `;
 
 export default async function RootLayout({
-  children,
+	children,
 }: Readonly<{
-  children: React.ReactNode;
+	children: React.ReactNode;
 }>) {
-  const initialLanguage = await getServerSiteLanguage();
+	const initialLanguage = await getServerSiteLanguage();
 
-  return (
-    <html lang={initialLanguage} suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
-      </head>
-      <body className={`${manrope.variable} ${spaceGrotesk.variable} bg-background text-text antialiased`}>
-        <SiteLanguageProvider initialLanguage={initialLanguage}>
-          <ThemeProvider>
-            {children}
-            <CookieNotice />
-          </ThemeProvider>
-        </SiteLanguageProvider>
-      </body>
-    </html>
-  );
+	return (
+		<html lang={initialLanguage} suppressHydrationWarning>
+			<head>
+				<script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+			</head>
+			<body className={`${manrope.variable} ${spaceGrotesk.variable} bg-background text-text antialiased`}>
+				<SiteLanguageProvider initialLanguage={initialLanguage}>
+					<ThemeProvider>
+						{children}
+						<CookieNotice />
+					</ThemeProvider>
+				</SiteLanguageProvider>
+			</body>
+		</html>
+	);
 }
