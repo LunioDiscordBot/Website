@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
-import type { RefObject } from 'react';
+import { useState, type RefObject } from 'react';
 import { useTheme } from '@/components/theme-provider';
 import { buildDashboardPath } from '@/lib/dashboard-routes';
 import { formatDuration, type AuthGuild, type AuthUser, type CommandFeedback, type GuildPlayerState, type Track } from '@/lib/api';
@@ -285,6 +285,7 @@ export function DashboardPlayerLayout(props: {
 	onToggleBotMenu: () => void;
 	onVolumeDraftChange: (value: number) => void;
 }) {
+	const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 	const {
 		activePremiumFilters,
 		activityState,
@@ -350,6 +351,14 @@ export function DashboardPlayerLayout(props: {
 	const accountDisplayName = authUser ? authUser.globalName || authUser.username : 'Dashboard guest';
 	const accountHandle = authUser?.username ? `@${authUser.username}` : 'Profile & preferences';
 	const queuePreview = queueTracks.slice(0, 6);
+	const botMenuStyle = botMenuPosition
+		? {
+				left: `${botMenuPosition.left}px`,
+				top: `${botMenuPosition.top}px`,
+				width: `${botMenuPosition.width}px`,
+			}
+		: undefined;
+	const commandFinishedTime = typeof commandFeedback.resultTimestamp === 'number' ? new Date(commandFeedback.resultTimestamp).toLocaleTimeString() : '--';
 	const frameClass = isLight
 		? 'border-slate-200/80 bg-[rgba(248,250,252,0.96)] shadow-[0_28px_90px_rgba(32,51,74,0.14)]'
 		: 'border-white/10 bg-[rgba(9,10,12,0.88)] shadow-[0_28px_90px_rgba(0,0,0,0.42)]';
@@ -398,17 +407,17 @@ export function DashboardPlayerLayout(props: {
 		? 'rounded-[1.6rem] border border-slate-200/80 bg-white/88 p-5 shadow-[0_18px_50px_rgba(32,51,74,0.1)]'
 		: 'rounded-[1.6rem] border border-white/10 bg-[rgba(18,19,22,0.82)] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.26)]';
 	const queuePanelClass = isLight
-		? 'rounded-[1.9rem] border border-slate-200/80 bg-white/92 p-5 shadow-[0_22px_65px_rgba(32,51,74,0.12)]'
-		: 'rounded-[1.9rem] border border-white/10 bg-[rgba(18,19,22,0.84)] p-5 shadow-[0_22px_65px_rgba(0,0,0,0.34)]';
+		? 'w-full min-w-0 rounded-[1.9rem] border border-slate-200/80 bg-white/92 p-5 shadow-[0_22px_65px_rgba(32,51,74,0.12)]'
+		: 'w-full min-w-0 rounded-[1.9rem] border border-white/10 bg-[rgba(18,19,22,0.84)] p-5 shadow-[0_22px_65px_rgba(0,0,0,0.34)]';
 	const queueBadgeClass = isLight
 		? 'rounded-full border border-slate-200/80 bg-slate-50/88 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500'
 		: 'rounded-full border border-white/10 bg-black/18 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.2em] text-white/64';
 	const queueRowClass = isLight
-		? 'flex items-center gap-3 rounded-[1.35rem] border border-slate-200/80 bg-slate-50/86 px-3 py-3 transition hover:border-slate-300'
-		: 'flex items-center gap-3 rounded-[1.35rem] border border-white/8 bg-black/18 px-3 py-3 transition hover:border-white/12';
+		? 'flex min-w-0 items-center gap-3 rounded-[1.35rem] border border-slate-200/80 bg-slate-50/86 px-3 py-3 transition hover:border-slate-300'
+		: 'flex min-w-0 items-center gap-3 rounded-[1.35rem] border border-white/8 bg-black/18 px-3 py-3 transition hover:border-white/12';
 	const premiumPanelClass = isLight
-		? 'rounded-[1.9rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,255,0.92))] p-5 shadow-[0_22px_65px_rgba(32,51,74,0.12)]'
-		: 'rounded-[1.9rem] border border-white/10 bg-[linear-gradient(180deg,rgba(18,19,22,0.84),rgba(18,19,22,0.78))] p-5 shadow-[0_22px_65px_rgba(0,0,0,0.34)]';
+		? 'w-full min-w-0 rounded-[1.9rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,255,0.92))] p-5 shadow-[0_22px_65px_rgba(32,51,74,0.12)]'
+		: 'w-full min-w-0 rounded-[1.9rem] border border-white/10 bg-[linear-gradient(180deg,rgba(18,19,22,0.84),rgba(18,19,22,0.78))] p-5 shadow-[0_22px_65px_rgba(0,0,0,0.34)]';
 	const insetPanelClass = isLight ? 'rounded-[1.3rem] border border-slate-200/80 bg-slate-50/86 px-4 py-4' : 'rounded-[1.3rem] border border-white/8 bg-black/18 px-4 py-4';
 	const messageCardClass = isLight
 		? 'mt-5 rounded-[1.25rem] border border-slate-200/80 bg-slate-50/86 px-4 py-3 text-sm text-slate-600'
@@ -425,6 +434,8 @@ export function DashboardPlayerLayout(props: {
 		premiumStudio.scrollIntoView({ behavior: 'smooth', block: 'start' });
 		window.history.replaceState(null, '', '#premium-studio');
 	};
+	const openSearchModal = () => setIsSearchModalOpen(true);
+	const closeSearchModal = () => setIsSearchModalOpen(false);
 
 	const sidebarPrimaryLinks: SidebarLink[] = [
 		{ label: 'Overview', caption: 'Player control', icon: 'overview', href: overviewHref, active: true },
@@ -515,7 +526,7 @@ export function DashboardPlayerLayout(props: {
 	};
 
 	return (
-		<div className="relative z-10 min-h-screen px-3 py-3 sm:px-4 sm:py-4 lg:px-5">
+		<div className="relative z-10 min-h-screen overflow-x-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-5">
 			<div className={`mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1820px] flex-col overflow-hidden rounded-[2rem] border backdrop-blur-xl lg:flex-row ${frameClass}`}>
 				<aside
 					className={`relative flex shrink-0 flex-col border-b p-4 lg:border-b-0 lg:border-r lg:p-5 ${sidebarClass} ${
@@ -525,19 +536,19 @@ export function DashboardPlayerLayout(props: {
 					<div className="flex items-start gap-3">
 						<Link
 							className={`group flex min-w-0 flex-1 items-center gap-3 rounded-[1.35rem] border px-3 py-3 transition ${profileCardClass} ${
-								isSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''
+								isSidebarCollapsed ? 'lg:h-12 lg:w-12 lg:flex-none lg:justify-center lg:px-0 lg:py-0' : ''
 							}`}
 							href="/settings"
 							title="Open account settings"
 						>
-							{authUser?.avatarUrl ? (
+							{!isSidebarCollapsed && authUser?.avatarUrl ? (
 								// eslint-disable-next-line @next/next/no-img-element
 								<img alt={accountDisplayName} className="h-11 w-11 rounded-full border border-white/10 object-cover" src={authUser?.avatarUrl ?? undefined} />
-							) : (
+							) : !isSidebarCollapsed ? (
 								<div className="flex h-11 w-11 items-center justify-center rounded-full border border-primary/25 bg-primary/12 font-headline text-base font-bold text-primary">
 									{accountDisplayName.slice(0, 1).toUpperCase()}
 								</div>
-							)}
+							) : null}
 							<div className={`min-w-0 flex-1 ${isSidebarCollapsed ? 'lg:hidden' : ''}`}>
 								<div className={`truncate text-sm font-bold ${mainTextClass}`}>{accountDisplayName}</div>
 								<div className={`mt-1 truncate text-xs ${faintTextClass}`}>{accountHandle}</div>
@@ -570,10 +581,8 @@ export function DashboardPlayerLayout(props: {
 						<div className="mt-3 space-y-1.5">{sidebarExploreLinks.map(renderSidebarLink)}</div>
 					</div>
 
-					<div className="flex-1" />
-
 					{showSidebarNotice && !isSidebarCollapsed ? (
-						<div className={`rounded-[1.5rem] border p-4 ${noticeCardClass}`}>
+						<div className={`mt-8 rounded-[1.5rem] border p-4 ${noticeCardClass}`}>
 							<div className="flex items-start justify-between gap-3">
 								<span className="rounded-full border border-primary/25 bg-primary/12 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-primary">
 									New
@@ -599,24 +608,23 @@ export function DashboardPlayerLayout(props: {
 						</div>
 					) : null}
 
-					<div className={`mt-6 border-t pt-4 ${dividerClass}`}>
+					<div className={`mt-8 border-t pt-4 ${dividerClass}`}>
 						<div className="space-y-1.5">{sidebarFooterLinks.map(renderSidebarLink)}</div>
 					</div>
 				</aside>
 
-				<main className={`min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 xl:p-7 ${workspaceClass}`}>
-					<header className={`flex flex-col gap-5 border-b pb-6 xl:flex-row xl:items-end xl:justify-between ${dividerClass}`}>
+				<main className={`min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-5 xl:p-6 ${workspaceClass}`}>
+					<header className={`flex flex-col gap-4 border-b pb-4 xl:flex-row xl:items-center xl:justify-between ${dividerClass}`}>
 						<div className="min-w-0">
-							<div className="text-xs font-extrabold uppercase tracking-[0.24em] text-primary">Player Control</div>
-							<h1 className={`mt-3 truncate font-headline text-4xl font-bold tracking-[-0.06em] sm:text-5xl ${mainTextClass}`}>
-								{selectedGuild?.name ?? 'Choose a server to start listening'}
-							</h1>
-							<p className={`mt-3 max-w-3xl text-sm leading-7 sm:text-base ${subTextClass}`}>
-								Live playback, queue flow, premium tuning and command telemetry in one dedicated control room.
-							</p>
+							<div className={`truncate font-headline text-2xl font-bold tracking-[-0.05em] sm:text-3xl ${mainTextClass}`}>
+								Player control: <span className="text-primary">{selectedGuild?.name ?? 'Choose a server to start listening'}</span>
+							</div>
 						</div>
 
 						<div className="flex flex-wrap items-center gap-3">
+							<button className="ghost-button px-4 py-2 text-sm" onClick={openSearchModal} type="button">
+								Search
+							</button>
 							<button className="ghost-button px-4 py-2 text-sm" onClick={onRefreshState} type="button">
 								Refresh State
 							</button>
@@ -636,15 +644,7 @@ export function DashboardPlayerLayout(props: {
 								</button>
 								{isBotMenuOpen && botMenuPosition
 									? createPortal(
-											<div
-												className="dashboard-select-menu max-h-72 overflow-y-auto"
-												role="listbox"
-												style={{
-													left: `${botMenuPosition.left}px`,
-													top: `${botMenuPosition.top}px`,
-													width: `${botMenuPosition.width}px`,
-												}}
-											>
+											<div className="dashboard-select-menu max-h-72 overflow-y-auto" role="listbox" style={botMenuStyle}>
 												{botOptions.map((bot) => (
 													<button
 														className={`dashboard-select-option ${formBotId === bot.botId ? 'dashboard-select-option-active' : ''}`}
@@ -664,8 +664,8 @@ export function DashboardPlayerLayout(props: {
 						</div>
 					</header>
 
-					<div className="mt-6 grid gap-6 2xl:grid-cols-[minmax(0,1.18fr)_390px]">
-						<div className="grid gap-6">
+					<div className="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1.08fr)_minmax(0,330px)]">
+						<div className="grid gap-4">
 							<article className={stageClass} key={playerSurfaceKey}>
 								<div
 									className="absolute inset-0"
@@ -683,9 +683,9 @@ export function DashboardPlayerLayout(props: {
 									<div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,255,255,0.16),transparent_24%),radial-gradient(circle_at_80%_10%,rgba(112,0,255,0.16),transparent_22%),linear-gradient(180deg,rgba(10,10,12,0.96),rgba(16,17,18,0.9))]" />
 								) : null}
 
-								<div className="relative grid min-h-[420px] gap-8 px-6 py-6 lg:grid-cols-[1.2fr_0.8fr] lg:px-8 lg:py-8">
+								<div className="relative grid min-h-[280px] gap-5 px-4 py-4 lg:grid-cols-[1.22fr_0.78fr] lg:px-5 lg:py-4">
 									<div className="flex min-w-0 flex-col justify-end">
-										<div className="mb-5 flex flex-wrap items-center gap-2">
+										<div className="mb-3 flex flex-wrap items-center gap-2">
 											<span className="rounded-full border border-primary/25 bg-primary/12 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-primary">
 												{currentTrack ? 'Now Playing' : 'Standby'}
 											</span>
@@ -698,13 +698,13 @@ export function DashboardPlayerLayout(props: {
 										</div>
 
 										<div className="max-w-3xl">
-											<h2 className={`truncate font-headline text-4xl font-bold tracking-[-0.07em] sm:text-5xl xl:text-6xl ${mainTextClass}`}>
+											<h2 className={`truncate font-headline text-[1.8rem] font-bold tracking-[-0.07em] sm:text-[2.15rem] xl:text-[2.9rem] ${mainTextClass}`}>
 												{currentTrack?.title ?? 'No active player'}
 											</h2>
 											<p className={`mt-3 truncate text-lg sm:text-xl ${isLight ? 'text-slate-700' : 'text-white/74'}`}>
 												{currentTrack?.artist ?? playerError ?? 'Join your voice channel from here or start playback in Discord.'}
 											</p>
-											<p className={`mt-4 text-sm leading-7 ${isLight ? 'text-slate-600' : 'text-white/56'}`}>
+											<p className={`mt-3 text-sm leading-6 ${isLight ? 'text-slate-600' : 'text-white/56'}`}>
 												{currentTrackRequester
 													? `Requested by ${currentTrackRequester}`
 													: selectedBot
@@ -713,7 +713,7 @@ export function DashboardPlayerLayout(props: {
 											</p>
 										</div>
 
-										<div className={`mt-8 flex flex-wrap gap-3 text-sm ${isLight ? 'text-slate-600' : 'text-white/68'}`}>
+										<div className={`mt-4 flex flex-wrap gap-2.5 text-sm ${isLight ? 'text-slate-600' : 'text-white/68'}`}>
 											<div className={stageInfoChipClass}>
 												Queue · {queueCount} {queueCount === 1 ? 'track' : 'tracks'}
 											</div>
@@ -722,7 +722,7 @@ export function DashboardPlayerLayout(props: {
 										</div>
 									</div>
 
-									<div className="relative hidden min-h-[320px] items-center justify-center lg:flex">
+									<div className="relative hidden min-h-[190px] items-center justify-center lg:flex">
 										<div className={artworkBackdropClass} />
 										<div className={artworkFrameClass}>
 											{currentTrack?.artworkUrl ? (
@@ -744,7 +744,7 @@ export function DashboardPlayerLayout(props: {
 								</div>
 							</article>
 
-							<article className={`rounded-[1.9rem] border p-6 ${panelClass}`}>
+							<article className={`rounded-[1.9rem] border p-4 ${panelClass}`}>
 								<div className={`mb-4 flex items-center justify-between gap-4 text-sm font-bold ${isLight ? 'text-slate-600' : 'text-white/74'}`}>
 									<span>{formatClock(syncedDisplayPosition)}</span>
 									<span>{formatClock(trackDuration)}</span>
@@ -768,8 +768,8 @@ export function DashboardPlayerLayout(props: {
 										value={Math.min(syncedDisplayPosition, Math.max(trackDuration, 1000))}
 									/>
 								</div>
-								<div className="mt-8 flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
-									<div className="flex flex-wrap items-center gap-3">
+								<div className="mt-5 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,260px)] xl:items-start">
+									<div className="flex min-w-0 flex-wrap items-center gap-3">
 										{!player ? (
 											<button
 												className="inline-flex min-h-[4.5rem] items-center justify-center rounded-full bg-primary px-8 text-sm font-extrabold uppercase tracking-[0.2em] text-black shadow-[0_18px_45px_rgba(0,255,255,0.24)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
@@ -820,7 +820,7 @@ export function DashboardPlayerLayout(props: {
 												<button
 													aria-label={`Repeat mode: ${player?.repeatMode ?? 'off'}`}
 													className={`relative flex h-14 w-14 items-center justify-center rounded-full border text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${
-														player?.repeatMode && player.repeatMode !== 'off'
+														player?.repeatMode && player?.repeatMode !== 'off'
 															? 'border-primary/25 bg-primary/12 text-primary'
 															: 'border-white/10 bg-white/[0.04] hover:border-primary/20 hover:text-primary'
 													}`}
@@ -843,7 +843,7 @@ export function DashboardPlayerLayout(props: {
 										)}
 									</div>
 
-									<div className="flex min-w-0 flex-1 flex-col gap-4 xl:max-w-[420px]">
+									<div className="flex min-w-0 flex-col gap-3 xl:w-full">
 										<label className="block">
 											<div className="mb-2 flex items-center justify-between gap-3">
 												<span className={`text-xs font-extrabold uppercase tracking-[0.22em] ${isLight ? 'text-slate-500' : 'text-white/38'}`}>Volume</span>
@@ -950,15 +950,13 @@ export function DashboardPlayerLayout(props: {
 									</div>
 									<div className="rounded-[1.15rem] border border-current/10 bg-black/10 px-4 py-3">
 										<div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-current/70">Finished</div>
-										<div className="mt-2 text-sm font-bold text-white">
-											{commandFeedback.resultTimestamp ? new Date(commandFeedback.resultTimestamp).toLocaleTimeString() : '--'}
-										</div>
+										<div className="mt-2 text-sm font-bold text-white">{commandFinishedTime}</div>
 									</div>
 								</div>
 							</article>
 						</div>
 
-						<aside className="grid gap-6">
+						<aside className="grid min-w-0 gap-6">
 							<article className={queuePanelClass}>
 								<div className="flex items-center justify-between gap-4">
 									<div>
@@ -1159,6 +1157,46 @@ export function DashboardPlayerLayout(props: {
 					</div>
 				</main>
 			</div>
+			{isSearchModalOpen
+				? createPortal(
+						<div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm" onClick={closeSearchModal}>
+							<div
+								className={`w-full max-w-xl rounded-[1.75rem] border p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] ${panelClass}`}
+								onClick={(event) => event.stopPropagation()}
+							>
+								<div className="flex items-start justify-between gap-4">
+									<div>
+										<div className="text-xs font-extrabold uppercase tracking-[0.24em] text-primary">Search tracks</div>
+										<h2 className={`mt-3 font-headline text-3xl font-bold tracking-[-0.05em] ${mainTextClass}`}>Coming soon</h2>
+									</div>
+									<button
+										aria-label="Close search modal"
+										className={`flex h-10 w-10 items-center justify-center rounded-full border transition ${iconButtonClass}`}
+										onClick={closeSearchModal}
+										type="button"
+									>
+										<PlayerControlIcon className="h-4 w-4" name="close" />
+									</button>
+								</div>
+								<p className={`mt-4 text-sm leading-7 ${subTextClass}`}>
+									Track search from the dashboard is planned next. This modal is the future entry point for searching songs and queueing them directly from the
+									web player.
+								</p>
+								<div className={`mt-5 rounded-[1.35rem] border px-4 py-4 ${softSurfaceClass}`}>
+									<div className="text-xs font-extrabold uppercase tracking-[0.22em] text-primary">Preview</div>
+									<input className="field-input mt-3" disabled placeholder="Search by title, artist or URL" type="text" value="" />
+									<div className={`mt-3 text-sm ${faintTextClass}`}>The backend search endpoint is not live yet, so this is temporarily disabled.</div>
+								</div>
+								<div className="mt-6 flex justify-end">
+									<button className="ghost-button px-4 py-2 text-sm" onClick={closeSearchModal} type="button">
+										Close
+									</button>
+								</div>
+							</div>
+						</div>,
+						document.body
+					)
+				: null}
 		</div>
 	);
 }

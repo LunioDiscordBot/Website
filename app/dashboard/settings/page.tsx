@@ -1,5 +1,5 @@
-import { SiteShell } from '@/components/site-shell';
 import { DashboardSettingsClient } from '@/app/dashboard/settings/settings-client';
+import { DashboardWorkspaceShell } from '@/app/dashboard/dashboard-workspace-shell';
 import { redirect } from 'next/navigation';
 import { buildDashboardPath } from '@/lib/dashboard-routes';
 
@@ -10,12 +10,8 @@ export default async function DashboardSettingsPage({ searchParams }: { searchPa
 	}
 
 	return (
-		<SiteShell currentPath="/dashboard">
-			<section className="py-12 sm:py-16">
-				<div className="shell">
-					<DashboardSettingsClient />
-				</div>
-			</section>
-		</SiteShell>
+		<DashboardWorkspaceShell activeKey="guild-settings" subtitle="Tune Lunio for the selected server once a guild has been chosen." title="Guild settings">
+			<DashboardSettingsClient />
+		</DashboardWorkspaceShell>
 	);
 }

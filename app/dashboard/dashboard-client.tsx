@@ -53,6 +53,7 @@ const STORAGE_KEYS = {
 	guildId: 'lunio:web:guildId',
 	userId: 'lunio:web:userId',
 	sidebarCollapsed: 'lunio:web:dashboardSidebarCollapsed',
+	sidebarNoticeDismissed: 'lunio:web:dashboardSidebarNoticeDismissed',
 };
 
 const DEFAULT_STATE: DashboardState = {
@@ -440,11 +441,16 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 
 	useEffect(() => {
 		setIsSidebarCollapsed(window.localStorage.getItem(STORAGE_KEYS.sidebarCollapsed) === '1');
+		setShowSidebarNotice(window.localStorage.getItem(STORAGE_KEYS.sidebarNoticeDismissed) !== '1');
 	}, []);
 
 	useEffect(() => {
 		window.localStorage.setItem(STORAGE_KEYS.sidebarCollapsed, isSidebarCollapsed ? '1' : '0');
 	}, [isSidebarCollapsed]);
+
+	useEffect(() => {
+		window.localStorage.setItem(STORAGE_KEYS.sidebarNoticeDismissed, showSidebarNotice ? '0' : '1');
+	}, [showSidebarNotice]);
 
 	useEffect(() => {
 		let active = true;
