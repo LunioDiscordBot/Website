@@ -36,6 +36,7 @@ import {
 	formatShortCommandId,
 	getCommandFeedbackToneClasses,
 } from '@/lib/command-feedback';
+import type { DashboardPlayerLayoutProps } from './dashboard-player-layout';
 
 type DashboardState = {
 	botId: string;
@@ -47,13 +48,14 @@ type DashboardState = {
 type PlayerFilters = GuildPlayerState['filters'];
 type PlayerCommandAction = 'join' | 'leave' | 'previous' | 'skip' | 'queue/remove' | 'shuffle' | 'repeat' | 'pause' | 'resume' | 'stop' | 'volume' | 'seek';
 type PremiumControlAction = 'autoplay' | 'bassboost' | 'speed' | 'filter' | 'filter/reset';
+type RequesterPermissions = NonNullable<GuildMetadata['requester']>;
 
 const STORAGE_KEYS = {
 	botId: 'lunio:web:botId',
 	guildId: 'lunio:web:guildId',
 	userId: 'lunio:web:userId',
 	sidebarCollapsed: 'lunio:web:dashboardSidebarCollapsed',
-	sidebarNoticeDismissed: 'lunio:web:dashboardSidebarNoticeDismissed',
+	sidebarNoticeDismissed: 'lunio:web:dashboardSidebarNoticeDismissed:premiumStudio',
 };
 
 const DEFAULT_STATE: DashboardState = {
@@ -71,6 +73,8 @@ const DEFAULT_PLAYER_FILTERS: PlayerFilters = {
 	speed: { enabled: false, level: 1 },
 	vaporwave: { enabled: false, level: null },
 };
+const REQUESTER_CONTEXT_GRACE_MS = 30000;
+const VOICE_TOGGLE_UI_COOLDOWN_MS = 5000;
 
 const PLAYER_ACTION_COMMAND_TYPES: Record<PlayerCommandAction, BrokerCommandType> = {
 	join: 'PLAYER_JOIN',
@@ -389,7 +393,13 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 	const [isBotMenuOpen, setIsBotMenuOpen] = useState(false);
 	const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 	const [showSidebarNotice, setShowSidebarNotice] = useState(true);
+	const [hasLoadedSidebarPrefs, setHasLoadedSidebarPrefs] = useState(false);
+	const [voiceToggleCooldownUntil, setVoiceToggleCooldownUntil] = useState(0);
 	const [hasLoadedBotOptions, setHasLoadedBotOptions] = useState(false);
+	const [lastKnownRequesterPermissions, setLastKnownRequesterPermissions] = useState<{
+		value: RequesterPermissions;
+		recordedAt: number;
+	} | null>(null);
 	const { triggerRef: botMenuTriggerRef, position: botMenuPosition } = useSelectMenuPosition(isBotMenuOpen);
 
 	const persist = (nextState: DashboardState) => {
@@ -417,13 +427,31 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 	const refreshPlayerState = async (botId = form.botId.trim(), guildId = form.guildId.trim()) => {
 		if (!botId || !guildId) return;
 		try {
-			const state = await apiJson<GuildPlayerState>(buildBotScopedPath(botId, guildId, '/player'));
+			const state = await apiJson<GuildPlayerState | null>(buildBotScopedPath(botId, guildId, '/player'));
 			setPlayer(state);
 			setPlayerError(null);
 		} catch (error) {
 			setPlayer(null);
 			setPlayerError(error instanceof Error ? error.message : 'Unable to load player state');
 		}
+	};
+
+	const refreshGuildMetadata = async (botId = form.botId.trim(), guildId = form.guildId.trim()) => {
+		if (!botId || !guildId || !authUser?.userId) {
+			setGuildMetadata(null);
+			return;
+		}
+
+		try {
+			const metadata = await apiJson<GuildMetadata>(buildBotScopedPath(botId, guildId, '/metadata'));
+			setGuildMetadata((current) => (metadata.requester ? metadata : current?.requester ? { ...metadata, requester: current.requester } : metadata));
+		} catch {
+			setGuildMetadata((current) => current);
+		}
+	};
+
+	const refreshDashboardState = async (botId = form.botId.trim(), guildId = form.guildId.trim()) => {
+		await Promise.allSettled([refreshPlayerState(botId, guildId), refreshGuildMetadata(botId, guildId)]);
 	};
 
 	const applyOptimisticPlayerUpdate = (updater: (current: GuildPlayerState) => GuildPlayerState) => {
@@ -442,15 +470,24 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 	useEffect(() => {
 		setIsSidebarCollapsed(window.localStorage.getItem(STORAGE_KEYS.sidebarCollapsed) === '1');
 		setShowSidebarNotice(window.localStorage.getItem(STORAGE_KEYS.sidebarNoticeDismissed) !== '1');
+		setHasLoadedSidebarPrefs(true);
 	}, []);
 
 	useEffect(() => {
+		if (!hasLoadedSidebarPrefs) return;
 		window.localStorage.setItem(STORAGE_KEYS.sidebarCollapsed, isSidebarCollapsed ? '1' : '0');
-	}, [isSidebarCollapsed]);
+	}, [hasLoadedSidebarPrefs, isSidebarCollapsed]);
 
 	useEffect(() => {
+		if (!hasLoadedSidebarPrefs) return;
 		window.localStorage.setItem(STORAGE_KEYS.sidebarNoticeDismissed, showSidebarNotice ? '0' : '1');
-	}, [showSidebarNotice]);
+	}, [hasLoadedSidebarPrefs, showSidebarNotice]);
+
+	useEffect(() => {
+		if (voiceToggleCooldownUntil <= Date.now()) return;
+		const timeout = window.setTimeout(() => setVoiceToggleCooldownUntil(0), voiceToggleCooldownUntil - Date.now());
+		return () => window.clearTimeout(timeout);
+	}, [voiceToggleCooldownUntil]);
 
 	useEffect(() => {
 		let active = true;
@@ -520,10 +557,20 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 		setScrubValue(0);
 		setIsBotMenuOpen(false);
 		setCommandFeedback(DEFAULT_COMMAND_FEEDBACK);
+		setLastKnownRequesterPermissions(null);
 	}, [form.botId, form.guildId]);
 
 	useEffect(() => {
-		if (form.botId.trim() && form.guildId.trim()) void refreshPlayerState();
+		const requester = guildMetadata?.requester;
+		if (!requester?.currentVoiceChannelId) return;
+		setLastKnownRequesterPermissions({
+			value: requester,
+			recordedAt: Date.now(),
+		});
+	}, [guildMetadata?.requester]);
+
+	useEffect(() => {
+		if (form.botId.trim() && form.guildId.trim()) void refreshDashboardState();
 	}, [form.botId, form.guildId]);
 
 	useEffect(() => {
@@ -533,9 +580,9 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 		}
 
 		let active = true;
-		void apiJson<GuildMetadata>(buildBotScopedPath(form.botId.trim(), form.guildId.trim(), '/metadata'))
-			.then((metadata) => {
-				if (active) setGuildMetadata(metadata);
+		void refreshGuildMetadata(form.botId.trim(), form.guildId.trim())
+			.then(() => {
+				if (!active) return;
 			})
 			.catch(() => {
 				if (active) setGuildMetadata(null);
@@ -548,7 +595,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 
 	useEffect(() => {
 		if (!form.botId.trim() || !form.guildId.trim()) return;
-		const interval = window.setInterval(() => void refreshPlayerState(), 15000);
+		const interval = window.setInterval(() => void refreshPlayerState(), 8000);
 		return () => window.clearInterval(interval);
 	}, [form.botId, form.guildId]);
 
@@ -562,7 +609,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 				if (payload.botId !== form.botId.trim()) return;
 				if ('guildId' in payload && payload.guildId !== form.guildId.trim()) return;
 				if (payload.type === 'PLAYER_STATE_UPDATE') {
-					const hasNoPlayerState = payload.currentTrack === null && payload.voiceChannelId === null;
+					const hasNoPlayerState = payload.state === 'DISCONNECTED' && payload.currentTrack === null && payload.voiceChannelId === null;
 
 					setPlayer((current) =>
 						hasNoPlayerState
@@ -571,6 +618,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 									botId: payload.botId,
 									guildId: payload.guildId,
 									instanceId: payload.instanceId,
+									state: payload.state,
 									currentTrack: payload.currentTrack,
 									queue: current?.queue ?? [],
 									updatedAt: payload.updatedAt,
@@ -593,7 +641,14 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 				if (payload.type === 'QUEUE_UPDATE') {
 					setPlayer((current) =>
 						payload.currentTrack === null && payload.queue.length === 0
-							? null
+							? current?.state === 'CONNECTED'
+								? {
+										...current,
+										currentTrack: null,
+										queue: [],
+										updatedAt: payload.updatedAt,
+									}
+								: null
 							: current
 								? {
 										...current,
@@ -606,6 +661,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 										botId: payload.botId,
 										guildId: payload.guildId,
 										instanceId: payload.instanceId,
+										state: payload.currentTrack || payload.queue.length ? 'CONNECTED' : 'DISCONNECTED',
 										currentTrack: payload.currentTrack,
 										queue: payload.queue,
 										updatedAt: payload.updatedAt,
@@ -722,8 +778,14 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 			return;
 		}
 		setIsBusy(true);
+		if (type === 'join' || type === 'leave') {
+			setVoiceToggleCooldownUntil(Date.now() + VOICE_TOGGLE_UI_COOLDOWN_MS);
+		}
 		setCommandFeedback(buildSendingCommandFeedback(commandType));
-		const body: Record<string, unknown> = { userId: form.userId.trim() };
+		const body: Record<string, unknown> = {
+			userId: form.userId.trim(),
+			memberVoiceChannelId: requesterVoiceChannelId,
+		};
 		if (type === 'volume') body.volume = Number(form.volume);
 		if (type === 'seek') body.position = Number(form.seek);
 		Object.assign(body, overrides ?? {});
@@ -789,14 +851,19 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 				body: JSON.stringify(body),
 			});
 			setCommandFeedback(buildAcceptedCommandFeedback(accepted));
-			await pollCommand(accepted.commandId);
-			if (type === 'join') {
-				await refreshPlayerState(form.botId.trim(), form.guildId.trim());
+			if (type === 'join' || type === 'leave') {
+				await pollCommand(accepted.commandId);
+				await refreshDashboardState(form.botId.trim(), form.guildId.trim());
+			} else {
+				void pollCommand(accepted.commandId);
+				window.setTimeout(() => {
+					void refreshPlayerState(form.botId.trim(), form.guildId.trim());
+				}, 1200);
 			}
 		} catch (error) {
 			const message = error instanceof Error ? error.message : 'Unable to send player command';
 			setCommandFeedback(buildFailedCommandFeedback(message, commandType));
-			await refreshPlayerState(form.botId.trim(), form.guildId.trim());
+			await refreshDashboardState(form.botId.trim(), form.guildId.trim());
 		} finally {
 			setIsBusy(false);
 		}
@@ -834,15 +901,17 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 		try {
 			const accepted = await apiJson<AcceptedCommandResponse>(buildBotScopedPath(form.botId.trim(), form.guildId.trim(), `/player/${action}`), {
 				method: 'POST',
-				body: JSON.stringify({ userId: form.userId.trim(), ...body }),
+				body: JSON.stringify({ userId: form.userId.trim(), memberVoiceChannelId: requesterVoiceChannelId, ...body }),
 			});
 			setCommandFeedback(buildAcceptedCommandFeedback(accepted));
-			await pollCommand(accepted.commandId);
-			await refreshPlayerState(form.botId.trim(), form.guildId.trim());
+			void pollCommand(accepted.commandId);
+			window.setTimeout(() => {
+				void refreshPlayerState(form.botId.trim(), form.guildId.trim());
+			}, 1200);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : 'Unable to send premium control';
 			setCommandFeedback(buildFailedCommandFeedback(message, commandType));
-			await refreshPlayerState(form.botId.trim(), form.guildId.trim());
+			await refreshDashboardState(form.botId.trim(), form.guildId.trim());
 		} finally {
 			setIsBusy(false);
 		}
@@ -889,6 +958,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 	const queueTracks = player?.queue ?? [];
 	const queueCount = queueTracks.length;
 	const queueDuration = queueTracks.reduce((total, track) => total + (track.duration ?? 0), 0);
+	const queueIsEmpty = !currentTrack && queueCount === 0;
 	const activityState = player?.paused ? 'Paused' : currentTrack ? 'Live' : 'Idle';
 	const playerSurfaceKey = `${player?.voiceChannelId ?? 'none'}:${currentTrack?.url ?? 'idle'}`;
 	const playerFilters = player?.filters ?? DEFAULT_PLAYER_FILTERS;
@@ -896,13 +966,66 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 	const currentTrackFromAutoplay = Boolean(currentTrack?.isAutoplay);
 	const currentTrackRequester = currentTrack?.requesterName ?? null;
 	const requesterPermissions = guildMetadata?.requester ?? null;
+	const recentRequesterPermissions =
+		lastKnownRequesterPermissions && Date.now() - lastKnownRequesterPermissions.recordedAt < REQUESTER_CONTEXT_GRACE_MS ? lastKnownRequesterPermissions.value : null;
+	const effectiveRequesterPermissions = requesterPermissions?.currentVoiceChannelId
+		? requesterPermissions
+		: player?.voiceChannelId && recentRequesterPermissions
+			? {
+					...recentRequesterPermissions,
+					currentVoiceChannelId: recentRequesterPermissions.currentVoiceChannelId ?? player.voiceChannelId,
+				}
+			: recentRequesterPermissions;
 	const canUsePremiumControls = Boolean(requesterPermissions?.canUsePremiumControls);
-	const canUseDjControls = Boolean(requesterPermissions?.canUseDjControls);
-	const hasVoiceChannelContext = Boolean(requesterPermissions?.currentVoiceChannelId);
-	const canUseJoinControl = Boolean(authUser && form.guildId.trim() && hasVoiceChannelContext);
-	const canUsePlayerDjControls = Boolean(player && canUseDjControls);
-	const canUseAutoplayControl = Boolean(player && canUsePremiumControls && hasVoiceChannelContext);
-	const canUsePremiumDjControls = Boolean(player && canUsePremiumControls && canUseDjControls);
+	const canUseDjControls = Boolean(effectiveRequesterPermissions?.canUseDjControls);
+	const hasVoiceChannelContext = Boolean(effectiveRequesterPermissions?.currentVoiceChannelId);
+	const requesterVoiceChannelId = effectiveRequesterPermissions?.currentVoiceChannelId ?? null;
+	const botVoiceChannelId = player?.voiceChannelId ?? null;
+	const hasConnectedPlayer = player?.state === 'CONNECTED';
+	const canManageGuild = Boolean(effectiveRequesterPermissions?.canManageGuild || requesterPermissions?.canManageGuild);
+	const isVoiceToggleCoolingDown = voiceToggleCooldownUntil > Date.now();
+	const canUseJoinControl = Boolean(
+		authUser &&
+		form.guildId.trim() &&
+		requesterVoiceChannelId &&
+		(!hasConnectedPlayer || (requesterVoiceChannelId !== botVoiceChannelId && queueIsEmpty)) &&
+		!isVoiceToggleCoolingDown
+	);
+	const canUseLeaveControl = Boolean(
+		hasConnectedPlayer && authUser && botVoiceChannelId && (requesterVoiceChannelId === botVoiceChannelId || canManageGuild) && !isVoiceToggleCoolingDown
+	);
+	const canUsePlayerDjControls = Boolean(hasConnectedPlayer && canUseDjControls);
+	const canUseAutoplayControl = Boolean(hasConnectedPlayer && canUsePremiumControls && hasVoiceChannelContext);
+	const canUsePremiumDjControls = Boolean(hasConnectedPlayer && canUsePremiumControls && canUseDjControls);
+	const sidebarNotice: DashboardPlayerLayoutProps['sidebarNotice'] =
+		commandFeedback.phase === 'failed' || commandFeedback.phase === 'timed_out'
+			? {
+					badge: commandFeedback.phase === 'timed_out' ? 'Timeout' : 'Action failed',
+					title: commandFeedback.title,
+					body: commandFeedback.message,
+					tone: commandFeedback.code === 'RATE_LIMITED' || commandFeedback.message.toLowerCase().includes('wait') ? 'warning' : ('error' as const),
+					actionLabel: 'Refresh State',
+					dismissible: false,
+				}
+			: playerError
+				? {
+						badge: 'Sync issue',
+						title: 'State needs a refresh',
+						body: playerError,
+						tone: 'warning' as const,
+						actionLabel: 'Refresh State',
+						dismissible: false,
+					}
+				: showSidebarNotice
+					? {
+							badge: 'New',
+							title: 'Premium Studio',
+							body: 'Autoplay, speed and filter controls now live directly inside Player Control for faster server tuning.',
+							tone: 'promo' as const,
+							actionLabel: 'Open Premium',
+							dismissible: true,
+						}
+					: null;
 	const activePremiumFilters = [
 		playerFilters.nightcore.enabled ? 'Nightcore' : null,
 		playerFilters.vaporwave.enabled ? 'Vaporwave' : null,
@@ -1240,7 +1363,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 												<button
 													aria-label="Leave voice channel"
 													className="dashboard-control-button"
-													disabled={isBusy || !canUsePlayerDjControls}
+													disabled={isBusy || !canUseLeaveControl}
 													onClick={() => void sendCommand('leave')}
 													title="Leave voice channel"
 													type="button"
@@ -1248,7 +1371,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 													<PlayerControlIcon className="mr-2 h-4 w-4" name="leave" />
 													Leave
 												</button>
-												<button className="ghost-button min-w-[10rem] justify-center" onClick={() => void refreshPlayerState()} type="button">
+												<button className="ghost-button min-w-[10rem] justify-center" onClick={() => void refreshDashboardState()} type="button">
 													Refresh State
 												</button>
 											</div>
@@ -1607,6 +1730,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 			canUseAutoplayControl={canUseAutoplayControl}
 			canUseDjControls={canUseDjControls}
 			canUseJoinControl={canUseJoinControl}
+			canUseLeaveControl={canUseLeaveControl}
 			canUsePlayerDjControls={canUsePlayerDjControls}
 			canUsePremiumControls={canUsePremiumControls}
 			canUsePremiumDjControls={canUsePremiumDjControls}
@@ -1628,6 +1752,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 			queueCount={queueCount}
 			queueDuration={queueDuration}
 			queueTracks={queueTracks}
+			sidebarNotice={sidebarNotice}
 			selectedBot={selectedBot}
 			selectedGuild={selectedGuild}
 			showSidebarNotice={showSidebarNotice}
@@ -1637,7 +1762,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 			volumeDraft={volumeDraft}
 			onBassboostDraftChange={setBassboostDraft}
 			onDismissNotice={() => setShowSidebarNotice(false)}
-			onRefreshState={() => void refreshPlayerState()}
+			onRefreshState={() => void refreshDashboardState()}
 			onRemoveQueuedTrack={(index) => void removeQueuedTrack(index)}
 			onScrubChange={setScrubValue}
 			onScrubStart={() => setIsScrubbing(true)}

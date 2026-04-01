@@ -17,6 +17,11 @@ type ServerPickerCache = {
 	refreshedAt: number;
 };
 
+const getConnectedBotIds = (guild: AuthGuildsResponse['guilds'][number]) => {
+	const connectedFromStates = guild.botStates.filter((bot) => bot.status === 'connected').map((bot) => bot.botId);
+	return connectedFromStates.length > 0 ? connectedFromStates : guild.connectedBots;
+};
+
 export function ServersClient() {
 	const { messages } = useSiteLanguage();
 	const [selectedBotId, setSelectedBotId] = useState('');
@@ -115,7 +120,7 @@ export function ServersClient() {
 		return () => window.removeEventListener('focus', onFocus);
 	}, []);
 
-	const connectedGuildCount = guilds.filter((guild) => guild.connectedBots.length > 0).length;
+	const connectedGuildCount = guilds.filter((guild) => getConnectedBotIds(guild).length > 0).length;
 	const manageableGuildCount = guilds.filter((guild) => guild.canManage).length;
 	const copy =
 		connectedGuildCount > 0
@@ -146,7 +151,7 @@ export function ServersClient() {
 		const selectedBotState = selectedBotId ? (guild.botStates.find((bot) => bot.botId === selectedBotId) ?? null) : null;
 		const sharesSelectedBot = selectedBotState?.status === 'connected';
 		const canInviteSelectedBot = guild.canManage && selectedBotState?.status === 'invite';
-		const sharesAnyBot = guild.connectedBots.length > 0;
+		const sharesAnyBot = getConnectedBotIds(guild).length > 0;
 
 		if (selectedBotId) {
 			if (sharesSelectedBot && guild.canManage) return 0;
@@ -170,8 +175,10 @@ export function ServersClient() {
 			return leftPriority - rightPriority;
 		}
 
-		if (left.connectedBots.length !== right.connectedBots.length) {
-			return right.connectedBots.length - left.connectedBots.length;
+		const leftConnectedBotCount = getConnectedBotIds(left).length;
+		const rightConnectedBotCount = getConnectedBotIds(right).length;
+		if (leftConnectedBotCount !== rightConnectedBotCount) {
+			return rightConnectedBotCount - leftConnectedBotCount;
 		}
 
 		return left.name.localeCompare(right.name);
@@ -185,7 +192,9 @@ export function ServersClient() {
 	};
 
 	const getPreferredBotId = (guild: AuthGuildsResponse['guilds'][number]) =>
-		selectedBotId && guild.connectedBots.includes(selectedBotId) ? selectedBotId : getPreferredBotFromList([...guild.connectedBots, ...botOptions.map((bot) => bot.botId)]);
+		selectedBotId && getConnectedBotIds(guild).includes(selectedBotId)
+			? selectedBotId
+			: getPreferredBotFromList([...getConnectedBotIds(guild), ...botOptions.map((bot) => bot.botId)]);
 
 	return (
 		<div className="space-y-8">
@@ -261,7 +270,7 @@ export function ServersClient() {
 
 			<div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
 				{sortedGuilds.map((guild) => (
-					<article className={`panel p-6 ${guild.connectedBots.length === 0 ? 'opacity-60' : ''}`} key={guild.guildId}>
+					<article className={`panel p-6 ${getConnectedBotIds(guild).length === 0 ? 'opacity-60' : ''}`} key={guild.guildId}>
 						<div className="flex items-start justify-between gap-4">
 							{guild.iconUrl ? (
 								// eslint-disable-next-line @next/next/no-img-element
@@ -273,10 +282,10 @@ export function ServersClient() {
 							)}
 
 							<div className="rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.2em] text-primary">
-								{guild.connectedBots.length > 0
+								{getConnectedBotIds(guild).length > 0
 									? messages.servers.botCount
-											.replace('{count}', String(guild.connectedBots.length))
-											.replace('{suffix}', guild.connectedBots.length === 1 ? '' : 's')
+											.replace('{count}', String(getConnectedBotIds(guild).length))
+											.replace('{suffix}', getConnectedBotIds(guild).length === 1 ? '' : 's')
 									: messages.servers.inviteAvailable}
 							</div>
 						</div>
@@ -313,8 +322,8 @@ export function ServersClient() {
 						</div>
 
 						<div className="mt-6 flex flex-col gap-3">
-							{guild.connectedBots.length > 0 ? (
-								<Link className="secondary-button w-full" href={buildDashboardPath(getPreferredBotId(guild), guild.guildId)}>
+							{getConnectedBotIds(guild).length > 0 ? (
+								<Link className="secondary-button w-full" href={buildDashboardPath(getPreferredBotId(guild), guild.guildId)} prefetch={false}>
 									{messages.servers.openDashboard}
 								</Link>
 							) : null}
@@ -323,13 +332,13 @@ export function ServersClient() {
 								? guild.botStates
 										.filter((bot) => bot.status === 'invite' && bot.inviteUrl)
 										.map((bot) => (
-											<Link
+											<a
 												className="ghost-button w-full text-center"
 												href={buildInvitePath(bot.botId, guild.guildId)}
 												key={`${guild.guildId}:${bot.botId}:invite`}
 											>
 												{messages.servers.inviteBot.replace('{label}', bot.label)}
-											</Link>
+											</a>
 										))
 								: null}
 						</div>

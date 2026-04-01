@@ -29,7 +29,7 @@ type SidebarLink = {
 };
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'lunio:web:dashboardSidebarCollapsed';
-const SIDEBAR_NOTICE_STORAGE_KEY = 'lunio:web:dashboardSidebarNoticeDismissed';
+const SIDEBAR_NOTICE_STORAGE_KEY = 'lunio:web:dashboardSidebarNoticeDismissed:workspace';
 const DASHBOARD_BOT_ID_STORAGE_KEY = 'lunio:web:botId';
 const DASHBOARD_GUILD_ID_STORAGE_KEY = 'lunio:web:guildId';
 const SUPPORT_SERVER_URL = 'https://discord.gg/rrqEFukVUZ';
@@ -135,6 +135,7 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 	const [authUser, setAuthUser] = useState<AuthUser | null>(null);
 	const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 	const [showSidebarNotice, setShowSidebarNotice] = useState(true);
+	const [hasLoadedSidebarPrefs, setHasLoadedSidebarPrefs] = useState(false);
 	const [rememberedBotId, setRememberedBotId] = useState('');
 	const [rememberedGuildId, setRememberedGuildId] = useState('');
 
@@ -144,15 +145,18 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 		setShowSidebarNotice(window.localStorage.getItem(SIDEBAR_NOTICE_STORAGE_KEY) !== 'true');
 		setRememberedBotId(window.localStorage.getItem(DASHBOARD_BOT_ID_STORAGE_KEY) || '');
 		setRememberedGuildId(window.localStorage.getItem(DASHBOARD_GUILD_ID_STORAGE_KEY) || '');
+		setHasLoadedSidebarPrefs(true);
 	}, []);
 
 	useEffect(() => {
+		if (!hasLoadedSidebarPrefs) return;
 		window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(isSidebarCollapsed));
-	}, [isSidebarCollapsed]);
+	}, [hasLoadedSidebarPrefs, isSidebarCollapsed]);
 
 	useEffect(() => {
+		if (!hasLoadedSidebarPrefs) return;
 		window.localStorage.setItem(SIDEBAR_NOTICE_STORAGE_KEY, String(!showSidebarNotice));
-	}, [showSidebarNotice]);
+	}, [hasLoadedSidebarPrefs, showSidebarNotice]);
 
 	useEffect(() => {
 		let active = true;
@@ -313,10 +317,10 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 	};
 
 	return (
-		<div className="overflow-x-hidden px-3 py-3 sm:px-4 lg:px-5">
-			<div className="flex min-h-[calc(100vh-1.5rem)] overflow-hidden rounded-[2.25rem] border border-white/10 bg-[rgba(9,10,12,0.88)] shadow-[0_28px_90px_rgba(0,0,0,0.42)]">
+		<div className="relative min-h-screen overflow-x-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-5">
+			<div className="mx-auto flex h-[calc(100vh-1.5rem)] max-w-[1820px] overflow-hidden rounded-[2rem] border border-white/10 bg-[rgba(9,10,12,0.88)] shadow-[0_28px_90px_rgba(0,0,0,0.42)] backdrop-blur-xl">
 				<aside
-					className={`flex shrink-0 flex-col border-r border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] px-4 py-5 transition-[width] duration-300 ${
+					className={`flex min-h-0 shrink-0 flex-col overflow-y-auto border-r border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] px-4 py-5 transition-[width] duration-300 [scrollbar-gutter:stable] ${
 						isSidebarCollapsed ? 'w-[104px]' : 'w-[292px]'
 					}`}
 				>
@@ -368,12 +372,12 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 						<nav className="mt-3 grid gap-2">{sidebarPrimaryLinks.map(renderSidebarLink)}</nav>
 					</div>
 
-					<div className="mt-6 border-t border-white/7 pt-6">
+					<div className="mt-4 border-t border-white/7 pt-4">
 						<div className={`px-2 text-[11px] font-extrabold uppercase tracking-[0.24em] text-white/28 ${isSidebarCollapsed ? 'sr-only' : ''}`}>Explore</div>
 						<nav className="mt-3 grid gap-2">{sidebarExploreLinks.map(renderSidebarLink)}</nav>
 					</div>
 
-					<div className="mt-6 flex-1">
+					<div className="mt-4 flex-1">
 						{showSidebarNotice && !isSidebarCollapsed ? (
 							<div className="rounded-[1.5rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.28)]">
 								<div className="flex items-start justify-between gap-3">
@@ -409,14 +413,14 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 						) : null}
 					</div>
 
-					<div className="mt-6 border-t border-white/7 pt-6">
+					<div className="mt-4 border-t border-white/7 pt-4">
 						<nav className="grid gap-2">{sidebarFooterLinks.map(renderSidebarLink)}</nav>
 					</div>
 				</aside>
 
-				<main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(0,255,255,0.08),transparent_28%),radial-gradient(circle_at_75%_10%,rgba(112,0,255,0.12),transparent_20%),linear-gradient(180deg,rgba(255,255,255,0.015),rgba(255,255,255,0))]">
+				<main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto [scrollbar-gutter:stable] bg-[radial-gradient(circle_at_top,rgba(0,255,255,0.08),transparent_28%),radial-gradient(circle_at_75%_10%,rgba(112,0,255,0.12),transparent_20%),linear-gradient(180deg,rgba(255,255,255,0.015),rgba(255,255,255,0))]">
 					<header className="sticky top-0 z-10 border-b border-white/7 bg-[rgba(9,10,12,0.72)] px-5 py-4 backdrop-blur-xl sm:px-6 lg:px-8">
-						<div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+						<div className="mx-auto flex w-full max-w-[1520px] flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
 							<div className="min-w-0">
 								<div className="text-[11px] font-extrabold uppercase tracking-[0.24em] text-primary">Dashboard</div>
 								<h1 className="mt-2 truncate font-headline text-3xl font-bold tracking-[-0.05em] text-white">{title}</h1>
@@ -438,7 +442,9 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 						</div>
 					</header>
 
-					<div className="px-5 py-5 sm:px-6 lg:px-8 lg:py-6">{children}</div>
+					<div className="px-5 py-5 sm:px-6 lg:px-8 lg:py-6">
+						<div className="mx-auto w-full max-w-[1520px]">{children}</div>
+					</div>
 				</main>
 			</div>
 		</div>

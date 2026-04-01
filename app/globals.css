@@ -54,6 +54,7 @@ html[data-theme='light'] {
 
 html {
 	scroll-behavior: smooth;
+	scrollbar-gutter: stable;
 }
 
 body {

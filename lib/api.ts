@@ -203,6 +203,7 @@ export interface GuildPlayerState {
 	botId: string;
 	guildId: string;
 	instanceId: string;
+	state: 'CONNECTED' | 'CONNECTING' | 'DISCONNECTED' | 'DISCONNECTING' | 'DESTROYING';
 	currentTrack: Track | null;
 	queue: Track[];
 	updatedAt: number;
@@ -301,6 +302,7 @@ export interface FrontendPlayerStateEvent {
 	botId: string;
 	instanceId: string;
 	guildId: string;
+	state: 'CONNECTED' | 'CONNECTING' | 'DISCONNECTED' | 'DISCONNECTING' | 'DESTROYING';
 	currentTrack: Track | null;
 	updatedAt: number;
 	paused: boolean;
