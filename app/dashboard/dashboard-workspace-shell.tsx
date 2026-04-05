@@ -33,7 +33,6 @@ const SIDEBAR_NOTICE_STORAGE_KEY = 'lunio:web:dashboardSidebarNoticeDismissed:wo
 const DASHBOARD_BOT_ID_STORAGE_KEY = 'lunio:web:botId';
 const DASHBOARD_GUILD_ID_STORAGE_KEY = 'lunio:web:guildId';
 const SUPPORT_SERVER_URL = 'https://discord.gg/rrqEFukVUZ';
-const DEFAULT_PUBLIC_SITE_URL = 'https://luniobot.com';
 
 function DashboardSidebarIcon({ name, className = 'h-5 w-5' }: { name: SidebarLink['icon']; className?: string }) {
 	const sharedProps = {
@@ -184,7 +183,6 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 		};
 	}, []);
 
-	const publicSiteUrl = (process.env.NEXT_PUBLIC_PUBLIC_SITE_URL || DEFAULT_PUBLIC_SITE_URL).replace(/\/$/, '');
 	const effectiveBotId = botId || rememberedBotId || '';
 	const effectiveGuildId = guildId || rememberedGuildId || '';
 	const accountDisplayName = authUser ? authUser.globalName || authUser.username : 'Dashboard guest';
@@ -197,8 +195,7 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 			label: 'Home',
 			caption: 'Main site',
 			icon: 'home',
-			href: publicSiteUrl,
-			external: true,
+			href: '/',
 		},
 		{
 			key: 'overview',
@@ -242,16 +239,14 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 			label: 'Commands',
 			caption: 'Public docs',
 			icon: 'commands',
-			href: `${publicSiteUrl}/commands`,
-			external: true,
+			href: '/commands',
 		},
 		{
 			key: 'status',
 			label: 'Status',
 			caption: 'System health',
 			icon: 'status',
-			href: `${publicSiteUrl}/status`,
-			external: true,
+			href: '/status',
 		},
 	];
 	const sidebarFooterLinks: SidebarLink[] = [

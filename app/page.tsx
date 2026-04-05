@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { SiteShell } from '@/components/site-shell';
 
-const DASHBOARD_SITE_URL = process.env.NEXT_PUBLIC_DASHBOARD_BASE_URL?.replace(/\/$/, '') || 'https://dashboard.luniobot.com';
 const MAIN_INVITE_URL = 'https://discord.com/oauth2/authorize?client_id=945030475779551415&scope=bot+applications.commands&permissions=8';
 const SECONDARY_INVITE_URL = 'https://discord.com/oauth2/authorize?client_id=945474723846950944&scope=bot+applications.commands&permissions=8';
 
@@ -163,7 +162,7 @@ export default function HomePage() {
 									</div>
 								) : null}
 							</div>
-							<a className="ghost-button min-w-[12rem]" href={`${DASHBOARD_SITE_URL}/servers`}>
+							<a className="ghost-button min-w-[12rem]" href="/servers">
 								Open Dashboard
 							</a>
 						</div>

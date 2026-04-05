@@ -5,8 +5,6 @@ import { useEffect, useRef, useState } from 'react';
 import { apiJson, API_BASE_URL, API_PREFIX, type AuthUser } from '@/lib/api';
 import { clearAuthClientState } from '@/lib/auth-storage';
 
-const DASHBOARD_SITE_URL = process.env.NEXT_PUBLIC_DASHBOARD_BASE_URL?.replace(/\/$/, '') || 'https://dashboard.luniobot.com';
-
 export function HeaderAccount() {
 	const [user, setUser] = useState<AuthUser | null>(null);
 	const [open, setOpen] = useState(false);
@@ -57,7 +55,7 @@ export function HeaderAccount() {
 
 	if (!user) {
 		return (
-			<Link className="ghost-button px-4 py-2 text-sm" href={`${DASHBOARD_SITE_URL}/login`} prefetch={false}>
+			<Link className="ghost-button px-4 py-2 text-sm" href="/login" prefetch={false}>
 				Login
 			</Link>
 		);
@@ -92,7 +90,7 @@ export function HeaderAccount() {
 					</div>
 
 					<div className="mt-2 grid gap-1">
-						<Link className="account-menu-action" href={`${DASHBOARD_SITE_URL}/settings`} onClick={() => setOpen(false)} prefetch={false}>
+						<Link className="account-menu-action" href="/settings" onClick={() => setOpen(false)} prefetch={false}>
 							Site Settings
 						</Link>
 						<button

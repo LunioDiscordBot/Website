@@ -42,7 +42,6 @@ export type SidebarNotice = {
 };
 
 const SUPPORT_SERVER_URL = 'https://discord.gg/rrqEFukVUZ';
-const DEFAULT_PUBLIC_SITE_URL = 'https://luniobot.com';
 
 function formatClock(ms: number | null | undefined) {
 	if (typeof ms !== 'number' || Number.isNaN(ms) || ms < 0) return '--:--';
@@ -367,7 +366,6 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 	const { resolvedTheme } = useTheme();
 	const isLight = resolvedTheme === 'light';
 
-	const publicSiteUrl = (process.env.NEXT_PUBLIC_PUBLIC_SITE_URL || DEFAULT_PUBLIC_SITE_URL).replace(/\/$/, '');
 	const overviewHref = buildDashboardPath(formBotId, formGuildId);
 	const guildSettingsHref = buildDashboardPath(formBotId, formGuildId, 'settings');
 	const accountDisplayName = authUser ? authUser.globalName || authUser.username : 'Dashboard guest';
@@ -485,7 +483,7 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 	const closeSearchModal = () => setIsSearchModalOpen(false);
 
 	const sidebarPrimaryLinks: SidebarLink[] = [
-		{ label: 'Home', caption: 'Main site', icon: 'home', href: publicSiteUrl, external: true },
+		{ label: 'Home', caption: 'Main site', icon: 'home', href: '/' },
 		{ label: 'Overview', caption: 'Player control', icon: 'overview', href: overviewHref, active: true },
 		{ label: 'Servers', caption: 'Switch guild', icon: 'servers', href: '/servers' },
 		{
@@ -498,8 +496,8 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 		{ label: 'Playlists', caption: 'Coming soon', icon: 'playlists', disabled: true, comingSoon: true },
 	];
 	const sidebarExploreLinks: SidebarLink[] = [
-		{ label: 'Commands', caption: 'Public docs', icon: 'commands', href: `${publicSiteUrl}/commands`, external: true },
-		{ label: 'Status', caption: 'System health', icon: 'status', href: `${publicSiteUrl}/status`, external: true },
+		{ label: 'Commands', caption: 'Public docs', icon: 'commands', href: '/commands' },
+		{ label: 'Status', caption: 'System health', icon: 'status', href: '/status' },
 	];
 	const sidebarFooterLinks: SidebarLink[] = [
 		{ label: 'Settings', caption: 'Account', icon: 'account', href: '/settings' },

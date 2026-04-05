@@ -13,9 +13,6 @@ type NavigationItem = {
 	activePaths?: string[];
 };
 
-const PUBLIC_SITE_URL = process.env.NEXT_PUBLIC_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://luniobot.com';
-const DASHBOARD_SITE_URL = process.env.NEXT_PUBLIC_DASHBOARD_BASE_URL?.replace(/\/$/, '') || 'https://dashboard.luniobot.com';
-
 function getNavigationPathname(href: string) {
 	try {
 		return new URL(href).pathname || '/';
@@ -40,11 +37,11 @@ type SiteShellProps = PropsWithChildren<{
 export function SiteShell({ currentPath, children, home = false }: SiteShellProps) {
 	const { messages } = useSiteLanguage();
 	const navigation = [
-		{ href: `${PUBLIC_SITE_URL}/`, label: messages.nav.home },
-		{ href: `${PUBLIC_SITE_URL}/commands`, label: messages.nav.commands },
-		{ href: `${PUBLIC_SITE_URL}/status`, label: messages.nav.status },
+		{ href: '/', label: messages.nav.home },
+		{ href: '/commands', label: messages.nav.commands },
+		{ href: '/status', label: messages.nav.status },
 		{
-			href: `${DASHBOARD_SITE_URL}/servers`,
+			href: '/servers',
 			label: messages.nav.dashboard,
 			activePaths: ['/servers', '/dashboard'],
 		},
@@ -55,7 +52,7 @@ export function SiteShell({ currentPath, children, home = false }: SiteShellProp
 		<div className="relative min-h-screen overflow-hidden font-body text-text">
 			<header className="sticky top-0 z-40 border-b border-white/10 bg-background/75 backdrop-blur-2xl">
 				<div className="shell flex items-center justify-between gap-4 py-4">
-					<Link className="flex items-center gap-3" href={`${PUBLIC_SITE_URL}/`}>
+					<Link className="flex items-center gap-3" href="/">
 						{/* eslint-disable-next-line @next/next/no-img-element */}
 						<img alt="Lunio" className="h-11 w-11 rounded-full object-cover" src="/lunio-logo.png" />
 						<span className="font-headline text-3xl font-bold tracking-[-0.06em] text-primary drop-shadow-[0_0_10px_rgba(0,255,255,0.32)]">Lunio</span>
@@ -87,7 +84,7 @@ export function SiteShell({ currentPath, children, home = false }: SiteShellProp
 				<div className="shell py-14">
 					<div className="mx-auto grid max-w-5xl gap-12 lg:grid-cols-[1.05fr_1.2fr] lg:items-start">
 						<div className="text-center lg:text-left">
-							<Link className="inline-flex items-center gap-4" href={`${PUBLIC_SITE_URL}/`}>
+							<Link className="inline-flex items-center gap-4" href="/">
 								{/* eslint-disable-next-line @next/next/no-img-element */}
 								<img alt="Lunio" className="h-14 w-14 rounded-full object-cover" src="/lunio-logo.png" />
 								<span className="font-headline text-4xl font-bold tracking-[-0.06em] text-white">Lunio</span>
@@ -100,16 +97,16 @@ export function SiteShell({ currentPath, children, home = false }: SiteShellProp
 							<div>
 								<div className="metric-label">{messages.footer.navigation}</div>
 								<div className="mt-4 grid gap-2 text-sm text-muted">
-									<Link className="transition hover:text-white" href={`${PUBLIC_SITE_URL}/`} prefetch={false}>
+									<Link className="transition hover:text-white" href="/" prefetch={false}>
 										{messages.nav.home}
 									</Link>
-									<Link className="transition hover:text-white" href={`${PUBLIC_SITE_URL}/commands`} prefetch={false}>
+									<Link className="transition hover:text-white" href="/commands" prefetch={false}>
 										{messages.nav.commands}
 									</Link>
-									<Link className="transition hover:text-white" href={`${PUBLIC_SITE_URL}/status`} prefetch={false}>
+									<Link className="transition hover:text-white" href="/status" prefetch={false}>
 										{messages.nav.status}
 									</Link>
-									<Link className="transition hover:text-white" href={`${DASHBOARD_SITE_URL}/servers`} prefetch={false}>
+									<Link className="transition hover:text-white" href="/servers" prefetch={false}>
 										{messages.nav.dashboard}
 									</Link>
 								</div>
@@ -118,10 +115,10 @@ export function SiteShell({ currentPath, children, home = false }: SiteShellProp
 							<div>
 								<div className="metric-label">{messages.footer.product}</div>
 								<div className="mt-4 grid gap-2 text-sm text-muted">
-									<Link className="transition hover:text-white" href={`${DASHBOARD_SITE_URL}/servers`} prefetch={false}>
+									<Link className="transition hover:text-white" href="/servers" prefetch={false}>
 										{messages.footer.inviteBot}
 									</Link>
-									<Link className="transition hover:text-white" href={`${PUBLIC_SITE_URL}/commands`} prefetch={false}>
+									<Link className="transition hover:text-white" href="/commands" prefetch={false}>
 										{messages.footer.exploreFeatures}
 									</Link>
 								</div>
@@ -130,13 +127,13 @@ export function SiteShell({ currentPath, children, home = false }: SiteShellProp
 							<div>
 								<div className="metric-label">{messages.footer.legal}</div>
 								<div className="mt-4 grid gap-2 text-sm text-muted">
-									<Link className="transition hover:text-white" href={`${PUBLIC_SITE_URL}/tos`} prefetch={false}>
+									<Link className="transition hover:text-white" href="/tos" prefetch={false}>
 										{messages.footer.tos}
 									</Link>
-									<Link className="transition hover:text-white" href={`${PUBLIC_SITE_URL}/privacy`} prefetch={false}>
+									<Link className="transition hover:text-white" href="/privacy" prefetch={false}>
 										{messages.footer.privacy}
 									</Link>
-									<Link className="transition hover:text-white" href={`${PUBLIC_SITE_URL}/withdrawal`} prefetch={false}>
+									<Link className="transition hover:text-white" href="/withdrawal" prefetch={false}>
 										{messages.footer.withdrawal}
 									</Link>
 								</div>
