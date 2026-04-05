@@ -258,7 +258,7 @@ export function ServersClient() {
 						<div className="text-sm leading-7 text-muted">{messages.servers.unauthorized}</div>
 						<a
 							className="secondary-button mt-5"
-							href={`${process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || 'https://api.luniobot.com'}/api/auth/discord/login`}
+							href={`${process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || 'https://api.luniobot.com'}/v1/auth/discord/login`}
 						>
 							Sign in with Discord
 						</a>

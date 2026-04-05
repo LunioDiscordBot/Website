@@ -21,7 +21,7 @@ type SelectMenuPosition = {
 type PlayerAction = 'join' | 'leave' | 'previous' | 'skip' | 'shuffle' | 'repeat' | 'pause' | 'resume' | 'stop';
 type PremiumAction = 'autoplay' | 'bassboost' | 'speed' | 'filter' | 'filter/reset';
 type PlayerIconName = 'previous' | 'pause' | 'play' | 'skip' | 'shuffle' | 'repeat' | 'stop' | 'leave' | 'close';
-type DashboardSidebarIconName = 'overview' | 'servers' | 'settings' | 'playlists' | 'commands' | 'status' | 'account' | 'support' | 'chevron' | 'collapse';
+type DashboardSidebarIconName = 'home' | 'overview' | 'servers' | 'settings' | 'playlists' | 'commands' | 'status' | 'account' | 'support' | 'chevron' | 'collapse';
 type SidebarLink = {
 	label: string;
 	caption: string;
@@ -154,6 +154,14 @@ function DashboardSidebarIcon({ name, className = 'h-5 w-5' }: { name: Dashboard
 	};
 
 	switch (name) {
+		case 'home':
+			return (
+				<svg {...sharedProps}>
+					<path d="M4.75 10.5 12 4l7.25 6.5" />
+					<path d="M6.5 9.5v9h11v-9" />
+					<path d="M10 18v-4h4v4" />
+				</svg>
+			);
 		case 'overview':
 			return (
 				<svg {...sharedProps}>
@@ -373,6 +381,7 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 			}
 		: undefined;
 	const commandFinishedTime = typeof commandFeedback.resultTimestamp === 'number' ? new Date(commandFeedback.resultTimestamp).toLocaleTimeString() : '--';
+	const isPlayerConnected = player?.state === 'CONNECTED';
 	const frameClass = isLight
 		? 'border-slate-200/80 bg-[rgba(248,250,252,0.96)] shadow-[0_28px_90px_rgba(32,51,74,0.14)]'
 		: 'border-white/10 bg-[rgba(9,10,12,0.88)] shadow-[0_28px_90px_rgba(0,0,0,0.42)]';
@@ -476,6 +485,7 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 	const closeSearchModal = () => setIsSearchModalOpen(false);
 
 	const sidebarPrimaryLinks: SidebarLink[] = [
+		{ label: 'Home', caption: 'Main site', icon: 'home', href: publicSiteUrl, external: true },
 		{ label: 'Overview', caption: 'Player control', icon: 'overview', href: overviewHref, active: true },
 		{ label: 'Servers', caption: 'Switch guild', icon: 'servers', href: '/servers' },
 		{
@@ -817,7 +827,7 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 									</div>
 									<div className="mt-5 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,236px)] xl:items-start">
 										<div className="flex min-w-0 flex-wrap items-center gap-3">
-											{player?.state !== 'CONNECTED' ? (
+											{!isPlayerConnected ? (
 												<button
 													className="inline-flex min-h-[4.5rem] items-center justify-center rounded-full bg-primary px-8 text-sm font-extrabold uppercase tracking-[0.2em] text-black shadow-[0_18px_45px_rgba(0,255,255,0.24)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
 													disabled={isBusy || !canUseJoinControl}

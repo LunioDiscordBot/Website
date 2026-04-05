@@ -1,4 +1,18 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:3000';
+export const API_PREFIX = '/v1';
+
+function normalizeApiPath(path: string) {
+	if (path.startsWith('/api/')) {
+		return `${API_PREFIX}${path.slice(4)}`;
+	}
+	if (path === '/api') {
+		return API_PREFIX;
+	}
+	if (path.startsWith('/v1/')) {
+		return path;
+	}
+	return `${API_PREFIX}${path.startsWith('/') ? path : `/${path}`}`;
+}
 
 export interface BotInstance {
 	botId: string;
@@ -71,6 +85,26 @@ export interface AuthGuild {
 
 export interface AuthGuildsResponse {
 	guilds: AuthGuild[];
+}
+
+export interface ReferralPromoStatus {
+	granted: boolean;
+	ready: boolean;
+	anchorGuild: {
+		guildId: string;
+		name: string | null;
+	} | null;
+	pendingGuild: {
+		guildId: string;
+		name: string | null;
+	} | null;
+	redeemedGuildIds?: string[];
+	message: string;
+}
+
+export interface ReferralPromoStatusResponse {
+	botId: string;
+	status: ReferralPromoStatus | null;
 }
 
 export interface GuildSettings {
@@ -384,7 +418,7 @@ export type FrontendEvent =
 	| FrontendCommandResultEvent;
 
 export function buildBotScopedPath(botId: string, guildId: string, suffix = '') {
-	return `/api/bots/${encodeURIComponent(botId)}/guilds/${encodeURIComponent(guildId)}${suffix}`;
+	return `${API_PREFIX}/bots/${encodeURIComponent(botId)}/guilds/${encodeURIComponent(guildId)}${suffix}`;
 }
 
 export function withBotQuery(path: string, botId?: string | null) {
@@ -394,7 +428,7 @@ export function withBotQuery(path: string, botId?: string | null) {
 }
 
 export async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
-	const response = await fetch(`${API_BASE_URL}${path}`, {
+	const response = await fetch(`${API_BASE_URL}${normalizeApiPath(path)}`, {
 		...init,
 		credentials: 'include',
 		headers: {

@@ -1,13 +1,31 @@
 'use client';
 
+import { useState } from 'react';
 import { useSiteLanguage } from '@/components/site-language-provider';
 import { useTheme } from '@/components/theme-provider';
+import { clearAuthClientState } from '@/lib/auth-storage';
+import { API_BASE_URL, API_PREFIX } from '@/lib/api';
 import { THEME_OPTIONS } from '@/lib/theme';
 
 export function SiteSettingsClient() {
 	const { language, messages, options: languageOptions, setLanguage } = useSiteLanguage();
 	const { preference, resolvedTheme, setPreference } = useTheme();
 	const languageSelectionEnabled = false;
+	const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+	const handleLogout = async () => {
+		if (isLoggingOut) return;
+		setIsLoggingOut(true);
+		try {
+			await fetch(`${API_BASE_URL}${API_PREFIX}/auth/logout`, {
+				method: 'POST',
+				credentials: 'include',
+			});
+		} finally {
+			clearAuthClientState();
+			window.location.href = '/';
+		}
+	};
 
 	return (
 		<div className="grid gap-6">
@@ -139,6 +157,20 @@ export function SiteSettingsClient() {
 								Site language is temporarily unavailable until the remaining pages are translated consistently.
 							</div>
 						) : null}
+					</article>
+
+					<article className="dashboard-side-card">
+						<div className="metric-label">Session</div>
+						<h3 className="mt-2 font-headline text-3xl font-bold tracking-[-0.05em] text-white">Account access</h3>
+						<p className="mt-4 text-sm leading-7 text-muted">Sign out of Lunio on this browser and return to the public site.</p>
+						<button
+							className="secondary-button mt-6 w-full justify-center disabled:opacity-50"
+							disabled={isLoggingOut}
+							onClick={() => void handleLogout()}
+							type="button"
+						>
+							{isLoggingOut ? 'Logging out...' : 'Logout'}
+						</button>
 					</article>
 				</aside>
 			</section>

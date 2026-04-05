@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useSiteLanguage } from '@/components/site-language-provider';
-import { API_BASE_URL, apiJson, type AuthUser } from '@/lib/api';
+import { API_BASE_URL, API_PREFIX, apiJson, type AuthUser } from '@/lib/api';
 import { clearAuthClientState } from '@/lib/auth-storage';
 
 export function LoginClient() {
 	const { messages } = useSiteLanguage();
+	const searchParams = useSearchParams();
 	const [user, setUser] = useState<AuthUser | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [rememberMe, setRememberMe] = useState(true);
@@ -33,9 +35,13 @@ export function LoginClient() {
 	}, []);
 
 	const handleLogin = () => {
-		const url = new URL(`${API_BASE_URL}/api/auth/discord/login`);
+		const url = new URL(`${API_BASE_URL}${API_PREFIX}/auth/discord/login`);
 		if (rememberMe) {
 			url.searchParams.set('remember', '1');
+		}
+		const returnTo = searchParams.get('returnTo');
+		if (returnTo?.startsWith('/') && !returnTo.startsWith('//')) {
+			url.searchParams.set('returnTo', returnTo);
 		}
 		window.location.href = url.toString();
 	};
@@ -43,7 +49,7 @@ export function LoginClient() {
 	const handleLogout = async () => {
 		setBusy(true);
 		try {
-			await fetch(`${API_BASE_URL}/api/auth/logout`, {
+			await fetch(`${API_BASE_URL}${API_PREFIX}/auth/logout`, {
 				method: 'POST',
 				credentials: 'include',
 			});

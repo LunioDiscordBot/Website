@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { apiJson, type AuthUser } from '@/lib/api';
+import { apiJson, API_BASE_URL, API_PREFIX, type AuthUser } from '@/lib/api';
 import { clearAuthClientState } from '@/lib/auth-storage';
 
 const DASHBOARD_SITE_URL = process.env.NEXT_PUBLIC_DASHBOARD_BASE_URL?.replace(/\/$/, '') || 'https://dashboard.luniobot.com';
@@ -41,14 +41,16 @@ export function HeaderAccount() {
 	}, []);
 
 	const logout = async () => {
+		if (busy) return;
 		setBusy(true);
 		try {
-			await apiJson('/api/auth/logout', {
+			await fetch(`${API_BASE_URL}${API_PREFIX}/auth/logout`, {
 				method: 'POST',
+				credentials: 'include',
 			});
+		} finally {
 			clearAuthClientState();
 			window.location.href = '/';
-		} finally {
 			setBusy(false);
 		}
 	};

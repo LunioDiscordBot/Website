@@ -23,6 +23,7 @@ import {
 	type FrontendEvent,
 	type GuildMetadata,
 	type GuildPlayerState,
+	type Track,
 } from '@/lib/api';
 import {
 	buildAcceptedCommandFeedback,
@@ -372,6 +373,103 @@ function normalizePlayerFilters(filters: unknown, fallback: PlayerFilters = DEFA
 	};
 }
 
+function getTrackIdentity(track: Track | null | undefined) {
+	if (!track) return null;
+	return `${track.url}|${track.title}|${track.artist}`;
+}
+
+function normalizeFetchedPlayerState(state: GuildPlayerState | null): GuildPlayerState | null {
+	if (!state) return null;
+
+	return {
+		...state,
+		updatedAt: Date.now(),
+		position: state.currentTrack ? Math.max(0, Number(state.position ?? 0)) : 0,
+		filters: normalizePlayerFilters(state.filters, DEFAULT_PLAYER_FILTERS),
+	};
+}
+
+function buildRealtimePlayerState(current: GuildPlayerState | null, payload: Extract<FrontendEvent, { type: 'PLAYER_STATE_UPDATE' }>): GuildPlayerState | null {
+	const receivedAt = Date.now();
+	const hasNoPlayerState = payload.state === 'DISCONNECTED' && payload.currentTrack === null && payload.voiceChannelId === null;
+	if (hasNoPlayerState) return null;
+
+	const trackChanged = getTrackIdentity(current?.currentTrack) !== getTrackIdentity(payload.currentTrack);
+
+	return {
+		botId: payload.botId,
+		guildId: payload.guildId,
+		instanceId: payload.instanceId,
+		state: payload.state,
+		currentTrack: payload.currentTrack,
+		queue: current?.queue ?? [],
+		updatedAt: receivedAt,
+		paused: payload.paused,
+		volume: payload.volume,
+		position: payload.currentTrack ? Math.max(0, Number(payload.position ?? (trackChanged ? 0 : (current?.position ?? 0)))) : 0,
+		repeatMode: payload.repeatMode,
+		voiceChannelId: payload.voiceChannelId,
+		channelId: payload.channelId,
+		textChannelId: payload.textChannelId,
+		autoPlayRequester: payload.autoPlayRequester,
+		autoplayEnabled: payload.autoplayEnabled,
+		isAutoPlay: payload.isAutoPlay,
+		is247: payload.is247,
+		filters: normalizePlayerFilters(payload.filters, current?.filters ?? DEFAULT_PLAYER_FILTERS),
+	};
+}
+
+function buildQueueSyncedPlayerState(current: GuildPlayerState | null, payload: Extract<FrontendEvent, { type: 'QUEUE_UPDATE' }>): GuildPlayerState | null {
+	const receivedAt = Date.now();
+	const trackChanged = getTrackIdentity(current?.currentTrack) !== getTrackIdentity(payload.currentTrack);
+
+	if (payload.currentTrack === null && payload.queue.length === 0) {
+		return current?.state === 'CONNECTED'
+			? {
+					...current,
+					currentTrack: null,
+					queue: [],
+					position: 0,
+					updatedAt: receivedAt,
+				}
+			: null;
+	}
+
+	if (current) {
+		return {
+			...current,
+			botId: payload.botId,
+			currentTrack: payload.currentTrack,
+			queue: payload.queue,
+			position: payload.currentTrack ? (trackChanged ? 0 : current.position) : 0,
+			paused: payload.currentTrack ? current.paused : false,
+			updatedAt: receivedAt,
+		};
+	}
+
+	return {
+		botId: payload.botId,
+		guildId: payload.guildId,
+		instanceId: payload.instanceId,
+		state: payload.currentTrack || payload.queue.length ? 'CONNECTED' : 'DISCONNECTED',
+		currentTrack: payload.currentTrack,
+		queue: payload.queue,
+		updatedAt: receivedAt,
+		paused: false,
+		volume: 100,
+		position: 0,
+		repeatMode: 'off',
+		voiceChannelId: null,
+		channelId: null,
+		textChannelId: null,
+		autoPlayRequester: null,
+		autoplayEnabled: null,
+		isAutoPlay: null,
+		is247: null,
+		filters: DEFAULT_PLAYER_FILTERS,
+	};
+}
+
 export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFromQuery?: string; guildIdFromQuery?: string }) {
 	const router = useRouter();
 	const [form, setForm] = useState<DashboardState>(DEFAULT_STATE);
@@ -428,7 +526,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 		if (!botId || !guildId) return;
 		try {
 			const state = await apiJson<GuildPlayerState | null>(buildBotScopedPath(botId, guildId, '/player'));
-			setPlayer(state);
+			setPlayer(normalizeFetchedPlayerState(state));
 			setPlayerError(null);
 		} catch (error) {
 			setPlayer(null);
@@ -609,76 +707,11 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 				if (payload.botId !== form.botId.trim()) return;
 				if ('guildId' in payload && payload.guildId !== form.guildId.trim()) return;
 				if (payload.type === 'PLAYER_STATE_UPDATE') {
-					const hasNoPlayerState = payload.state === 'DISCONNECTED' && payload.currentTrack === null && payload.voiceChannelId === null;
-
-					setPlayer((current) =>
-						hasNoPlayerState
-							? null
-							: {
-									botId: payload.botId,
-									guildId: payload.guildId,
-									instanceId: payload.instanceId,
-									state: payload.state,
-									currentTrack: payload.currentTrack,
-									queue: current?.queue ?? [],
-									updatedAt: payload.updatedAt,
-									paused: payload.paused,
-									volume: payload.volume,
-									position: payload.position,
-									repeatMode: payload.repeatMode,
-									voiceChannelId: payload.voiceChannelId,
-									channelId: payload.channelId,
-									textChannelId: payload.textChannelId,
-									autoPlayRequester: payload.autoPlayRequester,
-									autoplayEnabled: payload.autoplayEnabled,
-									isAutoPlay: payload.isAutoPlay,
-									is247: payload.is247,
-									filters: normalizePlayerFilters(payload.filters, current?.filters ?? DEFAULT_PLAYER_FILTERS),
-								}
-					);
+					setPlayer((current) => buildRealtimePlayerState(current, payload));
 					setPlayerError(null);
 				}
 				if (payload.type === 'QUEUE_UPDATE') {
-					setPlayer((current) =>
-						payload.currentTrack === null && payload.queue.length === 0
-							? current?.state === 'CONNECTED'
-								? {
-										...current,
-										currentTrack: null,
-										queue: [],
-										updatedAt: payload.updatedAt,
-									}
-								: null
-							: current
-								? {
-										...current,
-										botId: payload.botId,
-										currentTrack: payload.currentTrack,
-										queue: payload.queue,
-										updatedAt: payload.updatedAt,
-									}
-								: {
-										botId: payload.botId,
-										guildId: payload.guildId,
-										instanceId: payload.instanceId,
-										state: payload.currentTrack || payload.queue.length ? 'CONNECTED' : 'DISCONNECTED',
-										currentTrack: payload.currentTrack,
-										queue: payload.queue,
-										updatedAt: payload.updatedAt,
-										paused: false,
-										volume: 100,
-										position: 0,
-										repeatMode: 'off',
-										voiceChannelId: null,
-										channelId: null,
-										textChannelId: null,
-										autoPlayRequester: null,
-										autoplayEnabled: null,
-										isAutoPlay: null,
-										is247: null,
-										filters: DEFAULT_PLAYER_FILTERS,
-									}
-					);
+					setPlayer((current) => buildQueueSyncedPlayerState(current, payload));
 				}
 				if (payload.type === 'COMMAND_ACK') {
 					setCommandFeedback((current) =>
@@ -959,7 +992,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 	const queueCount = queueTracks.length;
 	const queueDuration = queueTracks.reduce((total, track) => total + (track.duration ?? 0), 0);
 	const queueIsEmpty = !currentTrack && queueCount === 0;
-	const activityState = player?.paused ? 'Paused' : currentTrack ? 'Live' : 'Idle';
+	const activityState = player?.state !== 'CONNECTED' ? 'Offline' : player?.paused ? 'Paused' : currentTrack ? 'Live' : 'Idle';
 	const playerSurfaceKey = `${player?.voiceChannelId ?? 'none'}:${currentTrack?.url ?? 'idle'}`;
 	const playerFilters = player?.filters ?? DEFAULT_PLAYER_FILTERS;
 	const autoplayModeEnabled = Boolean(player?.autoplayEnabled);

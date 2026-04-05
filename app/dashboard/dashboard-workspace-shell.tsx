@@ -17,10 +17,10 @@ type DashboardWorkspaceShellProps = {
 };
 
 type SidebarLink = {
-	key: DashboardWorkspaceShellProps['activeKey'] | 'commands' | 'status' | 'support';
+	key: DashboardWorkspaceShellProps['activeKey'] | 'home' | 'commands' | 'status' | 'support';
 	label: string;
 	caption: string;
-	icon: 'overview' | 'servers' | 'settings' | 'playlists' | 'commands' | 'status' | 'account' | 'support' | 'collapse' | 'chevron';
+	icon: 'home' | 'overview' | 'servers' | 'settings' | 'playlists' | 'commands' | 'status' | 'account' | 'support' | 'collapse' | 'chevron';
 	href?: string;
 	active?: boolean;
 	disabled?: boolean;
@@ -48,6 +48,14 @@ function DashboardSidebarIcon({ name, className = 'h-5 w-5' }: { name: SidebarLi
 	};
 
 	switch (name) {
+		case 'home':
+			return (
+				<svg {...sharedProps}>
+					<path d="M4.75 10.5 12 4l7.25 6.5" />
+					<path d="M6.5 9.5v9h11v-9" />
+					<path d="M10 18v-4h4v4" />
+				</svg>
+			);
 		case 'overview':
 			return (
 				<svg {...sharedProps}>
@@ -185,6 +193,14 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 	const canOpenGuildSettings = Boolean(effectiveBotId && effectiveGuildId) && (canManageGuild !== false || activeKey === 'guild-settings');
 	const sidebarPrimaryLinks: SidebarLink[] = [
 		{
+			key: 'home',
+			label: 'Home',
+			caption: 'Main site',
+			icon: 'home',
+			href: publicSiteUrl,
+			external: true,
+		},
+		{
 			key: 'overview',
 			label: 'Overview',
 			caption: 'Player control',
@@ -302,8 +318,9 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 		}
 
 		if (item.external) {
+			const shouldOpenNewTab = item.key === 'support';
 			return (
-				<a className={className} href={item.href} key={item.key} rel="noreferrer" target="_blank">
+				<a className={className} href={item.href} key={item.key} rel={shouldOpenNewTab ? 'noreferrer' : undefined} target={shouldOpenNewTab ? '_blank' : undefined}>
 					{content}
 				</a>
 			);
@@ -325,11 +342,12 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 					}`}
 				>
 					<div className="flex items-center justify-between gap-3">
-						<button
+						<Link
 							className={`flex min-w-0 flex-1 items-center gap-3 rounded-[1.2rem] border border-white/10 bg-white/[0.035] px-3 py-3 text-left transition hover:border-primary/20 hover:bg-white/[0.05] ${
 								isSidebarCollapsed ? 'justify-center px-0' : ''
 							}`}
-							type="button"
+							href="/settings"
+							title="Open account settings"
 						>
 							{isSidebarCollapsed ? (
 								<div className="flex h-11 w-11 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
@@ -356,7 +374,7 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 									<DashboardSidebarIcon className="h-4 w-4 text-white/38" name="chevron" />
 								</>
 							)}
-						</button>
+						</Link>
 						<button
 							aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
 							className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] border border-white/10 bg-white/[0.035] text-white/72 transition hover:border-primary/20 hover:text-primary"
