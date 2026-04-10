@@ -61,6 +61,11 @@ const getHealthTone = (label: string) => {
 	return 'status-badge-degraded';
 };
 
+const formatLatency = (value: number | null | undefined) => {
+	if (typeof value !== 'number' || !Number.isFinite(value)) return '--';
+	return `${Math.round(value)}ms`;
+};
+
 export function StatusClient() {
 	const [state, setState] = useState<StatusState>({
 		stats: null,
@@ -197,7 +202,7 @@ export function StatusClient() {
 					const eventLabel =
 						payload.event === 'disconnect' || payload.event === 'death' ? 'Alert' : payload.event === 'resume' || payload.event === 'ready' ? 'Recovery' : 'Shard';
 					const eventTitle = `Shard ${payload.shard.shardId} ${payload.event}`;
-					const eventBody = `${payload.instanceId} is now ${payload.shard.status} at ${payload.shard.latency}ms latency.`;
+					const eventBody = `${payload.instanceId} is now ${payload.shard.status} at ${formatLatency(payload.shard.latency)} latency.`;
 					setRealtimeFeed((current) =>
 						[
 							{
@@ -264,7 +269,7 @@ export function StatusClient() {
 					id: `${instance.botId}:${instance.instanceId}:health`,
 					label: health,
 					title: `${instance.instanceId} ${health.toLowerCase()}`,
-					body: `${formatCompactNumber(instance.guildCount)} guilds, ${formatCompactNumber(instance.userCount)} users, ${instance.latency}ms latency.`,
+					body: `${formatCompactNumber(instance.guildCount)} guilds, ${formatCompactNumber(instance.userCount)} users, ${formatLatency(instance.latency)} latency.`,
 				},
 				...(reconnecting.length
 					? [
@@ -353,9 +358,7 @@ export function StatusClient() {
 					</article>
 					<article className="status-summary-card">
 						<div className="metric-label">Average latency</div>
-						<div className="mt-3 font-headline text-3xl font-bold tracking-[-0.05em] text-white">
-							{typeof averageLatency === 'number' ? `${averageLatency}ms` : '--'}
-						</div>
+						<div className="mt-3 font-headline text-3xl font-bold tracking-[-0.05em] text-white">{formatLatency(averageLatency)}</div>
 					</article>
 				</div>
 			</section>
@@ -406,7 +409,7 @@ export function StatusClient() {
 
 											<div className="flex flex-wrap gap-2">
 												<div className={`status-badge ${getHealthTone(health)}`}>{health}</div>
-												<div className="status-badge status-badge-neutral">{instance.latency}ms</div>
+												<div className="status-badge status-badge-neutral">{formatLatency(instance.latency)}</div>
 											</div>
 										</div>
 
@@ -499,7 +502,7 @@ export function StatusClient() {
 										<div className="mt-2 font-headline text-2xl font-bold tracking-[-0.05em] text-white">{shard.status}</div>
 									</div>
 									<div className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.2em] text-white/70">
-										{shard.latency}ms
+										{formatLatency(shard.latency)}
 									</div>
 								</div>
 

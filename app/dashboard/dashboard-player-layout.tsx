@@ -1,9 +1,18 @@
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
-import { useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useTheme } from '@/components/theme-provider';
 import { buildDashboardPath } from '@/lib/dashboard-routes';
-import { formatDuration, type AuthGuild, type AuthUser, type CommandFeedback, type GuildPlayerState, type Track } from '@/lib/api';
+import {
+	formatDuration,
+	type AuthGuild,
+	type AuthUser,
+	type CommandFeedback,
+	type GuildPlayerState,
+	type SearchPlaylistResult,
+	type SearchTrackResult,
+	type Track,
+} from '@/lib/api';
 import { formatCommandFeedbackPhase, formatCommandTypeLabel, formatShortCommandId, getCommandFeedbackToneClasses } from '@/lib/command-feedback';
 
 type SelectedBot = {
@@ -278,6 +287,11 @@ export type DashboardPlayerLayoutProps = {
 	queueCount: number;
 	queueDuration: number;
 	queueTracks: Track[];
+	queueingSearchUrl: string | null;
+	searchError: string | null;
+	searchPlaylist: SearchPlaylistResult | null;
+	searchQuery: string;
+	searchResults: SearchTrackResult[];
 	sidebarNotice: SidebarNotice | null;
 	selectedBot: SelectedBot | null;
 	selectedGuild: AuthGuild | null;
@@ -286,12 +300,17 @@ export type DashboardPlayerLayoutProps = {
 	syncedDisplayPosition: number;
 	trackDuration: number;
 	volumeDraft: number;
+	isSearchLoading: boolean;
 	onBassboostDraftChange: (value: number) => void;
 	onDismissNotice: () => void;
 	onRefreshState: () => void;
 	onRemoveQueuedTrack: (index: number) => void;
 	onScrubChange: (value: number) => void;
 	onScrubStart: () => void;
+	onSearchReset: () => void;
+	onSearchQueryChange: (value: string) => void;
+	onSearchResultAdd: (trackUrl: string, trackData?: Record<string, unknown> | null) => Promise<boolean>;
+	onSearchSubmit: () => void;
 	onSendCommand: (action: PlayerAction) => void;
 	onSendPremiumControl: (action: PremiumAction, body: Record<string, unknown>) => void;
 	onSidebarToggle: () => void;
@@ -305,6 +324,7 @@ export type DashboardPlayerLayoutProps = {
 
 export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 	const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+	const lastAutoSearchQueryRef = useRef('');
 	const {
 		activePremiumFilters,
 		activityState,
@@ -339,6 +359,11 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 		queueCount,
 		queueDuration,
 		queueTracks,
+		queueingSearchUrl,
+		searchError,
+		searchPlaylist,
+		searchQuery,
+		searchResults,
 		sidebarNotice,
 		selectedBot,
 		selectedGuild,
@@ -347,12 +372,17 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 		syncedDisplayPosition,
 		trackDuration,
 		volumeDraft,
+		isSearchLoading,
 		onBassboostDraftChange,
 		onDismissNotice,
 		onRefreshState,
 		onRemoveQueuedTrack,
 		onScrubChange,
 		onScrubStart,
+		onSearchReset,
+		onSearchQueryChange,
+		onSearchResultAdd,
+		onSearchSubmit,
 		onSendCommand,
 		onSendPremiumControl,
 		onSidebarToggle,
@@ -371,6 +401,35 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 	const accountDisplayName = authUser ? authUser.globalName || authUser.username : 'Dashboard guest';
 	const accountHandle = authUser?.username ? `@${authUser.username}` : 'Profile & preferences';
 	const queuePreview = queueTracks.slice(0, 6);
+	const searchDisabledReason = !authUser
+		? 'Sign in with Discord to search and queue tracks from the dashboard.'
+		: !selectedGuild
+			? 'Choose a shared server first before searching.'
+			: !hasVoiceChannelContext
+				? 'Join a permitted voice channel to search and queue tracks from the dashboard.'
+				: null;
+
+	useEffect(() => {
+		if (!isSearchModalOpen) {
+			lastAutoSearchQueryRef.current = '';
+			return;
+		}
+		const trimmedQuery = searchQuery.trim();
+		if (trimmedQuery.length < 3 || searchDisabledReason || isSearchLoading || trimmedQuery === lastAutoSearchQueryRef.current) return;
+
+		const timeout = window.setTimeout(() => {
+			lastAutoSearchQueryRef.current = trimmedQuery;
+			onSearchSubmit();
+		}, 320);
+
+		return () => window.clearTimeout(timeout);
+	}, [isSearchLoading, isSearchModalOpen, onSearchSubmit, searchDisabledReason, searchQuery]);
+
+	useEffect(() => {
+		if (!isSearchModalOpen && (searchQuery || searchError || searchResults.length || searchPlaylist)) {
+			onSearchReset();
+		}
+	}, [isSearchModalOpen, onSearchReset, searchError, searchPlaylist, searchQuery, searchResults.length]);
 	const botMenuStyle = botMenuPosition
 		? {
 				left: `${botMenuPosition.left}px`,
@@ -505,13 +564,18 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 	];
 
 	const renderSidebarLink = (item: SidebarLink) => {
+		const isComingSoon = Boolean(item.comingSoon);
 		const baseClassName = `group flex w-full items-center gap-3 rounded-[1.15rem] border px-3 py-3 text-left transition ${
 			item.active
 				? `border-primary/25 bg-primary/12 ${mainTextClass} shadow-[0_14px_40px_rgba(0,255,255,0.12)]`
 				: item.disabled
-					? isLight
-						? 'border-slate-200/50 bg-transparent text-slate-400'
-						: 'border-white/6 bg-transparent text-white/32'
+					? isComingSoon
+						? isLight
+							? 'cursor-not-allowed border-transparent bg-transparent text-slate-700 hover:border-slate-200 hover:bg-white/75 hover:text-slate-950'
+							: 'cursor-not-allowed border-transparent bg-transparent text-white/72 hover:border-white/8 hover:bg-white/[0.04] hover:text-white'
+						: isLight
+							? 'border-slate-200/50 bg-transparent text-slate-400'
+							: 'border-white/6 bg-transparent text-white/32'
 					: isLight
 						? 'border-transparent bg-transparent text-slate-700 hover:border-slate-200 hover:bg-white/75 hover:text-slate-950'
 						: 'border-transparent bg-transparent text-white/72 hover:border-white/8 hover:bg-white/[0.04] hover:text-white'
@@ -523,9 +587,13 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 						item.active
 							? 'border-primary/30 bg-primary/15 text-primary'
 							: item.disabled
-								? isLight
-									? 'border-slate-200/60 bg-slate-100/80 text-slate-400'
-									: 'border-white/5 bg-white/[0.02] text-white/25'
+								? isComingSoon
+									? isLight
+										? 'border-slate-200/80 bg-white/82 text-slate-700'
+										: 'border-white/10 bg-white/[0.04] text-white/80'
+									: isLight
+										? 'border-slate-200/60 bg-slate-100/80 text-slate-400'
+										: 'border-white/5 bg-white/[0.02] text-white/25'
 								: isLight
 									? 'border-slate-200/80 bg-white/82 text-slate-700'
 									: 'border-white/10 bg-white/[0.04] text-white/80'
@@ -538,16 +606,26 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 					<div className={`mt-1 truncate text-xs ${faintTextClass}`}>{item.caption}</div>
 				</div>
 				{!isSidebarCollapsed && item.comingSoon ? (
-					<span className="rounded-full border border-secondary/25 bg-secondary/12 px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-secondary">
-						Soon
-					</span>
+					<span className="rounded-full bg-secondary/12 px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-secondary">Soon</span>
 				) : null}
 			</>
 		);
 
 		if (!item.href || item.disabled) {
 			return (
-				<button className={baseClassName} disabled key={item.label} title={item.comingSoon ? 'Coming soon' : item.caption} type="button">
+				<button
+					aria-disabled={item.disabled}
+					className={baseClassName}
+					disabled={item.disabled && !isComingSoon}
+					key={item.label}
+					onClick={(event) => {
+						if (item.disabled) {
+							event.preventDefault();
+						}
+					}}
+					title={item.comingSoon ? 'Coming soon' : item.caption}
+					type="button"
+				>
 					{content}
 				</button>
 			);
@@ -1233,7 +1311,7 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 								<div className="flex items-start justify-between gap-4">
 									<div>
 										<div className="text-xs font-extrabold uppercase tracking-[0.24em] text-primary">Search tracks</div>
-										<h2 className={`mt-3 font-headline text-3xl font-bold tracking-[-0.05em] ${mainTextClass}`}>Coming soon</h2>
+										<h2 className={`mt-3 font-headline text-3xl font-bold tracking-[-0.05em] ${mainTextClass}`}>Queue from dashboard</h2>
 									</div>
 									<button
 										aria-label="Close search modal"
@@ -1245,13 +1323,113 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 									</button>
 								</div>
 								<p className={`mt-4 text-sm leading-7 ${subTextClass}`}>
-									Track search from the dashboard is planned next. This modal is the future entry point for searching songs and queueing them directly from the
-									web player.
+									Search by title, artist, or URL and send tracks straight into the live Lunio queue without leaving the dashboard.
 								</p>
 								<div className={`mt-5 rounded-[1.35rem] border px-4 py-4 ${softSurfaceClass}`}>
-									<div className="text-xs font-extrabold uppercase tracking-[0.22em] text-primary">Preview</div>
-									<input className="field-input mt-3" disabled placeholder="Search by title, artist or URL" type="text" value="" />
-									<div className={`mt-3 text-sm ${faintTextClass}`}>The backend search endpoint is not live yet, so this is temporarily disabled.</div>
+									<div className="text-xs font-extrabold uppercase tracking-[0.22em] text-primary">Search query</div>
+									<div className="mt-3">
+										<input
+											className="field-input min-w-0 w-full"
+											disabled={Boolean(searchDisabledReason)}
+											onChange={(event) => onSearchQueryChange(event.target.value)}
+											placeholder="Search by title, artist or URL"
+											type="text"
+											value={searchQuery}
+										/>
+									</div>
+									<div className={`mt-3 text-sm ${faintTextClass}`}>
+										{searchDisabledReason ??
+											(searchQuery.trim().length >= 3
+												? isSearchLoading
+													? 'Searching automatically...'
+													: 'Results update automatically as you type.'
+												: 'Type at least 3 characters to start searching.')}
+									</div>
+								</div>
+								<div className="mt-5">
+									<div className="text-xs font-extrabold uppercase tracking-[0.22em] text-primary">Results</div>
+									{searchError ? (
+										<div
+											className={`mt-3 rounded-[1.2rem] border px-4 py-3 text-sm leading-7 ${softSurfaceClass} ${isLight ? 'text-rose-600' : 'text-rose-200'}`}
+										>
+											{searchError}
+										</div>
+									) : null}
+									{searchPlaylist ? (
+										<div className={`mt-3 rounded-[1.25rem] border px-4 py-4 ${softSurfaceClass}`}>
+											<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+												<div className="flex min-w-0 items-center gap-4">
+													{searchPlaylist.artworkUrl ? (
+														// eslint-disable-next-line @next/next/no-img-element
+														<img
+															alt={searchPlaylist.title}
+															className="h-16 w-16 shrink-0 rounded-[1rem] border border-white/10 object-cover"
+															src={searchPlaylist.artworkUrl}
+														/>
+													) : null}
+													<div className="min-w-0">
+														<div className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-primary">Playlist match</div>
+														<div className={`mt-2 truncate text-base font-semibold ${mainTextClass}`}>{searchPlaylist.title}</div>
+														<div className={`mt-1 truncate text-sm ${subTextClass}`}>
+															{searchPlaylist.author ? `${searchPlaylist.author} - ` : ''}
+															{searchPlaylist.trackCount} tracks
+														</div>
+													</div>
+												</div>
+												<button
+													className="primary-button min-w-[10rem] justify-center"
+													disabled={isBusy || Boolean(searchDisabledReason) || queueingSearchUrl === searchPlaylist.url}
+													onClick={async () => {
+														const didQueue = await onSearchResultAdd(searchPlaylist.url);
+														if (didQueue) {
+															closeSearchModal();
+														}
+													}}
+													type="button"
+												>
+													{queueingSearchUrl === searchPlaylist.url ? 'Adding...' : 'Add Playlist'}
+												</button>
+											</div>
+										</div>
+									) : null}
+									{!searchPlaylist && !searchResults.length && !searchError ? (
+										<div className={`mt-3 rounded-[1.2rem] border px-4 py-3 text-sm leading-7 ${softSurfaceClass} ${faintTextClass}`}>
+											Type at least 3 characters to see matching tracks here.
+										</div>
+									) : null}
+									{searchResults.length ? (
+										<div className="mt-3 max-h-[21rem] space-y-3 overflow-y-auto pr-1">
+											{searchResults.map((result, index) => {
+												const isQueueingThisResult = queueingSearchUrl === result.url;
+												return (
+													<div
+														className={`flex flex-col gap-3 rounded-[1.2rem] border px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${softSurfaceClass}`}
+														key={`${result.url}|${result.title}|${result.artist}|${index}`}
+													>
+														<div className="min-w-0">
+															<div className={`truncate text-sm font-semibold ${mainTextClass}`}>{result.title}</div>
+															<div className={`mt-1 truncate text-sm ${subTextClass}`}>
+																{result.artist} - {formatDuration(result.duration)}
+															</div>
+														</div>
+														<button
+															className="secondary-button min-w-[8rem] justify-center"
+															disabled={isBusy || Boolean(searchDisabledReason) || isQueueingThisResult}
+															onClick={async () => {
+																const didQueue = await onSearchResultAdd(result.url, result.trackData ?? null);
+																if (didQueue) {
+																	closeSearchModal();
+																}
+															}}
+															type="button"
+														>
+															{isQueueingThisResult ? 'Adding...' : searchPlaylist ? 'Add Track' : 'Add to Queue'}
+														</button>
+													</div>
+												);
+											})}
+										</div>
+									) : null}
 								</div>
 								<div className="mt-6 flex justify-end">
 									<button className="ghost-button px-4 py-2 text-sm" onClick={closeSearchModal} type="button">

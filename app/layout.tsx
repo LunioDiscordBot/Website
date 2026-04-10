@@ -55,7 +55,7 @@ export default async function RootLayout({
 	const initialLanguage = await getServerSiteLanguage();
 
 	return (
-		<html lang={initialLanguage} suppressHydrationWarning>
+		<html lang={initialLanguage} suppressHydrationWarning data-scroll-behavior="smooth">
 			<head>
 				<script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
 			</head>

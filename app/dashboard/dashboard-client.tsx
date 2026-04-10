@@ -7,7 +7,7 @@ import { DashboardRouteState } from '@/components/dashboard-route-state';
 import { DashboardPlayerLayout } from './dashboard-player-layout';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
 	apiJson,
 	buildBotScopedPath,
@@ -23,6 +23,8 @@ import {
 	type FrontendEvent,
 	type GuildMetadata,
 	type GuildPlayerState,
+	type SearchPlaylistResult,
+	type SearchTrackResult,
 	type Track,
 } from '@/lib/api';
 import {
@@ -50,6 +52,11 @@ type PlayerFilters = GuildPlayerState['filters'];
 type PlayerCommandAction = 'join' | 'leave' | 'previous' | 'skip' | 'queue/remove' | 'shuffle' | 'repeat' | 'pause' | 'resume' | 'stop' | 'volume' | 'seek';
 type PremiumControlAction = 'autoplay' | 'bassboost' | 'speed' | 'filter' | 'filter/reset';
 type RequesterPermissions = NonNullable<GuildMetadata['requester']>;
+type SearchResultsData = {
+	query?: string;
+	playlist?: SearchPlaylistResult | null;
+	results?: SearchTrackResult[];
+};
 
 const STORAGE_KEYS = {
 	botId: 'lunio:web:botId',
@@ -378,19 +385,68 @@ function getTrackIdentity(track: Track | null | undefined) {
 	return `${track.url}|${track.title}|${track.artist}`;
 }
 
-function normalizeFetchedPlayerState(state: GuildPlayerState | null): GuildPlayerState | null {
+function isIncomingPlayerStateNewer(current: GuildPlayerState | null, incomingRevision: number, incomingUpdatedAt: number) {
+	if (!current) return true;
+	if (incomingRevision > current.revision) return true;
+	if (incomingRevision < current.revision) return false;
+	return incomingUpdatedAt >= current.updatedAt;
+}
+
+function normalizeFetchedPlayerState(state: GuildPlayerState | null, current: GuildPlayerState | null = null): GuildPlayerState | null {
 	if (!state) return null;
+	if (!isIncomingPlayerStateNewer(current, Number(state.revision ?? 0), Number(state.updatedAt ?? 0))) {
+		return current;
+	}
+
+	const sameTrack = getTrackIdentity(state.currentTrack) !== null && getTrackIdentity(state.currentTrack) === getTrackIdentity(current?.currentTrack);
+	const currentLivePosition = sameTrack && current?.currentTrack ? getLivePlayerPosition(current, current.currentTrack.duration ?? 0) : 0;
+	const fetchedPosition = state.currentTrack ? Math.max(0, Number(state.position ?? 0)) : 0;
 
 	return {
 		...state,
+		revision: Number(state.revision ?? 0),
 		updatedAt: Date.now(),
-		position: state.currentTrack ? Math.max(0, Number(state.position ?? 0)) : 0,
+		position: state.currentTrack ? (sameTrack && !state.paused && !(current?.paused ?? false) ? Math.max(fetchedPosition, currentLivePosition) : fetchedPosition) : 0,
 		filters: normalizePlayerFilters(state.filters, DEFAULT_PLAYER_FILTERS),
 	};
 }
 
+function isSearchTrackResult(value: unknown): value is SearchTrackResult {
+	return Boolean(
+		value &&
+		typeof value === 'object' &&
+		typeof (value as SearchTrackResult).title === 'string' &&
+		typeof (value as SearchTrackResult).artist === 'string' &&
+		typeof (value as SearchTrackResult).duration === 'number' &&
+		typeof (value as SearchTrackResult).url === 'string'
+	);
+}
+
+function isSearchPlaylistResult(value: unknown): value is SearchPlaylistResult {
+	return Boolean(
+		value &&
+		typeof value === 'object' &&
+		typeof (value as SearchPlaylistResult).title === 'string' &&
+		typeof (value as SearchPlaylistResult).url === 'string' &&
+		typeof (value as SearchPlaylistResult).trackCount === 'number'
+	);
+}
+
+function extractSearchResults(data: Record<string, unknown> | undefined | null): SearchTrackResult[] {
+	const candidate = (data as SearchResultsData | undefined)?.results;
+	return Array.isArray(candidate) ? candidate.filter(isSearchTrackResult) : [];
+}
+
+function extractSearchPlaylist(data: Record<string, unknown> | undefined | null): SearchPlaylistResult | null {
+	const candidate = (data as SearchResultsData | undefined)?.playlist;
+	return isSearchPlaylistResult(candidate) ? candidate : null;
+}
+
 function buildRealtimePlayerState(current: GuildPlayerState | null, payload: Extract<FrontendEvent, { type: 'PLAYER_STATE_UPDATE' }>): GuildPlayerState | null {
 	const receivedAt = Date.now();
+	if (!isIncomingPlayerStateNewer(current, Number(payload.revision ?? 0), Number(payload.updatedAt ?? 0))) {
+		return current;
+	}
 	const hasNoPlayerState = payload.state === 'DISCONNECTED' && payload.currentTrack === null && payload.voiceChannelId === null;
 	if (hasNoPlayerState) return null;
 
@@ -400,6 +456,7 @@ function buildRealtimePlayerState(current: GuildPlayerState | null, payload: Ext
 		botId: payload.botId,
 		guildId: payload.guildId,
 		instanceId: payload.instanceId,
+		revision: Number(payload.revision ?? 0),
 		state: payload.state,
 		currentTrack: payload.currentTrack,
 		queue: current?.queue ?? [],
@@ -421,12 +478,16 @@ function buildRealtimePlayerState(current: GuildPlayerState | null, payload: Ext
 
 function buildQueueSyncedPlayerState(current: GuildPlayerState | null, payload: Extract<FrontendEvent, { type: 'QUEUE_UPDATE' }>): GuildPlayerState | null {
 	const receivedAt = Date.now();
+	if (!isIncomingPlayerStateNewer(current, Number(payload.revision ?? 0), Number(payload.updatedAt ?? 0))) {
+		return current;
+	}
 	const trackChanged = getTrackIdentity(current?.currentTrack) !== getTrackIdentity(payload.currentTrack);
 
 	if (payload.currentTrack === null && payload.queue.length === 0) {
 		return current?.state === 'CONNECTED'
 			? {
 					...current,
+					revision: Number(payload.revision ?? 0),
 					currentTrack: null,
 					queue: [],
 					position: 0,
@@ -451,6 +512,7 @@ function buildQueueSyncedPlayerState(current: GuildPlayerState | null, payload: 
 		botId: payload.botId,
 		guildId: payload.guildId,
 		instanceId: payload.instanceId,
+		revision: Number(payload.revision ?? 0),
 		state: payload.currentTrack || payload.queue.length ? 'CONNECTED' : 'DISCONNECTED',
 		currentTrack: payload.currentTrack,
 		queue: payload.queue,
@@ -494,6 +556,12 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 	const [hasLoadedSidebarPrefs, setHasLoadedSidebarPrefs] = useState(false);
 	const [voiceToggleCooldownUntil, setVoiceToggleCooldownUntil] = useState(0);
 	const [hasLoadedBotOptions, setHasLoadedBotOptions] = useState(false);
+	const [searchQuery, setSearchQuery] = useState('');
+	const [searchPlaylist, setSearchPlaylist] = useState<SearchPlaylistResult | null>(null);
+	const [searchResults, setSearchResults] = useState<SearchTrackResult[]>([]);
+	const [searchError, setSearchError] = useState<string | null>(null);
+	const [isSearchLoading, setIsSearchLoading] = useState(false);
+	const [queueingSearchUrl, setQueueingSearchUrl] = useState<string | null>(null);
 	const [lastKnownRequesterPermissions, setLastKnownRequesterPermissions] = useState<{
 		value: RequesterPermissions;
 		recordedAt: number;
@@ -526,7 +594,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 		if (!botId || !guildId) return;
 		try {
 			const state = await apiJson<GuildPlayerState | null>(buildBotScopedPath(botId, guildId, '/player'));
-			setPlayer(normalizeFetchedPlayerState(state));
+			setPlayer((current) => normalizeFetchedPlayerState(state, current));
 			setPlayerError(null);
 		} catch (error) {
 			setPlayer(null);
@@ -792,16 +860,27 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 		setSpeedDraft(player?.filters?.speed?.level ?? 1);
 	}, [player?.filters?.bassBoost?.level, player?.filters?.speed?.level]);
 
-	const pollCommand = async (commandId: string) => {
+	const waitForCommandResult = async (commandId: string, onStatus?: (status: CommandStatus) => void) => {
 		for (let attempt = 0; attempt < 12; attempt += 1) {
 			const status = await apiJson<CommandStatus>(`/api/commands/${commandId}`);
-			setCommandFeedback((current) => (current.commandId === commandId ? buildCommandFeedbackFromStatus(status) : current));
+			onStatus?.(status);
 			if (status.result) {
-				return;
+				return status;
 			}
 			await new Promise((resolve) => window.setTimeout(resolve, 900));
 		}
+		return null;
+	};
+
+	const pollCommand = async (commandId: string) => {
+		const status = await waitForCommandResult(commandId, (nextStatus) => {
+			setCommandFeedback((current) => (current.commandId === commandId ? buildCommandFeedbackFromStatus(nextStatus) : current));
+		});
+		if (status) {
+			return status;
+		}
 		setCommandFeedback((current) => (current.commandId === commandId ? buildTimedOutCommandFeedback(current) : current));
+		return null;
 	};
 
 	const sendCommand = async (type: PlayerCommandAction, overrides?: Record<string, unknown>) => {
@@ -1030,6 +1109,125 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 	const canUsePlayerDjControls = Boolean(hasConnectedPlayer && canUseDjControls);
 	const canUseAutoplayControl = Boolean(hasConnectedPlayer && canUsePremiumControls && hasVoiceChannelContext);
 	const canUsePremiumDjControls = Boolean(hasConnectedPlayer && canUsePremiumControls && canUseDjControls);
+
+	const updateSearchQuery = useCallback(
+		(value: string) => {
+			setSearchQuery(value);
+			if (value.trim().length < 3) {
+				setSearchPlaylist(null);
+				setSearchResults([]);
+			}
+			if (searchError) {
+				setSearchError(null);
+			}
+		},
+		[searchError]
+	);
+
+	const resetSearchState = useCallback(() => {
+		setSearchError(null);
+		setSearchPlaylist(null);
+		setSearchResults([]);
+		setIsSearchLoading(false);
+	}, []);
+
+	const runSearch = useCallback(async () => {
+		const query = searchQuery.trim();
+		if (!form.botId.trim() || !form.guildId.trim() || !form.userId.trim()) {
+			setSearchError('Sign in and choose a server before searching.');
+			setSearchPlaylist(null);
+			setSearchResults([]);
+			return;
+		}
+		if (!requesterVoiceChannelId) {
+			setSearchError('Join a permitted voice channel before searching from the dashboard.');
+			setSearchPlaylist(null);
+			setSearchResults([]);
+			return;
+		}
+		if (query.length < 3) {
+			setSearchError(null);
+			setSearchPlaylist(null);
+			setSearchResults([]);
+			return;
+		}
+
+		setIsSearchLoading(true);
+		setSearchError(null);
+		setSearchPlaylist(null);
+		setSearchResults([]);
+		try {
+			const accepted = await apiJson<AcceptedCommandResponse>(buildBotScopedPath(form.botId.trim(), form.guildId.trim(), '/player/search'), {
+				method: 'POST',
+				body: JSON.stringify({
+					userId: form.userId.trim(),
+					memberVoiceChannelId: requesterVoiceChannelId,
+					query,
+					limit: 5,
+				}),
+			});
+			const status = await waitForCommandResult(accepted.commandId);
+			if (!status?.result) {
+				setSearchPlaylist(null);
+				setSearchResults([]);
+				setSearchError('Search timed out. Try again in a moment.');
+				return;
+			}
+
+			const playlist = extractSearchPlaylist(status.result.data);
+			const results = extractSearchResults(status.result.data);
+			setSearchPlaylist(playlist);
+			setSearchResults(results);
+			setSearchError(status.result.success ? (results.length ? null : status.result.message) : status.result.message);
+		} catch (error) {
+			setSearchPlaylist(null);
+			setSearchResults([]);
+			setSearchError(error instanceof Error ? error.message : 'Unable to search tracks right now.');
+		} finally {
+			setIsSearchLoading(false);
+		}
+	}, [form.botId, form.guildId, form.userId, requesterVoiceChannelId, searchQuery]);
+
+	const addSearchResultToQueue = useCallback(
+		async (trackUrl: string, trackData?: Record<string, unknown> | null) => {
+			if (!trackUrl) return false;
+			if (!form.botId.trim() || !form.guildId.trim() || !form.userId.trim()) {
+				setCommandFeedback(buildFailedCommandFeedback('Sign in and choose a server before queueing tracks.', 'PLAYER_SEARCH_ADD'));
+				return false;
+			}
+
+			setQueueingSearchUrl(trackUrl);
+			setIsBusy(true);
+			setCommandFeedback(buildSendingCommandFeedback('PLAYER_SEARCH_ADD', 'Queueing the selected track from search.'));
+			try {
+				const accepted = await apiJson<AcceptedCommandResponse>(buildBotScopedPath(form.botId.trim(), form.guildId.trim(), '/player/search/add'), {
+					method: 'POST',
+					body: JSON.stringify({
+						userId: form.userId.trim(),
+						memberVoiceChannelId: requesterVoiceChannelId,
+						trackUrl,
+						trackData: trackData && typeof trackData === 'object' ? trackData : null,
+					}),
+				});
+				setCommandFeedback(buildAcceptedCommandFeedback(accepted));
+				const status = await pollCommand(accepted.commandId);
+				if (status?.result?.success) {
+					await refreshDashboardState(form.botId.trim(), form.guildId.trim());
+					return true;
+				}
+			} catch (error) {
+				const message = error instanceof Error ? error.message : 'Unable to queue the selected track';
+				setCommandFeedback(buildFailedCommandFeedback(message, 'PLAYER_SEARCH_ADD'));
+				await refreshDashboardState(form.botId.trim(), form.guildId.trim());
+			} finally {
+				setQueueingSearchUrl(null);
+				setIsBusy(false);
+			}
+			return false;
+		},
+		[form.botId, form.guildId, form.userId, requesterVoiceChannelId, refreshDashboardState]
+	);
+
 	const sidebarNotice: DashboardPlayerLayoutProps['sidebarNotice'] =
 		commandFeedback.phase === 'failed' || commandFeedback.phase === 'timed_out'
 			? {
@@ -1785,6 +1983,11 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 			queueCount={queueCount}
 			queueDuration={queueDuration}
 			queueTracks={queueTracks}
+			queueingSearchUrl={queueingSearchUrl}
+			searchError={searchError}
+			searchPlaylist={searchPlaylist}
+			searchQuery={searchQuery}
+			searchResults={searchResults}
 			sidebarNotice={sidebarNotice}
 			selectedBot={selectedBot}
 			selectedGuild={selectedGuild}
@@ -1793,12 +1996,17 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 			syncedDisplayPosition={syncedDisplayPosition}
 			trackDuration={trackDuration}
 			volumeDraft={volumeDraft}
+			isSearchLoading={isSearchLoading}
 			onBassboostDraftChange={setBassboostDraft}
 			onDismissNotice={() => setShowSidebarNotice(false)}
 			onRefreshState={() => void refreshDashboardState()}
 			onRemoveQueuedTrack={(index) => void removeQueuedTrack(index)}
 			onScrubChange={setScrubValue}
 			onScrubStart={() => setIsScrubbing(true)}
+			onSearchReset={resetSearchState}
+			onSearchQueryChange={updateSearchQuery}
+			onSearchResultAdd={addSearchResultToQueue}
+			onSearchSubmit={() => void runSearch()}
 			onSendCommand={(action) => void sendCommand(action)}
 			onSendPremiumControl={(action, body) => void sendPremiumControl(action, body)}
 			onSidebarToggle={() => setIsSidebarCollapsed((current) => !current)}

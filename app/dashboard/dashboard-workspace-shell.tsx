@@ -269,11 +269,14 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 	];
 
 	const renderSidebarLink = (item: SidebarLink) => {
+		const isComingSoon = Boolean(item.comingSoon);
 		const className = `group flex w-full items-center gap-3 rounded-[1.15rem] border px-3 py-3 text-left transition ${
 			item.active
 				? 'border-primary/25 bg-primary/12 text-white shadow-[0_14px_40px_rgba(0,255,255,0.12)]'
 				: item.disabled
-					? 'border-white/6 bg-transparent text-white/32'
+					? isComingSoon
+						? 'cursor-not-allowed border-transparent bg-transparent text-white/72 hover:border-white/10 hover:bg-white/[0.035] hover:text-white'
+						: 'border-white/6 bg-transparent text-white/32'
 					: 'border-transparent bg-transparent text-white/72 hover:border-white/10 hover:bg-white/[0.035] hover:text-white'
 		}`;
 
@@ -284,7 +287,9 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 						item.active
 							? 'border-primary/18 bg-primary/12 text-primary'
 							: item.disabled
-								? 'border-white/6 bg-white/[0.02] text-white/24'
+								? isComingSoon
+									? 'border-white/10 bg-white/[0.03] text-white/78'
+									: 'border-white/6 bg-white/[0.02] text-white/24'
 								: 'border-white/10 bg-white/[0.03] text-white/78 group-hover:border-primary/20 group-hover:text-primary'
 					}`}
 				>
@@ -297,16 +302,24 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 					</div>
 				)}
 				{!isSidebarCollapsed && item.comingSoon ? (
-					<span className="rounded-full border border-secondary/25 bg-secondary/12 px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-secondary">
-						Soon
-					</span>
+					<span className="rounded-full bg-secondary/12 px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-secondary">Soon</span>
 				) : null}
 			</>
 		);
 
 		if (!item.href || item.disabled) {
 			return (
-				<div className={className} key={item.key}>
+				<div
+					aria-disabled={item.disabled}
+					className={className}
+					key={item.key}
+					onClick={(event) => {
+						if (item.disabled) {
+							event.preventDefault();
+						}
+					}}
+					title={item.comingSoon ? 'Coming soon' : item.caption}
+				>
 					{content}
 				</div>
 			);

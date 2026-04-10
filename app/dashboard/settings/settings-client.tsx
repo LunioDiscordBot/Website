@@ -42,6 +42,7 @@ type SettingsForm = {
 	VCs: string[];
 	CustomChannel: boolean;
 	mChannelID: string;
+	LogsChannelID: string;
 	mEmbedMode: 'v1' | 'v2';
 	SongUserLimit: number;
 	SongTimeLimitMS: number;
@@ -54,6 +55,7 @@ type MetadataState = {
 };
 
 const CREATE_CUSTOM_CHANNEL_VALUE = '__create__';
+const DISABLED_LOG_CHANNEL_VALUE = '__disabled__';
 
 const EMPTY_FORM: SettingsForm = {
 	Language: 'en-US',
@@ -69,6 +71,7 @@ const EMPTY_FORM: SettingsForm = {
 	VCs: [],
 	CustomChannel: false,
 	mChannelID: CREATE_CUSTOM_CHANNEL_VALUE,
+	LogsChannelID: DISABLED_LOG_CHANNEL_VALUE,
 	mEmbedMode: 'v1',
 	SongUserLimit: 0,
 	SongTimeLimitMS: 0,
@@ -96,6 +99,7 @@ function isUninitializedDashboardSettings(settings: GuildSettings | null) {
 		(settings.VCs?.length ?? 0) === 0 &&
 		settings.CustomChannel === false &&
 		settings.mChannelID == null &&
+		settings.LogsChannelID == null &&
 		settings.mEmbedMode === 'v1' &&
 		Number(settings.SongUserLimit ?? 0) === 0 &&
 		Number(settings.SongTimeLimitMS ?? 0) === 0 &&
@@ -122,6 +126,7 @@ function mergeSettings(settings: GuildSettings | null, metadata: GuildMetadata |
 		VCs: Array.isArray(source.VCs) ? source.VCs : [],
 		CustomChannel: Boolean(source.CustomChannel),
 		mChannelID: source.mChannelID ?? CREATE_CUSTOM_CHANNEL_VALUE,
+		LogsChannelID: source.LogsChannelID ?? DISABLED_LOG_CHANNEL_VALUE,
 		mEmbedMode: source.mEmbedMode === 'v2' ? 'v2' : 'v1',
 		SongUserLimit: Number(source.SongUserLimit ?? 0),
 		SongTimeLimitMS: Number(source.SongTimeLimitMS ?? 0),
@@ -147,6 +152,7 @@ function mergeSavedSettingsIntoMetadata(metadata: GuildMetadata | null, settings
 			DefaultVol: settings.DefaultVol,
 			Playlists: settings.Playlists,
 			twentyFourSeven: settings.twentyFourSeven,
+			LogsChannelID: settings.LogsChannelID,
 			permpremium: metadata.settings?.permpremium ?? false,
 			Language: settings.Language,
 			Requester: settings.Requester,
@@ -508,6 +514,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 				VCs: form.VCs,
 				CustomChannel: form.CustomChannel,
 				mChannelID: form.CustomChannel && form.mChannelID !== CREATE_CUSTOM_CHANNEL_VALUE ? form.mChannelID : null,
+				LogsChannelID: form.LogsChannelID !== DISABLED_LOG_CHANNEL_VALUE ? form.LogsChannelID : null,
 				CustomChannelSetupMode: customChannelSetupMode,
 				CustomChannelSetupChannelID: customChannelSetupMode === 'existing' && selectedExistingPanelChannelId ? selectedExistingPanelChannelId : null,
 				mEmbedMode: form.mEmbedMode,
@@ -550,6 +557,12 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 				VCs: current.VCs.filter((id) => (nextMetadata.voiceChannels ?? []).some((channel) => channel.id === id)),
 				mChannelID:
 					current.mChannelID === CREATE_CUSTOM_CHANNEL_VALUE ? CREATE_CUSTOM_CHANNEL_VALUE : current.mChannelID ? current.mChannelID : CREATE_CUSTOM_CHANNEL_VALUE,
+				LogsChannelID:
+					current.LogsChannelID === DISABLED_LOG_CHANNEL_VALUE
+						? DISABLED_LOG_CHANNEL_VALUE
+						: current.LogsChannelID && (nextMetadata.textChannels ?? []).some((channel) => channel.id === current.LogsChannelID)
+							? current.LogsChannelID
+							: DISABLED_LOG_CHANNEL_VALUE,
 			}));
 			setNotice(
 				`Channels and roles refreshed from Discord. ${nextMetadata.textChannels?.length ?? 0} text channels, ${nextMetadata.voiceChannels?.length ?? 0} voice channels, ${nextMetadata.roles?.length ?? 0} roles loaded.`
@@ -568,6 +581,27 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 	const textChannels = metadata?.textChannels ?? [];
 	const voiceChannels = metadata?.voiceChannels ?? [];
 	const roles = metadata?.roles ?? [];
+	const logsChannelOptions = useMemo(() => {
+		const options = [
+			{
+				value: DISABLED_LOG_CHANNEL_VALUE,
+				label: 'Disabled',
+			},
+			...textChannels.map((channel) => ({
+				value: channel.id,
+				label: `#${channel.name}`,
+			})),
+		];
+
+		if (form.LogsChannelID !== DISABLED_LOG_CHANNEL_VALUE && form.LogsChannelID && !options.some((option) => option.value === form.LogsChannelID)) {
+			options.push({
+				value: form.LogsChannelID,
+				label: `Current logs channel (${formatChannelLabel(form.LogsChannelID, textChannels)})`,
+			});
+		}
+
+		return options;
+	}, [form.LogsChannelID, textChannels]);
 	const panelChannelOptions = useMemo(() => {
 		const options = [
 			{
@@ -693,66 +727,100 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 				</div>
 			) : null}
 
-			<section className="dashboard-hero-card">
-				<div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-					<div>
-						<div className="eyebrow">Guild settings</div>
-						<h1 className="font-headline text-4xl font-bold tracking-[-0.06em] text-white sm:text-5xl">Configure this server</h1>
-						<p className="mt-4 max-w-2xl text-base leading-8 text-muted">
-							These controls now mirror the real Lunio guild settings used by the admin and premium commands instead of a generic placeholder schema.
-						</p>
+			<section className="dashboard-hero-card overflow-hidden">
+				<div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(0,255,255,0.08),transparent_32%),radial-gradient(circle_at_72%_18%,rgba(255,90,173,0.08),transparent_26%)]" />
+				<div className="relative flex flex-col gap-8">
+					<div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+						<div className="max-w-3xl">
+							<div className="eyebrow">Guild settings</div>
+							<h1 className="font-headline text-4xl font-bold tracking-[-0.06em] text-white sm:text-5xl">Run this server like a control room.</h1>
+							<p className="mt-4 max-w-2xl text-base leading-8 text-muted">
+								Shape Lunio’s voice behavior, request workspace, queue limits, and moderation flow from one focused admin surface.
+							</p>
+							<div className="mt-6 flex flex-wrap gap-3">
+								<div className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-white">
+									{selectedGuild?.name ?? guildId ?? 'No server selected'}
+								</div>
+								<div className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-white">
+									{selectedBot?.label ?? botId ?? 'No bot selected'}
+								</div>
+								<div
+									className={`rounded-full border px-4 py-2 text-sm font-bold ${premiumEnabled ? 'border-secondary/30 bg-secondary/10 text-secondary' : 'border-white/10 bg-white/[0.04] text-white/80'}`}
+								>
+									{premiumEnabled ? 'Premium active' : 'Premium inactive'}
+								</div>
+								<div
+									className={`rounded-full border px-4 py-2 text-sm font-bold ${customChannelEnabled ? 'border-primary/30 bg-primary/10 text-primary' : 'border-white/10 bg-white/[0.04] text-white/80'}`}
+								>
+									{customChannelEnabled ? 'Custom workspace live' : 'Standard message flow'}
+								</div>
+							</div>
+						</div>
+						<div className="flex flex-wrap gap-3 xl:justify-end">
+							<Link className="secondary-button px-4 py-2 text-sm" href={buildDashboardPath(botId, guildId)}>
+								Back to player
+							</Link>
+							<button
+								className="ghost-button gap-2 px-4 py-2 text-sm"
+								disabled={isRefreshingMetadata || isLoading}
+								onClick={() => void refreshMetadata()}
+								type="button"
+							>
+								<svg aria-hidden="true" className={`h-4 w-4 ${isRefreshingMetadata ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24">
+									<path d="M20 12a8 8 0 1 1-2.34-5.66" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+									<path d="M20 4v6h-6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+								</svg>
+								{isRefreshingMetadata ? 'Refreshing...' : 'Fetch channels & roles'}
+							</button>
+							<Link className="ghost-button px-4 py-2 text-sm" href="/servers">
+								Change server
+							</Link>
+						</div>
 					</div>
-					<div className="flex flex-wrap gap-3">
-						<Link className="secondary-button px-4 py-2 text-sm" href={buildDashboardPath(botId, guildId)}>
-							Back to player
-						</Link>
-						<button className="ghost-button gap-2 px-4 py-2 text-sm" disabled={isRefreshingMetadata || isLoading} onClick={() => void refreshMetadata()} type="button">
-							<svg aria-hidden="true" className={`h-4 w-4 ${isRefreshingMetadata ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24">
-								<path d="M20 12a8 8 0 1 1-2.34-5.66" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-								<path d="M20 4v6h-6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-							</svg>
-							{isRefreshingMetadata ? 'Refreshing...' : 'Fetch channels/roles'}
-						</button>
-						<Link className="ghost-button px-4 py-2 text-sm" href="/servers">
-							Change server
-						</Link>
-					</div>
-				</div>
 
-				<div className="mt-8 grid gap-4 md:grid-cols-4">
-					<article className="dashboard-context-card">
-						<div className="metric-label">Guild</div>
-						<div className="mt-3 text-lg font-bold text-white">{selectedGuild?.name ?? guildId ?? 'No server selected'}</div>
-					</article>
-					<article className="dashboard-context-card">
-						<div className="metric-label">Bot</div>
-						<DashboardSingleSelect
-							disabled={isLoading || guildConnectedBots.length <= 1}
-							emptyLabel="Select bot"
-							isOpen={openMenu === 'bot'}
-							onSelect={(value) => {
-								setOpenMenu(null);
-								router.push(buildDashboardPath(value, guildId, 'settings'));
-							}}
-							onToggle={() => toggleMenu('bot')}
-							options={(guildConnectedBots.length ? guildConnectedBots : botOptions.map((bot) => bot.botId))
-								.map((connectedBotId) => botOptions.find((bot) => bot.botId === connectedBotId))
-								.filter(Boolean)
-								.map((bot) => ({
-									value: bot!.botId,
-									label: bot!.label,
-								}))}
-							value={botId}
-						/>
-					</article>
-					<article className="dashboard-context-card">
-						<div className="metric-label">Access</div>
-						<div className="mt-3 text-lg font-bold text-white">{canManage ? 'Manage Guild' : selectedGuild ? 'View only' : 'Select server first'}</div>
-					</article>
-					<article className="dashboard-context-card">
-						<div className="metric-label">Premium</div>
-						<div className="mt-3 text-lg font-bold text-white">{premiumEnabled ? 'Enabled' : 'Not active'}</div>
-					</article>
+					<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+						<article className="dashboard-context-card md:col-span-2">
+							<div className="metric-label">Guild + bot</div>
+							<div className="mt-3 grid gap-4 sm:grid-cols-[minmax(0,1fr)_280px]">
+								<div>
+									<div className="text-lg font-bold text-white">{selectedGuild?.name ?? guildId ?? 'No server selected'}</div>
+									<p className="mt-2 text-sm leading-6 text-muted">Switch the connected bot here without leaving the settings workspace.</p>
+								</div>
+								<DashboardSingleSelect
+									disabled={isLoading || guildConnectedBots.length <= 1}
+									emptyLabel="Select bot"
+									isOpen={openMenu === 'bot'}
+									onSelect={(value) => {
+										setOpenMenu(null);
+										router.push(buildDashboardPath(value, guildId, 'settings'));
+									}}
+									onToggle={() => toggleMenu('bot')}
+									options={(guildConnectedBots.length ? guildConnectedBots : botOptions.map((bot) => bot.botId))
+										.map((connectedBotId) => botOptions.find((bot) => bot.botId === connectedBotId))
+										.filter(Boolean)
+										.map((bot) => ({
+											value: bot!.botId,
+											label: bot!.label,
+										}))}
+									value={botId}
+								/>
+							</div>
+						</article>
+						{[
+							{ label: 'Access', value: canManage ? 'Manage Guild' : selectedGuild ? 'View only' : 'Select server first' },
+							{ label: 'Logs channel', value: form.LogsChannelID === DISABLED_LOG_CHANNEL_VALUE ? 'Disabled' : formatChannelLabel(form.LogsChannelID, textChannels) },
+							{
+								label: 'Queue limits',
+								value:
+									form.SongUserLimit === 0 && form.SongTimeLimitMS === 0 ? 'Open' : `${form.SongUserLimit || '∞'} / ${formatDuration(form.SongTimeLimitMS || 0)}`,
+							},
+						].map((metric) => (
+							<article className="dashboard-context-card" key={metric.label}>
+								<div className="metric-label">{metric.label}</div>
+								<div className="mt-3 text-lg font-bold text-white">{metric.value}</div>
+							</article>
+						))}
+					</div>
 				</div>
 			</section>
 
@@ -764,18 +832,126 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 
 			{notice ? <div className="rounded-[1.5rem] border border-primary/20 bg-primary/10 p-5 text-sm text-primary">{notice}</div> : null}
 
-			<section className="grid gap-6 xl:grid-cols-[minmax(0,1.12fr)_360px]">
+			<section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
 				<div className="grid gap-6">
 					<article className="dashboard-panel-card">
-						<div className="flex items-center justify-between gap-4">
+						<div className="flex flex-wrap items-start justify-between gap-4">
 							<div>
-								<div className="metric-label">Playback defaults</div>
-								<h2 className="mt-2 font-headline text-3xl font-bold tracking-[-0.05em] text-white">Core behavior</h2>
+								<div className="metric-label">Workspace</div>
+								<h2 className="mt-2 font-headline text-3xl font-bold tracking-[-0.05em] text-white">Custom request room</h2>
+								<p className="mt-4 max-w-3xl text-sm leading-7 text-muted">
+									Choose whether this guild runs on the normal chat flow or a dedicated Lunio request room. The request room becomes the single source of truth
+									for control messages.
+								</p>
 							</div>
 							<div className="dashboard-pill">{isLoading ? 'Loading' : canManage ? 'Editable' : 'Read only'}</div>
 						</div>
 
-						<div className="mt-6 grid gap-5 md:grid-cols-2">
+						<div className="mt-8 grid gap-4 lg:grid-cols-3">
+							{[
+								{
+									key: 'off',
+									title: 'Off',
+									description: 'Keep standard now playing messages in the active text channel.',
+									active: !customChannelEnabled,
+									onClick: () =>
+										setForm((current) => ({
+											...current,
+											CustomChannel: false,
+										})),
+								},
+								{
+									key: 'default',
+									title: 'Default',
+									description: 'Create a dedicated request room with the classic controller style.',
+									active: customChannelEnabled && form.mEmbedMode === 'v1',
+									onClick: () =>
+										setForm((current) => ({
+											...current,
+											CustomChannel: true,
+											mEmbedMode: 'v1',
+											mChannelID: current.mChannelID || CREATE_CUSTOM_CHANNEL_VALUE,
+											Announce: false,
+											DelAnnounce: false,
+											PlayerControls: false,
+										})),
+								},
+								{
+									key: 'modern',
+									title: 'Modern',
+									description: 'Use the new Components V2 request room presentation.',
+									active: customChannelEnabled && form.mEmbedMode === 'v2',
+									onClick: () =>
+										setForm((current) => ({
+											...current,
+											CustomChannel: true,
+											mEmbedMode: 'v2',
+											mChannelID: current.mChannelID || CREATE_CUSTOM_CHANNEL_VALUE,
+											Announce: false,
+											DelAnnounce: false,
+											PlayerControls: false,
+										})),
+								},
+							].map((mode) => (
+								<button
+									className={`rounded-[1.5rem] border p-5 text-left transition ${
+										mode.active
+											? 'border-primary/35 bg-[linear-gradient(180deg,rgba(0,255,255,0.12),rgba(255,255,255,0.03))] shadow-[0_20px_70px_rgba(0,255,255,0.08)]'
+											: 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]'
+									}`}
+									disabled={!canManage || isLoading}
+									key={mode.key}
+									onClick={mode.onClick}
+									type="button"
+								>
+									<div className="flex items-center justify-between gap-3">
+										<div className="text-lg font-bold text-white">{mode.title}</div>
+										<span
+											className={`rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.22em] ${mode.active ? 'bg-primary/15 text-primary' : 'bg-white/[0.06] text-white/55'}`}
+										>
+											{mode.active ? 'Selected' : 'Available'}
+										</span>
+									</div>
+									<p className="mt-3 text-sm leading-6 text-white/72">{mode.description}</p>
+								</button>
+							))}
+						</div>
+
+						<div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_280px]">
+							<label className="block">
+								<span className="field-label">Panel text channel</span>
+								<DashboardSingleSelect
+									disabled={!canManage || isLoading || !form.CustomChannel}
+									emptyLabel="Select a text channel"
+									isOpen={openMenu === 'panel-channel'}
+									onSelect={(value) => {
+										updateField('mChannelID', value);
+										setOpenMenu(null);
+									}}
+									onToggle={() => toggleMenu('panel-channel')}
+									options={panelChannelOptions}
+									value={form.mChannelID}
+								/>
+								<p className="mt-2 text-sm text-muted">Create a fresh request room or reuse an existing channel and let Lunio clear it before rebuilding.</p>
+							</label>
+
+							<label className="block">
+								<span className="field-label">Logs channel</span>
+								<DashboardSingleSelect
+									disabled={!canManage || isLoading}
+									emptyLabel="Disabled"
+									isOpen={openMenu === 'logs-channel'}
+									onSelect={(value) => {
+										updateField('LogsChannelID', value);
+										setOpenMenu(null);
+									}}
+									onToggle={() => toggleMenu('logs-channel')}
+									options={logsChannelOptions}
+									value={form.LogsChannelID}
+								/>
+								<p className="mt-2 text-sm text-muted">Lunio will maintain a webhook in this channel for action and music logs.</p>
+							</label>
+
 							<label className="block">
 								<span className="field-label">Language</span>
 								<DashboardSingleSelect
@@ -796,7 +972,18 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 							</label>
 						</div>
 
-						<div className="mt-6">
+						<div className="mt-6 rounded-[1.4rem] border border-white/10 bg-black/25 px-4 py-4 text-sm text-white/72">
+							<strong className="text-white">Heads up:</strong> while the request room is enabled, Lunio turns off standard announcement messages and inline
+							player-control embeds to avoid duplicate control surfaces.
+						</div>
+					</article>
+
+					<article className="dashboard-panel-card">
+						<div className="metric-label">Playback</div>
+						<h2 className="mt-2 font-headline text-3xl font-bold tracking-[-0.05em] text-white">Listening defaults</h2>
+						<p className="mt-4 text-sm leading-7 text-muted">Tune how Lunio behaves before anyone starts shaping the queue live.</p>
+
+						<div className="mt-6 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
 							<div className="flex items-center justify-between gap-3">
 								<span className="field-label">
 									Default volume
@@ -814,32 +1001,45 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 								type="range"
 								value={form.DefaultVol}
 							/>
-							{!premiumEnabled ? <p className="mt-2 text-sm text-muted">Premium-only default for new players.</p> : null}
+							{!premiumEnabled ? <p className="mt-2 text-sm text-muted">Premium-only default applied when Lunio creates a fresh player.</p> : null}
 						</div>
 
+						<label className="mt-5 flex items-start gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80">
+							<input
+								checked={form.twentyFourSeven}
+								className="mt-1 h-4 w-4 rounded border-white/20 bg-black/30 text-primary focus:ring-primary/30"
+								disabled={!canManage || isLoading || !premiumEnabled}
+								onChange={(event) => updateField('twentyFourSeven', event.target.checked)}
+								type="checkbox"
+							/>
+							<span className="leading-6">
+								Keep Lunio connected when playback stops.
+								{premiumBadge}
+							</span>
+						</label>
+						<p className="mt-2 text-sm text-muted">24/7 becomes valid once Lunio is already active in the target voice channel.</p>
+
 						<div className="mt-6 grid gap-4 md:grid-cols-2">
-							<label className="flex items-start gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80">
-								<input
-									checked={form.Playlists}
-									className="mt-1 h-4 w-4 rounded border-white/20 bg-black/30 text-primary focus:ring-primary/30"
-									disabled={!canManage || isLoading}
-									onChange={(event) => updateField('Playlists', event.target.checked)}
-									type="checkbox"
-								/>
-								<span className="leading-6">Allow users to queue playlists.</span>
-							</label>
+							{[
+								{ key: 'Playlists', label: 'Allow users to queue playlists.' },
+								{ key: 'Requester', label: 'Show requester info on tracks.' },
+								{ key: 'VoiceStatus', label: 'Enable voice status updates for the player.' },
+								{ key: 'Ephemeral', label: 'Respond with ephemeral command replies.' },
+							].map((toggle) => (
+								<label className="flex items-start gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80" key={toggle.key}>
+									<input
+										checked={Boolean(form[toggle.key as keyof SettingsForm])}
+										className="mt-1 h-4 w-4 rounded border-white/20 bg-black/30 text-primary focus:ring-primary/30"
+										disabled={!canManage || isLoading}
+										onChange={(event) => updateField(toggle.key as keyof SettingsForm, event.target.checked as never)}
+										type="checkbox"
+									/>
+									<span className="leading-6">{toggle.label}</span>
+								</label>
+							))}
+						</div>
 
-							<label className="flex items-start gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80">
-								<input
-									checked={form.Requester}
-									className="mt-1 h-4 w-4 rounded border-white/20 bg-black/30 text-primary focus:ring-primary/30"
-									disabled={!canManage || isLoading}
-									onChange={(event) => updateField('Requester', event.target.checked)}
-									type="checkbox"
-								/>
-								<span className="leading-6">Show requester info on tracks.</span>
-							</label>
-
+						<div className="mt-6 grid gap-4">
 							<label className="flex items-start gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80">
 								<input
 									checked={form.Announce}
@@ -853,8 +1053,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 									type="checkbox"
 								/>
 								<span className="leading-6">
-									Send now playing announcement messages.
-									{customChannelEnabled ? ' Disabled while custom channel mode is active.' : ''}
+									Send now playing announcement messages. {customChannelEnabled ? 'Disabled while the custom request room is active.' : ''}
 								</span>
 							</label>
 
@@ -867,8 +1066,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 									type="checkbox"
 								/>
 								<span className="leading-6">
-									Delete now playing announcements after they have been used.
-									{customChannelEnabled ? ' Disabled while custom channel mode is active.' : ''}
+									Delete now playing announcements after they have been used. {customChannelEnabled ? 'Disabled while the custom request room is active.' : ''}
 								</span>
 							</label>
 
@@ -881,101 +1079,8 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 									type="checkbox"
 								/>
 								<span className="leading-6">
-									Show player controls on now playing embeds.
-									{customChannelEnabled ? ' Disabled while custom channel mode is active.' : ''}
+									Show player controls on now playing embeds. {customChannelEnabled ? 'Disabled while the custom request room is active.' : ''}
 								</span>
-							</label>
-
-							<label className="flex items-start gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80">
-								<input
-									checked={form.VoiceStatus}
-									className="mt-1 h-4 w-4 rounded border-white/20 bg-black/30 text-primary focus:ring-primary/30"
-									disabled={!canManage || isLoading}
-									onChange={(event) => updateField('VoiceStatus', event.target.checked)}
-									type="checkbox"
-								/>
-								<span className="leading-6">Enable voice status updates for the player.</span>
-							</label>
-
-							<label className="flex items-start gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80">
-								<input
-									checked={form.Ephemeral}
-									className="mt-1 h-4 w-4 rounded border-white/20 bg-black/30 text-primary focus:ring-primary/30"
-									disabled={!canManage || isLoading}
-									onChange={(event) => updateField('Ephemeral', event.target.checked)}
-									type="checkbox"
-								/>
-								<span className="leading-6">Respond with ephemeral admin command replies.</span>
-							</label>
-						</div>
-					</article>
-
-					<article className="dashboard-panel-card">
-						<div className="metric-label">Music panel</div>
-						<h2 className="mt-2 font-headline text-3xl font-bold tracking-[-0.05em] text-white">Custom channel mode</h2>
-						<p className="mt-4 text-sm leading-7 text-muted">
-							Choose whether Lunio should create a fresh request-panel channel or clear and reuse an existing one, then pick the embed mode for the panel messages.
-						</p>
-
-						<div className="mt-6 grid gap-5 md:grid-cols-2">
-							<label className="flex items-start gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80 md:col-span-2">
-								<input
-									checked={form.CustomChannel}
-									className="mt-1 h-4 w-4 rounded border-white/20 bg-black/30 text-primary focus:ring-primary/30"
-									disabled={!canManage || isLoading}
-									onChange={(event) => {
-										const enabled = event.target.checked;
-										setForm((current) => ({
-											...current,
-											CustomChannel: enabled,
-											mChannelID: enabled ? current.mChannelID || CREATE_CUSTOM_CHANNEL_VALUE : current.mChannelID || CREATE_CUSTOM_CHANNEL_VALUE,
-											Announce: enabled ? false : current.Announce,
-											DelAnnounce: enabled ? false : current.DelAnnounce,
-											PlayerControls: enabled ? false : current.PlayerControls,
-										}));
-									}}
-									type="checkbox"
-								/>
-								<span className="leading-6">Use the dedicated request-panel text channel instead of normal now playing messages.</span>
-							</label>
-
-							<label className="block">
-								<span className="field-label">Panel text channel</span>
-								<DashboardSingleSelect
-									disabled={!canManage || isLoading || !form.CustomChannel}
-									emptyLabel="Select a text channel"
-									isOpen={openMenu === 'panel-channel'}
-									onSelect={(value) => {
-										updateField('mChannelID', value);
-										setOpenMenu(null);
-									}}
-									onToggle={() => toggleMenu('panel-channel')}
-									options={panelChannelOptions}
-									value={form.mChannelID}
-								/>
-								<p className="mt-2 text-sm text-muted">
-									Select <span className="font-bold text-white">Create one for me</span> to let Lunio create a fresh request channel, or pick an existing channel
-									and Lunio will clear it before posting the panel there.
-								</p>
-							</label>
-
-							<label className="block">
-								<span className="field-label">Embed mode</span>
-								<DashboardSingleSelect
-									disabled={!canManage || isLoading || !form.CustomChannel}
-									emptyLabel="Select embed mode"
-									isOpen={openMenu === 'embed-mode'}
-									onSelect={(value) => {
-										updateField('mEmbedMode', value as 'v1' | 'v2');
-										setOpenMenu(null);
-									}}
-									onToggle={() => toggleMenu('embed-mode')}
-									options={[
-										{ value: 'v1', label: 'Default' },
-										{ value: 'v2', label: 'Modern' },
-									]}
-									value={form.mEmbedMode}
-								/>
 							</label>
 						</div>
 					</article>
@@ -1126,59 +1231,47 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 					</article>
 				</div>
 
-				<aside className="grid gap-6">
+				<aside className="grid gap-6 xl:sticky xl:top-6 xl:self-start">
 					<article className="dashboard-side-card">
-						<div className="metric-label">Guild state</div>
-						<h3 className="mt-2 font-headline text-3xl font-bold tracking-[-0.05em] text-white">Live snapshot</h3>
-						<label className="mt-6 flex items-start gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80">
-							<input
-								checked={form.twentyFourSeven}
-								className="mt-1 h-4 w-4 rounded border-white/20 bg-black/30 text-primary focus:ring-primary/30"
-								disabled={!canManage || isLoading || !premiumEnabled}
-								onChange={(event) => updateField('twentyFourSeven', event.target.checked)}
-								type="checkbox"
-							/>
-							<span className="leading-6">
-								Keep Lunio in voice when playback stops.
-								{premiumBadge}
-							</span>
-						</label>
-						<p className="mt-3 text-sm text-muted">24/7 can only be enabled while Lunio already has an active player in the target voice channel.</p>
-						{!premiumEnabled ? <p className="mt-3 text-sm text-muted">Premium is required for 24/7 mode and default volume changes.</p> : null}
+						<div className="metric-label">Review</div>
+						<h3 className="mt-2 font-headline text-3xl font-bold tracking-[-0.05em] text-white">Save rail</h3>
+						<p className="mt-4 text-sm leading-7 text-muted">
+							Review the current state, save your changes, and keep an eye on the last settings command without losing your place in the page.
+						</p>
+
 						<div className="mt-6 grid gap-3">
 							<div className="dashboard-stat-row">
-								<span>Custom channel</span>
-								<strong>{customChannelEnabled ? 'Enabled' : 'Off'}</strong>
+								<span>Unsaved changes</span>
+								<strong>{hasUnsavedChanges ? 'Yes' : 'No'}</strong>
 							</div>
 							<div className="dashboard-stat-row">
-								<span>Setup text channel</span>
-								<strong className="truncate pl-4 text-right">{formatChannelLabel(settings?.mChannelID ?? metadata?.settings?.mChannelID, textChannels)}</strong>
+								<span>Access</span>
+								<strong>{canManage ? 'Manage Guild' : 'Read only'}</strong>
 							</div>
 							<div className="dashboard-stat-row">
-								<span>Playlists</span>
-								<strong>{form.Playlists ? 'Allowed' : 'Blocked'}</strong>
+								<span>Premium</span>
+								<strong>{premiumEnabled ? 'Enabled' : 'Not active'}</strong>
 							</div>
 							<div className="dashboard-stat-row">
-								<span>Now playing messages</span>
-								<strong>{form.Announce ? 'On' : 'Off'}</strong>
+								<span>Workspace mode</span>
+								<strong>{!customChannelEnabled ? 'Off' : form.mEmbedMode === 'v2' ? 'Modern' : 'Default'}</strong>
 							</div>
 							<div className="dashboard-stat-row">
-								<span>Delete announcements</span>
-								<strong>{form.DelAnnounce ? 'On' : 'Off'}</strong>
-							</div>
-							<div className="dashboard-stat-row">
-								<span>DJ roles</span>
-								<strong>{form.MusicDJRole.length}</strong>
-							</div>
-							<div className="dashboard-stat-row">
-								<span>Voice restrictions</span>
-								<strong>{form.VCs.length}</strong>
-							</div>
-							<div className="dashboard-stat-row">
-								<span>Last update</span>
-								<strong>{settings?.updatedAt ? new Date(settings.updatedAt).toLocaleString() : '--'}</strong>
+								<span>Default volume</span>
+								<strong>{form.DefaultVol}%</strong>
 							</div>
 						</div>
+
+						{canManage ? (
+							<button className="primary-button mt-6 w-full justify-center" disabled={isSaving || isLoading} onClick={() => void handleSave()} type="button">
+								{isSaving ? 'Saving...' : 'Save settings'}
+							</button>
+						) : (
+							<div className="mt-6 rounded-[1.4rem] border border-white/10 bg-black/25 px-4 py-3 text-sm text-muted">
+								Only members with Manage Guild can save changes here.
+							</div>
+						)}
+
 						{saveFeedback ? (
 							<div className={`mt-6 rounded-[1.4rem] border p-4 ${getCommandFeedbackToneClasses(saveFeedback.phase)}`}>
 								<div className="flex items-center justify-between gap-3">
@@ -1207,15 +1300,59 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 								</div>
 							</div>
 						) : null}
-						{canManage ? (
-							<button className="secondary-button mt-6 w-full justify-center" disabled={isSaving || isLoading} onClick={() => void handleSave()} type="button">
-								{isSaving ? 'Saving...' : 'Save settings'}
-							</button>
-						) : (
-							<div className="mt-6 rounded-[1.4rem] border border-white/10 bg-black/25 px-4 py-3 text-sm text-muted">
-								Only members with Manage Guild can save changes here.
+					</article>
+
+					<article className="dashboard-side-card">
+						<div className="metric-label">Live snapshot</div>
+						<h3 className="mt-2 font-headline text-3xl font-bold tracking-[-0.05em] text-white">Server state</h3>
+						<div className="mt-6 grid gap-3">
+							<div className="dashboard-stat-row">
+								<span>Custom channel</span>
+								<strong>{customChannelEnabled ? 'Enabled' : 'Off'}</strong>
 							</div>
-						)}
+							<div className="dashboard-stat-row">
+								<span>Setup text channel</span>
+								<strong className="truncate pl-4 text-right">{formatChannelLabel(settings?.mChannelID ?? metadata?.settings?.mChannelID, textChannels)}</strong>
+							</div>
+							<div className="dashboard-stat-row">
+								<span>Logs channel</span>
+								<strong className="truncate pl-4 text-right">
+									{form.LogsChannelID === DISABLED_LOG_CHANNEL_VALUE ? 'Disabled' : formatChannelLabel(form.LogsChannelID, textChannels)}
+								</strong>
+							</div>
+							<div className="dashboard-stat-row">
+								<span>Playlists</span>
+								<strong>{form.Playlists ? 'Allowed' : 'Blocked'}</strong>
+							</div>
+							<div className="dashboard-stat-row">
+								<span>Announcements</span>
+								<strong>{form.Announce ? 'On' : 'Off'}</strong>
+							</div>
+							<div className="dashboard-stat-row">
+								<span>Delete announce</span>
+								<strong>{form.DelAnnounce ? 'On' : 'Off'}</strong>
+							</div>
+							<div className="dashboard-stat-row">
+								<span>Embed controls</span>
+								<strong>{form.PlayerControls ? 'On' : 'Off'}</strong>
+							</div>
+							<div className="dashboard-stat-row">
+								<span>DJ roles</span>
+								<strong>{form.MusicDJRole.length}</strong>
+							</div>
+							<div className="dashboard-stat-row">
+								<span>Voice restrictions</span>
+								<strong>{form.VCs.length}</strong>
+							</div>
+							<div className="dashboard-stat-row">
+								<span>24/7</span>
+								<strong>{form.twentyFourSeven ? 'Enabled' : 'Disabled'}</strong>
+							</div>
+							<div className="dashboard-stat-row">
+								<span>Last update</span>
+								<strong>{settings?.updatedAt ? new Date(settings.updatedAt).toLocaleString() : '--'}</strong>
+							</div>
+						</div>
 					</article>
 				</aside>
 			</section>

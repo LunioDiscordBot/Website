@@ -125,6 +125,7 @@ export interface GuildSettings {
 	VCs: string[];
 	CustomChannel: boolean;
 	mChannelID: string | null;
+	LogsChannelID: string | null;
 	mEmbedMode: 'v1' | 'v2';
 	SongUserLimit: number;
 	SongTimeLimitMS: number;
@@ -157,6 +158,7 @@ export interface GuildMetadata {
 	settings?: {
 		CustomChannel: boolean;
 		mChannelID: string | null;
+		LogsChannelID?: string | null;
 		mEmbedMode: 'v1' | 'v2';
 		Announce: boolean;
 		DelAnnounce: boolean;
@@ -196,11 +198,31 @@ export interface Track {
 	requesterName?: string | null;
 }
 
+export interface SearchTrackResult {
+	title: string;
+	artist: string;
+	duration: number;
+	url: string;
+	artworkUrl: string | null;
+	sourceName?: string | null;
+	trackData?: Record<string, unknown> | null;
+}
+
+export interface SearchPlaylistResult {
+	title: string;
+	url: string;
+	artworkUrl: string | null;
+	trackCount: number;
+	author?: string | null;
+}
+
 export type BrokerCommandType =
 	| 'GUILD_SETTINGS_UPDATE'
 	| 'PLAYER_JOIN'
 	| 'PLAYER_LEAVE'
 	| 'PLAYER_PREVIOUS'
+	| 'PLAYER_SEARCH'
+	| 'PLAYER_SEARCH_ADD'
 	| 'PLAYER_SKIP'
 	| 'PLAYER_QUEUE_REMOVE'
 	| 'PLAYER_SHUFFLE'
@@ -237,6 +259,7 @@ export interface GuildPlayerState {
 	botId: string;
 	guildId: string;
 	instanceId: string;
+	revision: number;
 	state: 'CONNECTED' | 'CONNECTING' | 'DISCONNECTED' | 'DISCONNECTING' | 'DESTROYING';
 	currentTrack: Track | null;
 	queue: Track[];
@@ -326,6 +349,7 @@ export interface FrontendQueueEvent {
 	botId: string;
 	instanceId: string;
 	guildId: string;
+	revision: number;
 	currentTrack: Track | null;
 	queue: Track[];
 	updatedAt: number;
@@ -336,6 +360,7 @@ export interface FrontendPlayerStateEvent {
 	botId: string;
 	instanceId: string;
 	guildId: string;
+	revision: number;
 	state: 'CONNECTED' | 'CONNECTING' | 'DISCONNECTED' | 'DISCONNECTING' | 'DESTROYING';
 	currentTrack: Track | null;
 	updatedAt: number;

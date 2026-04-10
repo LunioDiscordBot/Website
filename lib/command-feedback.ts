@@ -5,6 +5,8 @@ const COMMAND_TYPE_LABELS: Record<BrokerCommandType, string> = {
 	PLAYER_JOIN: 'Join voice channel',
 	PLAYER_LEAVE: 'Leave voice channel',
 	PLAYER_PREVIOUS: 'Previous track',
+	PLAYER_SEARCH: 'Search tracks',
+	PLAYER_SEARCH_ADD: 'Queue track',
 	PLAYER_SKIP: 'Skip track',
 	PLAYER_QUEUE_REMOVE: 'Remove queued track',
 	PLAYER_SHUFFLE: 'Shuffle queue',
