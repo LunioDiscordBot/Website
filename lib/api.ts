@@ -32,6 +32,7 @@ export interface BotInstance {
 		latency: number;
 		guildCount: number;
 		userCount: number;
+		playerCount: number;
 		uptimeMs: number;
 	}>;
 }

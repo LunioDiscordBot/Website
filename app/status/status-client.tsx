@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { Spinner } from '@/components/spinner';
 import {
 	apiJson,
 	formatCompactNumber,
@@ -61,9 +62,21 @@ const getHealthTone = (label: string) => {
 	return 'status-badge-degraded';
 };
 
+const getHealthCardAccent = (label: string) => {
+	if (label === 'Operational') return 'status-summary-card-operational';
+	if (label === 'Recovering') return 'status-summary-card-recovering';
+	if (label === 'Degraded') return 'status-summary-card-degraded';
+	return '';
+};
+
 const formatLatency = (value: number | null | undefined) => {
 	if (typeof value !== 'number' || !Number.isFinite(value)) return '--';
 	return `${Math.round(value)}ms`;
+};
+
+const formatExactNumber = (value: number | null | undefined) => {
+	if (typeof value !== 'number' || Number.isNaN(value)) return '--';
+	return new Intl.NumberFormat('en').format(value);
 };
 
 export function StatusClient() {
@@ -72,6 +85,7 @@ export function StatusClient() {
 		instances: [],
 		error: null,
 	});
+	const [isInitialLoading, setIsInitialLoading] = useState(true);
 	const [botOptions, setBotOptions] = useState<Array<{ botId: string; label: string }>>([]);
 	const [selectedBotId, setSelectedBotId] = useState('');
 	const [selectedInstanceId, setSelectedInstanceId] = useState('');
@@ -121,15 +135,25 @@ export function StatusClient() {
 					instances: [],
 					error: error instanceof Error ? error.message : 'Unable to load status',
 				});
+			} finally {
+				if (active) setIsInitialLoading(false);
 			}
 		};
 
 		void load();
-		const interval = window.setInterval(load, 10000);
+		const interval = window.setInterval(() => {
+			if (document.visibilityState === 'visible') void load();
+		}, 10000);
+
+		const onVisibilityChange = () => {
+			if (document.visibilityState === 'visible') void load();
+		};
+		document.addEventListener('visibilitychange', onVisibilityChange);
 
 		return () => {
 			active = false;
 			window.clearInterval(interval);
+			document.removeEventListener('visibilitychange', onVisibilityChange);
 		};
 	}, [selectedBotId]);
 
@@ -340,7 +364,7 @@ export function StatusClient() {
 				</div>
 
 				<div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-					<article className="status-summary-card">
+					<article className={`status-summary-card ${getHealthCardAccent(globalHealth)}`}>
 						<div className="metric-label">Global status</div>
 						<div className="mt-3 font-headline text-3xl font-bold tracking-[-0.05em] text-white">{globalHealth}</div>
 					</article>
@@ -376,7 +400,12 @@ export function StatusClient() {
 					<div className="mt-6 space-y-4">
 						{state.error ? <div className="rounded-[1.6rem] border border-danger/30 bg-danger/10 p-5 text-sm text-red-100">{state.error}</div> : null}
 
-						{!state.error && state.instances.length === 0 ? <div className="status-empty-card">No active instances are reporting yet.</div> : null}
+						{!state.error && state.instances.length === 0 ? (
+							<div className="status-empty-card flex items-center gap-3">
+								{isInitialLoading ? <Spinner className="h-4 w-4 text-primary" /> : null}
+								{isInitialLoading ? 'Loading instances...' : 'No active instances are reporting yet.'}
+							</div>
+						) : null}
 
 						{state.instances.map((instance) => {
 							const instanceKey = `${instance.botId}:${instance.instanceId}`;
@@ -484,7 +513,7 @@ export function StatusClient() {
 					</div>
 					{selectedInstance ? (
 						<div className="text-sm text-muted">
-							{formatCompactNumber(selectedInstance.guildCount)} guilds, {formatCompactNumber(selectedInstance.userCount)} users,{' '}
+							{formatExactNumber(selectedInstance.guildCount)} guilds, {formatCompactNumber(selectedInstance.userCount)} users,{' '}
 							{formatUptime(selectedInstance.uptimeMs)}
 						</div>
 					) : null}
@@ -509,11 +538,15 @@ export function StatusClient() {
 								<div className="mt-5 grid gap-3">
 									<div className="status-inline-stat">
 										<span>Guilds</span>
-										<strong>{formatCompactNumber(shard.guildCount)}</strong>
+										<strong>{formatExactNumber(shard.guildCount)}</strong>
 									</div>
 									<div className="status-inline-stat">
 										<span>Users</span>
 										<strong>{formatCompactNumber(shard.userCount)}</strong>
+									</div>
+									<div className="status-inline-stat">
+										<span>Players</span>
+										<strong>{formatCompactNumber(shard.playerCount)}</strong>
 									</div>
 									<div className="status-inline-stat">
 										<span>Uptime</span>
