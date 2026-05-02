@@ -48,7 +48,7 @@ export function HeaderAccount() {
 			});
 		} finally {
 			clearAuthClientState();
-			window.location.href = '/';
+			window.location.href = process.env.NEXT_PUBLIC_PUBLIC_SITE_URL || '/';
 			setBusy(false);
 		}
 	};

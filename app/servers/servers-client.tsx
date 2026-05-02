@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Spinner } from '@/components/spinner';
 import { useSiteLanguage } from '@/components/site-language-provider';
 import { buildDashboardPath, buildInvitePath } from '@/lib/dashboard-routes';
 import { getPreferredBotId as getPreferredBotFromList } from '@/lib/bot-preference';
@@ -29,6 +30,7 @@ export function ServersClient() {
 	const [guilds, setGuilds] = useState<AuthGuildsResponse['guilds']>([]);
 	const [guildsError, setGuildsError] = useState<string | null>(null);
 	const [isRefreshing, setIsRefreshing] = useState(false);
+	const [showSkeleton, setShowSkeleton] = useState(false);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
 
@@ -105,6 +107,15 @@ export function ServersClient() {
 			activeRef.current = false;
 		};
 	}, []);
+
+	useEffect(() => {
+		if (!isRefreshing || guilds.length > 0) {
+			setShowSkeleton(false);
+			return;
+		}
+		const timer = window.setTimeout(() => setShowSkeleton(true), 300);
+		return () => window.clearTimeout(timer);
+	}, [isRefreshing, guilds.length]);
 
 	useEffect(() => {
 		const onFocus = () => {
@@ -230,12 +241,12 @@ export function ServersClient() {
 						</button>
 					))}
 					<button
-						className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-extrabold uppercase tracking-[0.2em] text-muted transition hover:text-white disabled:opacity-50"
+						className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-extrabold uppercase tracking-[0.2em] text-muted transition hover:text-white disabled:opacity-50"
 						disabled={isRefreshing}
 						onClick={() => void refreshServerPicker()}
 						type="button"
 					>
-						{isRefreshing ? messages.servers.refreshing : messages.servers.refresh}
+						{isRefreshing ? <><Spinner className="h-3 w-3" />{messages.servers.refreshing}</> : messages.servers.refresh}
 					</button>
 				</div>
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -268,88 +279,115 @@ export function ServersClient() {
 				)
 			) : null}
 
-			<div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-				{sortedGuilds.map((guild) => (
-					<article className={`panel p-6 ${getConnectedBotIds(guild).length === 0 ? 'opacity-60' : ''}`} key={guild.guildId}>
-						<div className="flex items-start justify-between gap-4">
-							{guild.iconUrl ? (
-								// eslint-disable-next-line @next/next/no-img-element
-								<img alt={guild.name} className="h-14 w-14 rounded-[1.2rem] border border-white/10 object-cover" src={guild.iconUrl} />
-							) : (
-								<div className="flex h-14 w-14 items-center justify-center rounded-[1.2rem] bg-primary/10 font-headline text-xl font-bold text-primary">
-									{guild.name.slice(0, 2).toUpperCase()}
-								</div>
-							)}
-
-							<div className="rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.2em] text-primary">
-								{getConnectedBotIds(guild).length > 0
-									? messages.servers.botCount
-											.replace('{count}', String(getConnectedBotIds(guild).length))
-											.replace('{suffix}', getConnectedBotIds(guild).length === 1 ? '' : 's')
-									: messages.servers.inviteAvailable}
+			{showSkeleton ? (
+				<div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+					{Array.from({ length: 6 }).map((_, i) => (
+						<div className="panel p-6" key={i}>
+							<div className="flex items-start justify-between gap-4">
+								<div className="skeleton h-14 w-14 rounded-[1.2rem]" />
+								<div className="skeleton h-8 w-24 rounded-full" />
+							</div>
+							<div className="skeleton mt-5 h-8 w-3/4 rounded-md" />
+							<div className="skeleton mt-2 h-4 w-1/2 rounded-md" />
+							<div className="skeleton mt-5 h-7 w-20 rounded-full" />
+							<div className="mt-5 flex gap-3">
+								<div className="skeleton h-8 w-24 rounded-full" />
+								<div className="skeleton h-8 w-24 rounded-full" />
+							</div>
+							<div className="mt-6 flex flex-col gap-3">
+								<div className="skeleton h-11 w-full rounded-[1rem]" />
 							</div>
 						</div>
+					))}
+				</div>
+			) : null}
 
-						<h2 className="mt-5 font-headline text-3xl font-bold tracking-[-0.05em] text-white">{guild.name}</h2>
-						<p className="mt-1 text-sm text-muted">
-							{messages.servers.guildId}: {guild.guildId}
-						</p>
-
-						<div className="mt-5 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-extrabold uppercase tracking-[0.18em] text-secondary">
-							{guild.owner ? messages.servers.owner : guild.canManage ? messages.servers.manageable : messages.servers.member}
-						</div>
-
-						<div className="mt-5 flex flex-wrap gap-3">
-							{guild.botStates.map((bot) => (
-								<div
-									className={`flex items-center gap-3 rounded-full border px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] ${
-										bot.status === 'connected' ? 'border-primary/20 bg-primary/10 text-primary' : 'border-white/10 bg-white/[0.03] text-muted'
-									}`}
-									key={`${guild.guildId}:${bot.botId}`}
-								>
-									{bot.avatarUrl ? (
+			{!showSkeleton ? (
+				<>
+					<div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+						{sortedGuilds.map((guild) => (
+							<article className={`panel p-6 ${getConnectedBotIds(guild).length === 0 ? 'opacity-60' : ''}`} key={guild.guildId}>
+								<div className="flex items-start justify-between gap-4">
+									{guild.iconUrl ? (
 										// eslint-disable-next-line @next/next/no-img-element
-										<img alt={bot.label} className="h-6 w-6 rounded-full border border-white/10 object-cover" src={bot.avatarUrl} />
+										<img alt={guild.name} className="h-14 w-14 rounded-[1.2rem] border border-white/10 object-cover" src={guild.iconUrl} />
 									) : (
-										<div className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-white/10 text-[10px] text-white">
-											{bot.label.slice(0, 1).toUpperCase()}
+										<div className="flex h-14 w-14 items-center justify-center rounded-[1.2rem] bg-primary/10 font-headline text-xl font-bold text-primary">
+											{guild.name.slice(0, 2).toUpperCase()}
 										</div>
 									)}
-									<span>{bot.label}</span>
-									<span>{bot.status === 'connected' ? messages.servers.live : messages.servers.invite}</span>
+
+									<div className="rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.2em] text-primary">
+										{getConnectedBotIds(guild).length > 0
+											? messages.servers.botCount
+													.replace('{count}', String(getConnectedBotIds(guild).length))
+													.replace('{suffix}', getConnectedBotIds(guild).length === 1 ? '' : 's')
+											: messages.servers.inviteAvailable}
+									</div>
 								</div>
-							))}
+
+								<h2 className="mt-5 font-headline text-3xl font-bold tracking-[-0.05em] text-white">{guild.name}</h2>
+								<p className="mt-1 text-sm text-muted">
+									{messages.servers.guildId}: {guild.guildId}
+								</p>
+
+								<div className="mt-5 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-extrabold uppercase tracking-[0.18em] text-secondary">
+									{guild.owner ? messages.servers.owner : guild.canManage ? messages.servers.manageable : messages.servers.member}
+								</div>
+
+								<div className="mt-5 flex flex-wrap gap-3">
+									{guild.botStates.map((bot) => (
+										<div
+											className={`flex items-center gap-3 rounded-full border px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] ${
+												bot.status === 'connected' ? 'border-primary/20 bg-primary/10 text-primary' : 'border-white/10 bg-white/[0.03] text-muted'
+											}`}
+											key={`${guild.guildId}:${bot.botId}`}
+										>
+											{bot.avatarUrl ? (
+												// eslint-disable-next-line @next/next/no-img-element
+												<img alt={bot.label} className="h-6 w-6 rounded-full border border-white/10 object-cover" src={bot.avatarUrl} />
+											) : (
+												<div className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-white/10 text-[10px] text-white">
+													{bot.label.slice(0, 1).toUpperCase()}
+												</div>
+											)}
+											<span>{bot.label}</span>
+											<span>{bot.status === 'connected' ? messages.servers.live : messages.servers.invite}</span>
+										</div>
+									))}
+								</div>
+
+								<div className="mt-6 flex flex-col gap-3">
+									{getConnectedBotIds(guild).length > 0 ? (
+										<Link className="secondary-button w-full" href={buildDashboardPath(getPreferredBotId(guild), guild.guildId)} prefetch={false}>
+											{messages.servers.openDashboard}
+										</Link>
+									) : null}
+
+									{guild.canManage
+										? guild.botStates
+												.filter((bot) => bot.status === 'invite' && bot.inviteUrl)
+												.map((bot) => (
+													<a
+														className="ghost-button w-full text-center"
+														href={buildInvitePath(bot.botId, guild.guildId)}
+														key={`${guild.guildId}:${bot.botId}:invite`}
+													>
+														{messages.servers.inviteBot.replace('{label}', bot.label)}
+													</a>
+												))
+										: null}
+								</div>
+							</article>
+						))}
+					</div>
+
+					{!guildsError && sortedGuilds.length === 0 ? (
+						<div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5 text-sm text-muted">
+							{searchQuery.trim() ? messages.servers.noGuildsSearch : messages.servers.noGuildsBot}
 						</div>
-
-						<div className="mt-6 flex flex-col gap-3">
-							{getConnectedBotIds(guild).length > 0 ? (
-								<Link className="secondary-button w-full" href={buildDashboardPath(getPreferredBotId(guild), guild.guildId)} prefetch={false}>
-									{messages.servers.openDashboard}
-								</Link>
-							) : null}
-
-							{guild.canManage
-								? guild.botStates
-										.filter((bot) => bot.status === 'invite' && bot.inviteUrl)
-										.map((bot) => (
-											<a
-												className="ghost-button w-full text-center"
-												href={buildInvitePath(bot.botId, guild.guildId)}
-												key={`${guild.guildId}:${bot.botId}:invite`}
-											>
-												{messages.servers.inviteBot.replace('{label}', bot.label)}
-											</a>
-										))
-								: null}
-						</div>
-					</article>
-				))}
-			</div>
-
-			{!guildsError && sortedGuilds.length === 0 ? (
-				<div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5 text-sm text-muted">
-					{searchQuery.trim() ? messages.servers.noGuildsSearch : messages.servers.noGuildsBot}
-				</div>
+					) : null}
+				</>
 			) : null}
 		</div>
 	);

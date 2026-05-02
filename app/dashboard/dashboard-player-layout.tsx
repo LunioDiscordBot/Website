@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Spinner } from '@/components/spinner';
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useTheme } from '@/components/theme-provider';
@@ -173,8 +174,7 @@ function DashboardSidebarIcon({ name, className = 'h-5 w-5' }: { name: Dashboard
 		case 'overview':
 			return (
 				<svg {...sharedProps}>
-					<path d="M4.75 10.5 12 4l7.25 6.5" />
-					<path d="M6.5 9.5v9h11v-9" />
+					<path d="M7.5 5v14l11-7-11-7Z" />
 				</svg>
 			);
 		case 'servers':
@@ -542,9 +542,8 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 	const closeSearchModal = () => setIsSearchModalOpen(false);
 
 	const sidebarPrimaryLinks: SidebarLink[] = [
-		{ label: 'Home', caption: 'Main site', icon: 'home', href: '/' },
+		{ label: 'Home', caption: 'Main site', icon: 'home', href: process.env.NEXT_PUBLIC_PUBLIC_SITE_URL || '/', external: true },
 		{ label: 'Overview', caption: 'Player control', icon: 'overview', href: overviewHref, active: true },
-		{ label: 'Servers', caption: 'Switch guild', icon: 'servers', href: '/servers' },
 		{
 			label: 'Guild settings',
 			caption: selectedGuild?.canManage ? 'Tune this server' : 'Requires Manage Guild',
@@ -571,8 +570,8 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 				: item.disabled
 					? isComingSoon
 						? isLight
-							? 'cursor-not-allowed border-transparent bg-transparent text-slate-700 hover:border-slate-200 hover:bg-white/75 hover:text-slate-950'
-							: 'cursor-not-allowed border-transparent bg-transparent text-white/72 hover:border-white/8 hover:bg-white/[0.04] hover:text-white'
+							? 'cursor-not-allowed border-secondary/15 bg-secondary/[0.05] text-slate-700 hover:border-secondary/25 hover:bg-secondary/[0.09] hover:text-slate-950'
+							: 'cursor-not-allowed border-secondary/12 bg-secondary/[0.04] text-white/72 hover:border-secondary/20 hover:bg-secondary/[0.07] hover:text-white'
 						: isLight
 							? 'border-slate-200/50 bg-transparent text-slate-400'
 							: 'border-white/6 bg-transparent text-white/32'
@@ -589,8 +588,8 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 							: item.disabled
 								? isComingSoon
 									? isLight
-										? 'border-slate-200/80 bg-white/82 text-slate-700'
-										: 'border-white/10 bg-white/[0.04] text-white/80'
+										? 'border-secondary/25 bg-secondary/[0.07] text-secondary/80'
+										: 'border-secondary/20 bg-secondary/[0.07] text-secondary/70'
 									: isLight
 										? 'border-slate-200/60 bg-slate-100/80 text-slate-400'
 										: 'border-white/5 bg-white/[0.02] text-white/25'
@@ -751,15 +750,21 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 							</div>
 
 							<div className="flex flex-wrap items-center gap-3">
-								<button className="ghost-button px-4 py-2 text-sm" onClick={openSearchModal} type="button">
-									Search
-								</button>
-								<button className="ghost-button px-4 py-2 text-sm" onClick={onRefreshState} type="button">
-									Refresh State
-								</button>
-								<Link className="ghost-button px-4 py-2 text-sm" href="/servers">
-									Change Server
-								</Link>
+								<Link
+								className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-white/58 transition duration-200 hover:border-white/20 hover:text-white"
+								href="/servers"
+							>
+								<svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24">
+									<path d="M15 18l-6-6 6-6" />
+								</svg>
+								Servers
+							</Link>
+							<button className="ghost-button px-4 py-2 text-sm" onClick={openSearchModal} type="button">
+								Search
+							</button>
+							<button className="ghost-button px-4 py-2 text-sm" onClick={onRefreshState} type="button">
+								Refresh
+							</button>
 								<div className="relative min-w-[13rem]">
 									<button
 										aria-expanded={isBotMenuOpen}
@@ -1337,7 +1342,8 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 											value={searchQuery}
 										/>
 									</div>
-									<div className={`mt-3 text-sm ${faintTextClass}`}>
+									<div className={`mt-3 flex items-center gap-2 text-sm ${faintTextClass}`}>
+										{isSearchLoading ? <Spinner className="h-3.5 w-3.5 shrink-0" /> : null}
 										{searchDisabledReason ??
 											(searchQuery.trim().length >= 3
 												? isSearchLoading
@@ -1348,15 +1354,35 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 								</div>
 								<div className="mt-5">
 									<div className="text-xs font-extrabold uppercase tracking-[0.22em] text-primary">Results</div>
+
+									{/* Error */}
 									{searchError ? (
-										<div
-											className={`mt-3 rounded-[1.2rem] border px-4 py-3 text-sm leading-7 ${softSurfaceClass} ${isLight ? 'text-rose-600' : 'text-rose-200'}`}
-										>
+										<div className={`mt-3 rounded-[1.2rem] border px-4 py-3 text-sm leading-7 ${softSurfaceClass} ${isLight ? 'text-rose-600' : 'text-rose-200'}`}>
 											{searchError}
 										</div>
 									) : null}
+
+									{/* Skeleton rows — shown while loading with no results yet */}
+									{isSearchLoading && !searchResults.length && !searchPlaylist && !searchError ? (
+										<div className="mt-3 space-y-3">
+											{([62, 78, 54, 70] as const).map((titleWidth, i) => (
+												<div className={`flex items-center gap-3 rounded-[1.2rem] border px-4 py-3 ${softSurfaceClass}`} key={i}>
+													<div className="skeleton h-10 w-10 shrink-0 rounded-[0.75rem]" />
+													<div className="min-w-0 flex-1 space-y-2">
+														<div className="skeleton h-3.5 rounded" style={{ width: `${titleWidth}%` }} />
+														<div className="skeleton h-3 rounded" style={{ width: `${titleWidth - 18}%` }} />
+													</div>
+													<div className="skeleton h-8 w-24 shrink-0 rounded-[0.875rem]" />
+												</div>
+											))}
+										</div>
+									) : null}
+
+									{/* Playlist card */}
 									{searchPlaylist ? (
-										<div className={`mt-3 rounded-[1.25rem] border px-4 py-4 ${softSurfaceClass}`}>
+										<div
+											className={`mt-3 rounded-[1.25rem] border px-4 py-4 transition-opacity duration-200 ${softSurfaceClass} ${isSearchLoading ? 'opacity-50' : '[animation:fade-in-up_0.22s_ease_forwards]'}`}
+										>
 											<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 												<div className="flex min-w-0 items-center gap-4">
 													{searchPlaylist.artworkUrl ? (
@@ -1392,13 +1418,19 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 											</div>
 										</div>
 									) : null}
-									{!searchPlaylist && !searchResults.length && !searchError ? (
+
+									{/* Empty hint */}
+									{!isSearchLoading && !searchPlaylist && !searchResults.length && !searchError ? (
 										<div className={`mt-3 rounded-[1.2rem] border px-4 py-3 text-sm leading-7 ${softSurfaceClass} ${faintTextClass}`}>
 											Type at least 3 characters to see matching tracks here.
 										</div>
 									) : null}
+
+									{/* Track results — dim while refreshing, fade in when fresh */}
 									{searchResults.length ? (
-										<div className="mt-3 max-h-[21rem] space-y-3 overflow-y-auto pr-1">
+										<div
+											className={`mt-3 max-h-[21rem] space-y-3 overflow-y-auto pr-1 transition-opacity duration-200 ${isSearchLoading ? 'opacity-50' : '[animation:fade-in-up_0.22s_ease_forwards]'}`}
+										>
 											{searchResults.map((result, index) => {
 												const isQueueingThisResult = queueingSearchUrl === result.url;
 												return (
@@ -1406,10 +1438,20 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 														className={`flex flex-col gap-3 rounded-[1.2rem] border px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${softSurfaceClass}`}
 														key={`${result.url}|${result.title}|${result.artist}|${index}`}
 													>
-														<div className="min-w-0">
-															<div className={`truncate text-sm font-semibold ${mainTextClass}`}>{result.title}</div>
-															<div className={`mt-1 truncate text-sm ${subTextClass}`}>
-																{result.artist} - {formatDuration(result.duration)}
+														<div className="flex min-w-0 items-center gap-3">
+															{result.artworkUrl ? (
+																// eslint-disable-next-line @next/next/no-img-element
+																<img alt={result.title} className="h-10 w-10 shrink-0 rounded-[0.75rem] border border-white/10 object-cover" src={result.artworkUrl} />
+															) : (
+																<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.75rem] border border-white/10 bg-white/[0.04] text-[10px] font-extrabold uppercase tracking-[0.18em] text-primary">
+																	{String(index + 1).padStart(2, '0')}
+																</div>
+															)}
+															<div className="min-w-0">
+																<div className={`truncate text-sm font-semibold ${mainTextClass}`}>{result.title}</div>
+																<div className={`mt-1 truncate text-sm ${subTextClass}`}>
+																	{result.artist} - {formatDuration(result.duration)}
+																</div>
 															</div>
 														</div>
 														<button

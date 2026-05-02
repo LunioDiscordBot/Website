@@ -1,4 +1,5 @@
 import { DashboardClient } from './dashboard-client';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { redirect } from 'next/navigation';
 import { buildDashboardPath } from '@/lib/dashboard-routes';
 
@@ -8,5 +9,5 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 		redirect(buildDashboardPath(params.botId, params.guildId));
 	}
 
-	return <DashboardClient />;
+	return <ErrorBoundary><DashboardClient /></ErrorBoundary>;
 }

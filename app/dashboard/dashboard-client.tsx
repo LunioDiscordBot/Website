@@ -761,8 +761,22 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 
 	useEffect(() => {
 		if (!form.botId.trim() || !form.guildId.trim()) return;
-		const interval = window.setInterval(() => void refreshPlayerState(), 8000);
-		return () => window.clearInterval(interval);
+
+		const tick = () => {
+			if (document.visibilityState === 'visible') void refreshPlayerState();
+		};
+
+		const onVisibilityChange = () => {
+			if (document.visibilityState === 'visible') void refreshPlayerState();
+		};
+
+		const interval = window.setInterval(tick, 8000);
+		document.addEventListener('visibilitychange', onVisibilityChange);
+
+		return () => {
+			window.clearInterval(interval);
+			document.removeEventListener('visibilitychange', onVisibilityChange);
+		};
 	}, [form.botId, form.guildId]);
 
 	useEffect(() => {

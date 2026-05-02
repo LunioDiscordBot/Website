@@ -14,6 +14,16 @@ export function LoginClient() {
 	const [rememberMe, setRememberMe] = useState(true);
 	const [busy, setBusy] = useState(false);
 
+	const oauthErrorParam = searchParams.get('error');
+	const oauthErrorMessage =
+		oauthErrorParam === 'oauth_callback'
+			? 'Sign-in failed — Discord returned an error during the OAuth flow. Please try again.'
+			: oauthErrorParam === 'oauth_state'
+				? 'Sign-in failed — the OAuth state was invalid or expired. Please try again.'
+				: oauthErrorParam
+					? 'Sign-in failed. Please try again.'
+					: null;
+
 	useEffect(() => {
 		let active = true;
 
@@ -61,7 +71,13 @@ export function LoginClient() {
 	};
 
 	return (
-		<div className="mx-auto max-w-3xl panel p-8 sm:p-10">
+		<div className="mx-auto max-w-3xl space-y-4">
+		{oauthErrorMessage ? (
+			<div className="rounded-[1.5rem] border border-danger/30 bg-danger/10 px-5 py-4 text-sm leading-7 text-red-100">
+				{oauthErrorMessage}
+			</div>
+		) : null}
+		<div className="panel p-8 sm:p-10">
 			<div className="eyebrow">{messages.login.eyebrow}</div>
 			<h1 className="section-title">{messages.login.title}</h1>
 			<p className="section-copy mt-5">{messages.login.intro}</p>
@@ -115,6 +131,7 @@ export function LoginClient() {
 					</button>
 				)}
 			</div>
+		</div>
 		</div>
 	);
 }

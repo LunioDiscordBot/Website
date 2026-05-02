@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Spinner } from '@/components/spinner';
 import { buildDashboardPath } from '@/lib/dashboard-routes';
 import { getPreferredBotId as getPreferredBotFromList } from '@/lib/bot-preference';
 import { DashboardRouteState } from '@/components/dashboard-route-state';
@@ -844,7 +845,10 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 									for control messages.
 								</p>
 							</div>
-							<div className="dashboard-pill">{isLoading ? 'Loading' : canManage ? 'Editable' : 'Read only'}</div>
+							<div className="dashboard-pill inline-flex items-center gap-2">
+								{isLoading ? <Spinner className="h-3 w-3" /> : null}
+								{isLoading ? 'Loading' : canManage ? 'Editable' : 'Read only'}
+							</div>
 						</div>
 
 						<div className="mt-8 grid gap-4 lg:grid-cols-3">
@@ -1263,8 +1267,8 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 						</div>
 
 						{canManage ? (
-							<button className="primary-button mt-6 w-full justify-center" disabled={isSaving || isLoading} onClick={() => void handleSave()} type="button">
-								{isSaving ? 'Saving...' : 'Save settings'}
+							<button className="primary-button mt-6 inline-flex w-full items-center justify-center gap-2" disabled={isSaving || isLoading} onClick={() => void handleSave()} type="button">
+								{isSaving ? <><Spinner className="h-4 w-4" />Saving...</> : 'Save settings'}
 							</button>
 						) : (
 							<div className="mt-6 rounded-[1.4rem] border border-white/10 bg-black/25 px-4 py-3 text-sm text-muted">

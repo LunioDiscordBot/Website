@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Design tokens ───────────────────────────────────────────────── */
 :root {
 	color-scheme: dark;
 	--color-background: 10 11 11;
@@ -16,9 +17,22 @@
 	--color-tertiary: 112 0 255;
 	--color-success: 124 246 194;
 	--color-danger: 255 113 108;
+
+	/* Radius scale — 4 steps, nothing else */
+	--radius-sm: 0.875rem;   /* 14px — rows, inputs, buttons, pills */
+	--radius-md: 1.25rem;    /* 20px — cards nested inside panels   */
+	--radius-lg: 1.625rem;   /* 26px — main panels, hero cards       */
+	--radius-xl: 2rem;       /* 32px — outermost shell only          */
+
+	/* Text tiers — 3 levels, nothing in between */
+	--text-secondary: 0.65; /* body text, labels  */
+	--text-hint:      0.38; /* captions, sub-info */
+
 	--body-gradient:
-		radial-gradient(circle at top right, rgba(0, 255, 255, 0.12), transparent 28%), radial-gradient(circle at bottom left, rgba(253, 104, 179, 0.1), transparent 24%),
-		radial-gradient(circle at 55% 65%, rgba(112, 0, 255, 0.08), transparent 26%), linear-gradient(180deg, #0a0b0b 0%, #0e0e0e 52%, #090909 100%);
+		radial-gradient(circle at top right, rgba(0, 255, 255, 0.12), transparent 28%),
+		radial-gradient(circle at bottom left, rgba(253, 104, 179, 0.1), transparent 24%),
+		radial-gradient(circle at 55% 65%, rgba(112, 0, 255, 0.08), transparent 26%),
+		linear-gradient(180deg, #0a0b0b 0%, #0e0e0e 52%, #090909 100%);
 	--scanline-opacity: 0.35;
 	--surface-elevated: rgba(255, 255, 255, 0.04);
 	--surface-soft: rgba(255, 255, 255, 0.03);
@@ -42,8 +56,10 @@ html[data-theme='light'] {
 	--color-success: 29 179 124;
 	--color-danger: 215 88 84;
 	--body-gradient:
-		radial-gradient(circle at top right, rgba(14, 158, 184, 0.12), transparent 30%), radial-gradient(circle at bottom left, rgba(218, 74, 145, 0.11), transparent 24%),
-		radial-gradient(circle at 55% 65%, rgba(112, 0, 255, 0.08), transparent 26%), linear-gradient(180deg, #fbfdff 0%, #eef3f8 52%, #f8fbfe 100%);
+		radial-gradient(circle at top right, rgba(14, 158, 184, 0.12), transparent 30%),
+		radial-gradient(circle at bottom left, rgba(218, 74, 145, 0.11), transparent 24%),
+		radial-gradient(circle at 55% 65%, rgba(112, 0, 255, 0.08), transparent 26%),
+		linear-gradient(180deg, #fbfdff 0%, #eef3f8 52%, #f8fbfe 100%);
 	--scanline-opacity: 0.08;
 	--surface-elevated: rgba(255, 255, 255, 0.84);
 	--surface-soft: rgba(255, 255, 255, 0.72);
@@ -52,6 +68,7 @@ html[data-theme='light'] {
 	--shadow-soft: 0 24px 80px rgba(43, 61, 82, 0.12);
 }
 
+/* ─── Base ────────────────────────────────────────────────────────── */
 html {
 	scroll-behavior: smooth;
 	scrollbar-gutter: stable;
@@ -77,6 +94,23 @@ body::before {
 	z-index: 0;
 }
 
+/* ─── Global focus ring ───────────────────────────────────────────── */
+@layer base {
+	:focus-visible {
+		outline: 2px solid rgb(var(--color-primary) / 0.5);
+		outline-offset: 2px;
+		border-radius: 0.5rem;
+	}
+
+	/* Inputs manage their own focus ring via field-input styles */
+	.field-input:focus-visible,
+	.field-select:focus-visible,
+	.dashboard-select:focus-visible {
+		outline: none;
+	}
+}
+
+/* ─── Animations ──────────────────────────────────────────────────── */
 .unsaved-flash {
 	position: fixed;
 	inset: 0;
@@ -84,6 +118,26 @@ body::before {
 	z-index: 79;
 	background: radial-gradient(circle at center, rgba(255, 113, 108, 0.18), transparent 45%), linear-gradient(180deg, rgba(159, 5, 25, 0.22), rgba(159, 5, 25, 0.08));
 	animation: unsaved-pulse 0.65s ease;
+}
+
+@keyframes fade-in-up {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes skeleton-shimmer {
+	0% {
+		background-position: 200% 0;
+	}
+	100% {
+		background-position: -200% 0;
+	}
 }
 
 @keyframes unsaved-pulse {
@@ -113,13 +167,26 @@ body::before {
 	}
 }
 
+/* ─── Components ──────────────────────────────────────────────────── */
 @layer components {
+	.skeleton {
+		@apply rounded-[var(--radius-sm)];
+		background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 75%);
+		background-size: 200% 100%;
+		animation: skeleton-shimmer 1.6s ease-in-out infinite;
+	}
+
+	html[data-theme='light'] .skeleton {
+		background: linear-gradient(90deg, rgba(0, 0, 0, 0.05) 25%, rgba(0, 0, 0, 0.1) 50%, rgba(0, 0, 0, 0.05) 75%);
+		background-size: 200% 100%;
+	}
+
 	.shell {
 		@apply relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
 	}
 
 	.glass {
-		@apply rounded-[1.5rem] backdrop-blur-xl;
+		@apply rounded-[var(--radius-lg)] backdrop-blur-xl;
 		border: 1px solid var(--border-subtle);
 		background: var(--surface-elevated);
 	}
@@ -145,19 +212,19 @@ body::before {
 	}
 
 	.primary-button {
-		@apply inline-flex items-center justify-center rounded-[1rem] bg-secondary px-5 py-3 font-bold text-black transition hover:-translate-y-0.5 hover:shadow-pink;
+		@apply inline-flex items-center justify-center rounded-[var(--radius-sm)] bg-secondary px-5 py-3 font-bold text-black transition duration-200 hover:-translate-y-0.5 hover:shadow-pink;
 	}
 
 	.secondary-button {
-		@apply inline-flex items-center justify-center rounded-[1rem] border border-primary/30 bg-primary/10 px-5 py-3 font-bold text-primary transition hover:-translate-y-0.5 hover:bg-primary/15 hover:shadow-cyan;
+		@apply inline-flex items-center justify-center rounded-[var(--radius-sm)] border border-primary/30 bg-primary/10 px-5 py-3 font-bold text-primary transition duration-200 hover:-translate-y-0.5 hover:bg-primary/15 hover:shadow-cyan;
 	}
 
 	.ghost-button {
-		@apply inline-flex items-center justify-center rounded-[1rem] border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white transition hover:-translate-y-0.5 hover:bg-white/[0.06];
+		@apply inline-flex items-center justify-center rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-white/[0.06];
 	}
 
 	.account-menu {
-		@apply rounded-[1.1rem] border backdrop-blur-xl;
+		@apply rounded-[var(--radius-sm)] border backdrop-blur-xl;
 		border-color: rgba(255, 255, 255, 0.1);
 		background: rgba(12, 13, 15, 0.92);
 		box-shadow:
@@ -166,13 +233,13 @@ body::before {
 	}
 
 	.account-menu-surface {
-		@apply rounded-[0.95rem] border;
+		@apply rounded-[0.75rem] border;
 		border-color: rgba(255, 255, 255, 0.08);
 		background: rgba(255, 255, 255, 0.04);
 	}
 
 	.account-menu-action {
-		@apply rounded-[0.9rem] px-4 py-3 text-sm font-bold text-white transition;
+		@apply rounded-[0.75rem] px-4 py-3 text-sm font-bold text-white transition duration-200;
 	}
 
 	.account-menu-action:hover {
@@ -189,7 +256,7 @@ body::before {
 	}
 
 	.top-link {
-		@apply relative text-sm font-bold tracking-tight text-muted transition hover:text-white;
+		@apply relative text-sm font-bold tracking-tight text-muted transition duration-200 hover:text-white;
 	}
 
 	.top-link-active {
@@ -220,7 +287,7 @@ body::before {
 	}
 
 	.field-input {
-		@apply mt-2 w-full rounded-[1rem] border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15;
+		@apply mt-2 w-full rounded-[var(--radius-sm)] border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition duration-200 focus:border-primary/40 focus:ring-2 focus:ring-primary/15;
 	}
 
 	.field-select {
@@ -249,12 +316,13 @@ body::before {
 
 	.home-hero {
 		background:
-			radial-gradient(circle at top right, rgba(0, 255, 255, 0.08), transparent 34%), radial-gradient(circle at 75% 22%, rgba(112, 0, 255, 0.1), transparent 22%),
+			radial-gradient(circle at top right, rgba(0, 255, 255, 0.08), transparent 34%),
+			radial-gradient(circle at 75% 22%, rgba(112, 0, 255, 0.1), transparent 22%),
 			linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.02) 100%);
 	}
 
 	.feature-card {
-		@apply panel relative overflow-hidden rounded-[1.6rem] p-6 sm:p-8;
+		@apply panel relative overflow-hidden rounded-[var(--radius-lg)] p-6 sm:p-8;
 	}
 
 	.feature-card::before {
@@ -267,7 +335,7 @@ body::before {
 	}
 
 	.feature-card-icon {
-		@apply inline-flex h-14 w-14 items-center justify-center rounded-[1.15rem] border border-white/10 text-sm font-extrabold uppercase tracking-[0.2em];
+		@apply inline-flex h-14 w-14 items-center justify-center rounded-[var(--radius-sm)] border border-white/10 text-sm font-extrabold uppercase tracking-[0.2em];
 	}
 
 	.feature-card-number {
@@ -275,10 +343,12 @@ body::before {
 	}
 
 	.dashboard-hero-card {
-		@apply panel relative overflow-visible rounded-[1.8rem] p-6 sm:p-8;
+		@apply panel relative overflow-visible rounded-[var(--radius-lg)] p-6 sm:p-8;
 		background:
-			radial-gradient(circle at top right, rgba(0, 255, 255, 0.08), transparent 32%), radial-gradient(circle at bottom left, rgba(253, 104, 179, 0.08), transparent 28%),
-			radial-gradient(circle at 70% 18%, rgba(112, 0, 255, 0.12), transparent 22%), linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.018) 100%);
+			radial-gradient(circle at top right, rgba(0, 255, 255, 0.08), transparent 32%),
+			radial-gradient(circle at bottom left, rgba(253, 104, 179, 0.08), transparent 28%),
+			radial-gradient(circle at 70% 18%, rgba(112, 0, 255, 0.12), transparent 22%),
+			linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.018) 100%);
 	}
 
 	.dashboard-context-grid {
@@ -286,20 +356,20 @@ body::before {
 	}
 
 	.dashboard-context-card {
-		@apply rounded-[1.35rem] border border-white/10 bg-black/25 p-5;
+		@apply rounded-[var(--radius-md)] border border-white/10 bg-black/25 p-5;
 	}
 
 	.dashboard-meta-card {
-		@apply rounded-[1.35rem] border border-primary/15 bg-primary/5 p-5;
+		@apply rounded-[var(--radius-md)] border border-primary/15 bg-primary/5 p-5;
 		box-shadow: inset 0 0 0 1px rgba(112, 0, 255, 0.08);
 	}
 
 	.dashboard-player-card {
-		@apply panel rounded-[1.8rem] p-6 sm:p-8;
+		@apply panel rounded-[var(--radius-lg)] p-6 sm:p-8;
 	}
 
 	.dashboard-art-card {
-		@apply aspect-square overflow-hidden rounded-[1.6rem] border border-white/10 bg-black/30 shadow-[0_20px_60px_rgba(0,0,0,0.35)];
+		@apply aspect-square overflow-hidden rounded-[var(--radius-lg)] border border-white/10 bg-black/30 shadow-[0_20px_60px_rgba(0,0,0,0.35)];
 	}
 
 	.dashboard-pill {
@@ -307,7 +377,7 @@ body::before {
 	}
 
 	.dashboard-control-button {
-		@apply inline-flex min-w-[7.5rem] items-center justify-center rounded-[1rem] border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-50;
+		@apply inline-flex min-w-[7.5rem] items-center justify-center rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-bold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-50;
 	}
 
 	.dashboard-control-primary {
@@ -315,7 +385,7 @@ body::before {
 	}
 
 	.dashboard-control-icon {
-		@apply h-14 min-w-0 w-14 rounded-[1rem] px-0 text-2xl leading-none;
+		@apply h-14 min-w-0 w-14 rounded-[var(--radius-sm)] px-0 text-2xl leading-none;
 	}
 
 	.dashboard-control-icon-primary {
@@ -323,19 +393,19 @@ body::before {
 	}
 
 	.dashboard-panel-card {
-		@apply panel relative overflow-visible rounded-[1.6rem] p-6;
+		@apply panel relative overflow-visible rounded-[var(--radius-lg)] p-6;
 	}
 
 	.dashboard-queue-row {
-		@apply flex items-center rounded-[1.1rem] border border-white/10 bg-white/[0.03] p-4;
+		@apply flex items-center rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] p-4;
 	}
 
 	.dashboard-empty-card {
-		@apply rounded-[1.1rem] border border-white/10 bg-white/[0.03] p-4 text-sm leading-7 text-muted;
+		@apply rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] p-4 text-sm leading-7 text-muted;
 	}
 
 	.dashboard-stat-row {
-		@apply flex items-center justify-between rounded-[1rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-muted;
+		@apply flex items-center justify-between rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-muted transition duration-200;
 	}
 
 	.dashboard-stat-row strong {
@@ -343,11 +413,11 @@ body::before {
 	}
 
 	.dashboard-side-card {
-		@apply panel relative overflow-visible rounded-[1.6rem] p-6;
+		@apply panel relative overflow-visible rounded-[var(--radius-lg)] p-6;
 	}
 
 	.dashboard-mini-button {
-		@apply inline-flex items-center justify-center rounded-[0.95rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-bold text-white transition hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-50;
+		@apply inline-flex items-center justify-center rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-bold text-white transition duration-200 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-50;
 	}
 
 	.dashboard-mini-icon {
@@ -355,14 +425,14 @@ body::before {
 	}
 
 	.dashboard-select {
-		@apply w-full appearance-none rounded-[0.95rem] border border-white/10 bg-[length:1rem_1rem,100%_100%] bg-[position:right_1rem_center,center] bg-no-repeat px-4 py-3 pr-12 text-left text-sm font-bold text-white outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15;
+		@apply w-full appearance-none rounded-[var(--radius-sm)] border border-white/10 bg-[length:1rem_1rem,100%_100%] bg-[position:right_1rem_center,center] bg-no-repeat px-4 py-3 pr-12 text-left text-sm font-bold text-white outline-none transition duration-200 focus:border-primary/40 focus:ring-2 focus:ring-primary/15;
 		background-image:
 			url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23d5ffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"),
 			linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
 	}
 
 	.dashboard-select-menu {
-		@apply fixed z-[90] max-h-72 overflow-y-auto rounded-[1rem] p-2 backdrop-blur-xl;
+		@apply fixed z-[90] max-h-72 overflow-y-auto rounded-[var(--radius-sm)] p-2 backdrop-blur-xl;
 		border: 1px solid var(--border-subtle);
 		background: color-mix(in srgb, rgb(var(--color-surface)) 92%, transparent);
 		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
@@ -378,7 +448,7 @@ body::before {
 	}
 
 	.dashboard-select-option {
-		@apply flex w-full items-center rounded-[0.85rem] px-4 py-3 text-left text-sm font-bold text-white/85 transition hover:bg-white/[0.06] hover:text-white;
+		@apply flex w-full items-center rounded-[0.75rem] px-4 py-3 text-left text-sm font-bold text-white/65 transition duration-200 hover:bg-white/[0.06] hover:text-white;
 	}
 
 	.dashboard-select-option-active {
@@ -425,23 +495,43 @@ body::before {
 		box-shadow: 0 0 18px rgba(0, 255, 255, 0.35);
 	}
 
+	/* Status ───────────────────────────────────────────────────────── */
+
 	.status-hero-card {
-		@apply panel relative overflow-hidden rounded-[1.8rem] p-6 sm:p-8;
+		@apply panel relative overflow-hidden rounded-[var(--radius-lg)] p-6 sm:p-8;
 		background:
-			radial-gradient(circle at top right, rgba(0, 255, 255, 0.08), transparent 30%), radial-gradient(circle at bottom left, rgba(253, 104, 179, 0.08), transparent 26%),
-			radial-gradient(circle at 72% 18%, rgba(112, 0, 255, 0.12), transparent 22%), linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.018) 100%);
+			radial-gradient(circle at top right, rgba(0, 255, 255, 0.08), transparent 30%),
+			radial-gradient(circle at bottom left, rgba(253, 104, 179, 0.08), transparent 26%),
+			radial-gradient(circle at 72% 18%, rgba(112, 0, 255, 0.12), transparent 22%),
+			linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.018) 100%);
 	}
 
 	.status-panel-card {
-		@apply panel rounded-[1.6rem] p-6;
+		@apply panel rounded-[var(--radius-lg)] p-6;
 	}
 
 	.status-summary-card {
-		@apply rounded-[1.15rem] border border-white/10 bg-black/25 p-5;
+		@apply rounded-[var(--radius-sm)] border border-white/10 bg-black/25 p-5 transition duration-200;
+	}
+
+	/* Health-state accents on the Global status card */
+	.status-summary-card-operational {
+		border-color: rgba(var(--color-primary), 0.3);
+		box-shadow: 0 0 0 1px rgba(var(--color-primary), 0.1), 0 0 24px rgba(var(--color-primary), 0.07);
+	}
+
+	.status-summary-card-recovering {
+		border-color: rgba(var(--color-secondary), 0.3);
+		box-shadow: 0 0 0 1px rgba(var(--color-secondary), 0.1), 0 0 24px rgba(var(--color-secondary), 0.07);
+	}
+
+	.status-summary-card-degraded {
+		border-color: rgba(var(--color-danger), 0.35);
+		box-shadow: 0 0 0 1px rgba(var(--color-danger), 0.12), 0 0 24px rgba(var(--color-danger), 0.08);
 	}
 
 	.status-filter-pill {
-		@apply rounded-full border px-4 py-2 text-xs font-extrabold uppercase tracking-[0.2em] transition;
+		@apply rounded-full border px-4 py-2 text-xs font-extrabold uppercase tracking-[0.2em] transition duration-200;
 	}
 
 	.status-filter-pill-active {
@@ -469,11 +559,11 @@ body::before {
 	}
 
 	.status-badge-neutral {
-		@apply border-white/10 bg-white/[0.03] text-white/75;
+		@apply border-white/10 bg-white/[0.03] text-white/65;
 	}
 
 	.status-cluster-card {
-		@apply w-full rounded-[1.35rem] border border-white/10 bg-black/25 p-6 text-left transition hover:border-primary/20 hover:bg-white/[0.04];
+		@apply w-full rounded-[var(--radius-md)] border border-white/10 bg-black/25 p-6 text-left transition duration-200 hover:border-primary/20 hover:bg-white/[0.04];
 	}
 
 	.status-cluster-card-active {
@@ -481,7 +571,7 @@ body::before {
 	}
 
 	.status-mini-stat {
-		@apply rounded-[1.2rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-muted;
+		@apply rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-muted;
 	}
 
 	.status-mini-stat strong {
@@ -489,7 +579,7 @@ body::before {
 	}
 
 	.status-inline-stat {
-		@apply flex items-center justify-between rounded-[1.15rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-muted;
+		@apply flex items-center justify-between rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-muted;
 	}
 
 	.status-inline-stat strong {
@@ -497,15 +587,15 @@ body::before {
 	}
 
 	.status-feed-card {
-		@apply rounded-[1.05rem] border border-white/10 bg-white/[0.03] p-4;
+		@apply rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] p-4;
 	}
 
 	.status-empty-card {
-		@apply rounded-[1.1rem] border border-white/10 bg-white/[0.03] p-5 text-sm leading-7 text-muted;
+		@apply rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] p-5 text-sm leading-7 text-muted;
 	}
 
 	.status-shard-card {
-		@apply rounded-[1.15rem] border p-5;
+		@apply rounded-[var(--radius-sm)] border p-5;
 	}
 
 	.status-shard-ready {
@@ -521,6 +611,8 @@ body::before {
 	}
 }
 
+/* ─── Light mode overrides ────────────────────────────────────────── */
+
 html[data-theme='light'] .text-white {
 	color: rgb(var(--color-text)) !important;
 }
@@ -529,19 +621,15 @@ html[data-theme='light'] .text-white\/80 {
 	color: rgb(var(--color-text) / 0.8) !important;
 }
 
+/* Secondary tier: near-white values → 0.66 on light */
 html[data-theme='light'] .text-white\/75,
-html[data-theme='light'] .text-white\/70 {
+html[data-theme='light'] .text-white\/72,
+html[data-theme='light'] .text-white\/70,
+html[data-theme='light'] .text-white\/65 {
 	color: rgb(var(--color-text) / 0.72) !important;
 }
 
-html[data-theme='light'] .text-white\/74,
-html[data-theme='light'] .text-white\/72,
-html[data-theme='light'] .text-white\/68,
-html[data-theme='light'] .text-white\/65,
-html[data-theme='light'] .text-white\/64 {
-	color: rgb(var(--color-text) / 0.66) !important;
-}
-
+/* Muted tier: all the mid-opacity chaos → 0.58 on light */
 html[data-theme='light'] .text-white\/60,
 html[data-theme='light'] .text-white\/58,
 html[data-theme='light'] .text-white\/56,
@@ -550,13 +638,18 @@ html[data-theme='light'] .text-white\/54,
 html[data-theme='light'] .text-white\/52,
 html[data-theme='light'] .text-white\/48,
 html[data-theme='light'] .text-white\/45,
+html[data-theme='light'] .text-white\/42 {
+	color: rgb(var(--color-text) / 0.58) !important;
+}
+
+/* Hint tier: very low opacity → 0.48 on light for legibility */
 html[data-theme='light'] .text-white\/38,
 html[data-theme='light'] .text-white\/35,
 html[data-theme='light'] .text-white\/34,
 html[data-theme='light'] .text-white\/32,
 html[data-theme='light'] .text-white\/28,
 html[data-theme='light'] .text-white\/25 {
-	color: rgb(var(--color-text) / 0.58) !important;
+	color: rgb(var(--color-text) / 0.48) !important;
 }
 
 html[data-theme='light'] .text-cyan-100 {
@@ -652,13 +745,16 @@ html[data-theme='light'] .primary-button {
 html[data-theme='light'] .dashboard-hero-card,
 html[data-theme='light'] .status-hero-card {
 	background:
-		radial-gradient(circle at top right, rgba(14, 158, 184, 0.12), transparent 34%), radial-gradient(circle at bottom left, rgba(218, 74, 145, 0.1), transparent 28%),
-		radial-gradient(circle at 72% 18%, rgba(112, 0, 255, 0.1), transparent 22%), linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(251, 253, 255, 0.96) 100%);
+		radial-gradient(circle at top right, rgba(14, 158, 184, 0.12), transparent 34%),
+		radial-gradient(circle at bottom left, rgba(218, 74, 145, 0.1), transparent 28%),
+		radial-gradient(circle at 72% 18%, rgba(112, 0, 255, 0.1), transparent 22%),
+		linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(251, 253, 255, 0.96) 100%);
 }
 
 html[data-theme='light'] .home-hero {
 	background:
-		radial-gradient(circle at top right, rgba(14, 158, 184, 0.1), transparent 34%), radial-gradient(circle at 75% 22%, rgba(112, 0, 255, 0.08), transparent 22%),
+		radial-gradient(circle at top right, rgba(14, 158, 184, 0.1), transparent 34%),
+		radial-gradient(circle at 75% 22%, rgba(112, 0, 255, 0.08), transparent 22%),
 		linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(248, 251, 255, 0.96) 100%);
 }
 

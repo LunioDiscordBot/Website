@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { Spinner } from '@/components/spinner';
 import { apiJson, type ReferralPromoStatusResponse } from '@/lib/api';
 
 type LoadState = 'loading' | 'ready' | 'unauthorized' | 'error';
@@ -100,7 +101,12 @@ export function RedeemClient({ botId }: { botId: string }) {
 	};
 
 	if (state === 'loading') {
-		return <div className="dashboard-empty-card">Checking your referral promo progress...</div>;
+		return (
+			<div className="dashboard-empty-card flex items-center justify-center gap-3">
+				<Spinner className="h-5 w-5 text-primary" />
+				<span>Checking your referral promo progress...</span>
+			</div>
+		);
 	}
 
 	if (state === 'unauthorized') {
@@ -199,8 +205,8 @@ export function RedeemClient({ botId }: { botId: string }) {
 
 					<div className="mt-8 flex flex-wrap gap-3">
 						{status?.ready && !status?.granted ? (
-							<button className="primary-button" disabled={isRedeeming} onClick={() => void onRedeem()} type="button">
-								{isRedeeming ? 'Redeeming...' : 'Redeem 3 Months Premium'}
+							<button className="primary-button inline-flex items-center gap-2" disabled={isRedeeming} onClick={() => void onRedeem()} type="button">
+								{isRedeeming ? <><Spinner className="h-4 w-4" />Redeeming...</> : 'Redeem 3 Months Premium'}
 							</button>
 						) : (
 							<a className="primary-button" href="/servers">

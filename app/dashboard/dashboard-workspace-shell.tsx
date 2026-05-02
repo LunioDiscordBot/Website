@@ -17,10 +17,10 @@ type DashboardWorkspaceShellProps = {
 };
 
 type SidebarLink = {
-	key: DashboardWorkspaceShellProps['activeKey'] | 'home' | 'commands' | 'status' | 'support';
+	key: Exclude<DashboardWorkspaceShellProps['activeKey'], 'servers'> | 'home' | 'commands' | 'status' | 'support';
 	label: string;
 	caption: string;
-	icon: 'home' | 'overview' | 'servers' | 'settings' | 'playlists' | 'commands' | 'status' | 'account' | 'support' | 'collapse' | 'chevron';
+	icon: 'home' | 'overview' | 'settings' | 'playlists' | 'commands' | 'status' | 'account' | 'support' | 'collapse' | 'chevron';
 	href?: string;
 	active?: boolean;
 	disabled?: boolean;
@@ -58,17 +58,7 @@ function DashboardSidebarIcon({ name, className = 'h-5 w-5' }: { name: SidebarLi
 		case 'overview':
 			return (
 				<svg {...sharedProps}>
-					<path d="M4.75 10.5 12 4l7.25 6.5" />
-					<path d="M6.5 9.5v9h11v-9" />
-				</svg>
-			);
-		case 'servers':
-			return (
-				<svg {...sharedProps}>
-					<rect x="4.5" y="5" width="15" height="4.5" rx="1.5" />
-					<rect x="4.5" y="14.5" width="15" height="4.5" rx="1.5" />
-					<path d="M8 7.25h.01" />
-					<path d="M8 16.75h.01" />
+					<path d="M7.5 5v14l11-7-11-7Z" />
 				</svg>
 			);
 		case 'settings':
@@ -195,7 +185,8 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 			label: 'Home',
 			caption: 'Main site',
 			icon: 'home',
-			href: '/',
+			href: process.env.NEXT_PUBLIC_PUBLIC_SITE_URL || '/',
+			external: true,
 		},
 		{
 			key: 'overview',
@@ -205,14 +196,6 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 			href: canOpenOverview ? buildDashboardPath(effectiveBotId, effectiveGuildId) : undefined,
 			active: activeKey === 'overview',
 			disabled: !canOpenOverview,
-		},
-		{
-			key: 'servers',
-			label: 'Servers',
-			caption: 'Switch guild',
-			icon: 'servers',
-			href: '/servers',
-			active: activeKey === 'servers',
 		},
 		{
 			key: 'guild-settings',
@@ -270,12 +253,14 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 
 	const renderSidebarLink = (item: SidebarLink) => {
 		const isComingSoon = Boolean(item.comingSoon);
-		const className = `group flex w-full items-center gap-3 rounded-[1.15rem] border px-3 py-3 text-left transition ${
+		const className = `group flex w-full items-center gap-3 rounded-[1.15rem] border py-3 text-left transition ${
+			isSidebarCollapsed ? 'justify-center px-0' : 'px-3'
+		} ${
 			item.active
 				? 'border-primary/25 bg-primary/12 text-white shadow-[0_14px_40px_rgba(0,255,255,0.12)]'
 				: item.disabled
 					? isComingSoon
-						? 'cursor-not-allowed border-transparent bg-transparent text-white/72 hover:border-white/10 hover:bg-white/[0.035] hover:text-white'
+						? 'cursor-not-allowed border-secondary/12 bg-secondary/[0.04] text-white/72 hover:border-secondary/20 hover:bg-secondary/[0.07] hover:text-white'
 						: 'border-white/6 bg-transparent text-white/32'
 					: 'border-transparent bg-transparent text-white/72 hover:border-white/10 hover:bg-white/[0.035] hover:text-white'
 		}`;
@@ -288,7 +273,7 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 							? 'border-primary/18 bg-primary/12 text-primary'
 							: item.disabled
 								? isComingSoon
-									? 'border-white/10 bg-white/[0.03] text-white/78'
+									? 'border-secondary/20 bg-secondary/[0.07] text-secondary/70'
 									: 'border-white/6 bg-white/[0.02] text-white/24'
 								: 'border-white/10 bg-white/[0.03] text-white/78 group-hover:border-primary/20 group-hover:text-primary'
 					}`}
@@ -307,6 +292,8 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 			</>
 		);
 
+		const tooltip = item.comingSoon ? 'Coming soon' : isSidebarCollapsed ? item.label : item.caption;
+
 		if (!item.href || item.disabled) {
 			return (
 				<div
@@ -318,7 +305,7 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 							event.preventDefault();
 						}
 					}}
-					title={item.comingSoon ? 'Coming soon' : item.caption}
+					title={tooltip}
 				>
 					{content}
 				</div>
@@ -328,14 +315,14 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 		if (item.external) {
 			const shouldOpenNewTab = item.key === 'support';
 			return (
-				<a className={className} href={item.href} key={item.key} rel={shouldOpenNewTab ? 'noreferrer' : undefined} target={shouldOpenNewTab ? '_blank' : undefined}>
+				<a className={className} href={item.href} key={item.key} rel={shouldOpenNewTab ? 'noreferrer' : undefined} target={shouldOpenNewTab ? '_blank' : undefined} title={tooltip}>
 					{content}
 				</a>
 			);
 		}
 
 		return (
-			<Link className={className} href={item.href} key={item.key}>
+			<Link className={className} href={item.href} key={item.key} title={tooltip}>
 				{content}
 			</Link>
 		);
@@ -349,49 +336,70 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 						isSidebarCollapsed ? 'w-[104px]' : 'w-[292px]'
 					}`}
 				>
-					<div className="flex items-center justify-between gap-3">
-						<Link
-							className={`flex min-w-0 flex-1 items-center gap-3 rounded-[1.2rem] border border-white/10 bg-white/[0.035] px-3 py-3 text-left transition hover:border-primary/20 hover:bg-white/[0.05] ${
-								isSidebarCollapsed ? 'justify-center px-0' : ''
-							}`}
-							href="/settings"
-							title="Open account settings"
-						>
-							{isSidebarCollapsed ? (
-								<div className="flex h-11 w-11 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
-									<DashboardSidebarIcon className="h-5 w-5" name="account" />
-								</div>
-							) : authUser?.avatarUrl ? (
-								// eslint-disable-next-line @next/next/no-img-element
-								<img
-									alt={authUser?.username ?? 'Signed in user'}
-									className="h-11 w-11 rounded-full border border-primary/20 object-cover"
-									src={authUser?.avatarUrl ?? undefined}
-								/>
-							) : (
-								<div className="flex h-11 w-11 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-sm font-black text-primary">
-									{accountDisplayName.slice(0, 1).toUpperCase()}
-								</div>
-							)}
-							{isSidebarCollapsed ? null : (
-								<>
-									<div className="min-w-0 flex-1">
-										<div className="truncate text-sm font-bold text-white">{accountDisplayName}</div>
-										<div className="mt-1 truncate text-xs text-white/42">{accountHandle}</div>
+					{isSidebarCollapsed ? (
+						/* ── Collapsed header: avatar + toggle stacked vertically ── */
+						<div className="flex flex-col items-center gap-2">
+							<Link
+								className="flex h-11 w-11 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary transition hover:border-primary/40 hover:bg-primary/20"
+								href="/settings"
+								title={accountDisplayName}
+							>
+								{authUser?.avatarUrl ? (
+									// eslint-disable-next-line @next/next/no-img-element
+									<img
+										alt={authUser.username ?? 'Signed in user'}
+										className="h-11 w-11 rounded-full object-cover"
+										src={authUser.avatarUrl}
+									/>
+								) : (
+									<span className="text-sm font-black">{accountDisplayName.slice(0, 1).toUpperCase()}</span>
+								)}
+							</Link>
+							<button
+								aria-label="Expand sidebar"
+								className="flex h-8 w-11 items-center justify-center rounded-[0.75rem] border border-white/10 bg-white/[0.035] text-white/72 transition hover:border-primary/20 hover:text-primary"
+								onClick={() => setIsSidebarCollapsed(false)}
+								type="button"
+							>
+								<DashboardSidebarIcon className="h-4 w-4 rotate-180" name="collapse" />
+							</button>
+						</div>
+					) : (
+						/* ── Expanded header: full user card + collapse button side by side ── */
+						<div className="flex items-center gap-3">
+							<Link
+								className="flex min-w-0 flex-1 items-center gap-3 rounded-[1.2rem] border border-white/10 bg-white/[0.035] px-3 py-3 text-left transition hover:border-primary/20 hover:bg-white/[0.05]"
+								href="/settings"
+								title="Open account settings"
+							>
+								{authUser?.avatarUrl ? (
+									// eslint-disable-next-line @next/next/no-img-element
+									<img
+										alt={authUser.username ?? 'Signed in user'}
+										className="h-11 w-11 rounded-full border border-primary/20 object-cover"
+										src={authUser.avatarUrl}
+									/>
+								) : (
+									<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-sm font-black text-primary">
+										{accountDisplayName.slice(0, 1).toUpperCase()}
 									</div>
-									<DashboardSidebarIcon className="h-4 w-4 text-white/38" name="chevron" />
-								</>
-							)}
-						</Link>
-						<button
-							aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-							className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] border border-white/10 bg-white/[0.035] text-white/72 transition hover:border-primary/20 hover:text-primary"
-							onClick={() => setIsSidebarCollapsed((current) => !current)}
-							type="button"
-						>
-							<DashboardSidebarIcon className={`h-5 w-5 ${isSidebarCollapsed ? 'rotate-180' : ''}`} name="collapse" />
-						</button>
-					</div>
+								)}
+								<div className="min-w-0 flex-1">
+									<div className="truncate text-sm font-bold text-white">{accountDisplayName}</div>
+									<div className="mt-1 truncate text-xs text-white/42">{accountHandle}</div>
+								</div>
+								<DashboardSidebarIcon className="h-4 w-4 shrink-0 text-white/38" name="chevron" />
+							</Link>
+							<button
+								aria-label="Collapse sidebar"
+								className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] border border-white/10 bg-white/[0.035] text-white/72 transition hover:border-primary/20 hover:text-primary"
+								onClick={() => setIsSidebarCollapsed(true)}
+								type="button"
+							>
+								<DashboardSidebarIcon className="h-5 w-5" name="collapse" />
+							</button>
+						</div>
+					)}
 
 					<div className="mt-8">
 						<div className={`px-2 text-[11px] font-extrabold uppercase tracking-[0.24em] text-white/28 ${isSidebarCollapsed ? 'sr-only' : ''}`}>Workspace</div>
@@ -451,18 +459,34 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 								<div className="text-[11px] font-extrabold uppercase tracking-[0.24em] text-primary">Dashboard</div>
 								<h1 className="mt-2 truncate font-headline text-3xl font-bold tracking-[-0.05em] text-white">{title}</h1>
 								{subtitle ? <p className="mt-2 max-w-3xl text-sm leading-6 text-white/52">{subtitle}</p> : null}
-								<div className="mt-3 flex flex-wrap gap-2">
-									{effectiveBotId ? (
-										<span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/58">
-											Bot: {effectiveBotId}
-										</span>
-									) : null}
-									{effectiveGuildId ? (
+								{effectiveGuildId ? (
+									<div className="mt-3 flex flex-wrap items-center gap-2">
 										<span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/58">
 											Server: {effectiveGuildId}
 										</span>
-									) : null}
-								</div>
+										<Link
+											className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/45 transition hover:border-white/20 hover:text-white"
+											href="/servers"
+										>
+											<svg aria-hidden="true" className="h-3 w-3" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24">
+												<path d="M15 18l-6-6 6-6" />
+											</svg>
+											Change
+										</Link>
+									</div>
+								) : activeKey !== 'servers' ? (
+									<div className="mt-3">
+										<Link
+											className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/45 transition hover:border-primary/20 hover:text-primary"
+											href="/servers"
+										>
+											Pick a server
+											<svg aria-hidden="true" className="h-3 w-3" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24">
+												<path d="M9 18l6-6-6-6" />
+											</svg>
+										</Link>
+									</div>
+								) : null}
 							</div>
 							{headerActions ? <div className="flex shrink-0 flex-wrap items-center gap-3">{headerActions}</div> : null}
 						</div>
