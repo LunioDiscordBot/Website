@@ -61,10 +61,6 @@ function formatClock(ms: number | null | undefined) {
 	return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-function formatToggleState(value: boolean | null | undefined) {
-	return value ? 'On' : 'Off';
-}
-
 function PlayerControlIcon({ name, className = 'h-5 w-5' }: { name: PlayerIconName; className?: string }) {
 	const sharedProps = {
 		className,
@@ -400,7 +396,6 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 	const guildSettingsHref = buildDashboardPath(formBotId, formGuildId, 'settings');
 	const accountDisplayName = authUser ? authUser.globalName || authUser.username : 'Dashboard guest';
 	const accountHandle = authUser?.username ? `@${authUser.username}` : 'Profile & preferences';
-	const queuePreview = queueTracks.slice(0, 6);
 	const searchDisabledReason = !authUser
 		? 'Sign in with Discord to search and queue tracks from the dashboard.'
 		: !selectedGuild
@@ -430,6 +425,7 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 			onSearchReset();
 		}
 	}, [isSearchModalOpen, onSearchReset, searchError, searchPlaylist, searchQuery, searchResults.length]);
+
 	const botMenuStyle = botMenuPosition
 		? {
 				left: `${botMenuPosition.left}px`,
@@ -439,6 +435,8 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 		: undefined;
 	const commandFinishedTime = typeof commandFeedback.resultTimestamp === 'number' ? new Date(commandFeedback.resultTimestamp).toLocaleTimeString() : '--';
 	const isPlayerConnected = player?.state === 'CONNECTED';
+
+	// Theme-aware class sets
 	const frameClass = isLight
 		? 'border-slate-200/80 bg-[rgba(248,250,252,0.96)] shadow-[0_28px_90px_rgba(32,51,74,0.14)]'
 		: 'border-white/10 bg-[rgba(9,10,12,0.88)] shadow-[0_28px_90px_rgba(0,0,0,0.42)]';
@@ -501,15 +499,6 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 				? 'rounded-full border border-primary/25 bg-primary/12 px-4 py-2 text-primary'
 				: 'rounded-full border border-secondary/25 bg-secondary/12 px-4 py-2 text-secondary'
 			: stageInfoChipClass;
-	const artworkBackdropClass = isLight
-		? 'absolute inset-y-8 right-8 left-8 rounded-[2rem] border border-slate-200/80 bg-[rgba(241,245,249,0.86)] shadow-[0_24px_90px_rgba(32,51,74,0.16)] backdrop-blur-md'
-		: 'absolute inset-y-8 right-8 left-8 rounded-[2rem] border border-white/10 bg-black/25 shadow-[0_24px_90px_rgba(0,0,0,0.45)] backdrop-blur-md';
-	const artworkFrameClass = isLight
-		? 'relative aspect-[0.86] w-full max-w-[320px] overflow-hidden rounded-[2rem] border border-slate-200/80 bg-[rgba(255,255,255,0.88)] shadow-[0_24px_90px_rgba(32,51,74,0.16)]'
-		: 'relative aspect-[0.86] w-full max-w-[320px] overflow-hidden rounded-[2rem] border border-white/12 bg-[rgba(255,255,255,0.03)] shadow-[0_24px_90px_rgba(0,0,0,0.45)]';
-	const statCardClass = isLight
-		? 'rounded-[1.6rem] border border-slate-200/80 bg-white/88 p-5 shadow-[0_18px_50px_rgba(32,51,74,0.1)]'
-		: 'rounded-[1.6rem] border border-white/10 bg-[rgba(18,19,22,0.82)] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.26)]';
 	const queuePanelClass = isLight
 		? 'w-full min-w-0 rounded-[1.9rem] border border-slate-200/80 bg-white/92 p-5 shadow-[0_22px_65px_rgba(32,51,74,0.12)]'
 		: 'w-full min-w-0 rounded-[1.9rem] border border-white/10 bg-[rgba(18,19,22,0.84)] p-5 shadow-[0_22px_65px_rgba(0,0,0,0.34)]';
@@ -532,6 +521,7 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 	const pillActionButtonClass = isLight
 		? 'inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90 px-4 py-2.5 text-sm font-bold text-slate-800 transition hover:border-primary/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40'
 		: 'inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-bold text-white transition hover:border-primary/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40';
+
 	const scrollToPremiumStudio = () => {
 		const premiumStudio = document.getElementById('premium-studio');
 		if (!premiumStudio) return;
@@ -649,6 +639,7 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 	return (
 		<div className="relative z-10 min-h-screen overflow-x-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-5">
 			<div className={`mx-auto flex h-[calc(100vh-1.5rem)] max-w-[1820px] flex-col overflow-hidden rounded-[2rem] border backdrop-blur-xl lg:flex-row ${frameClass}`}>
+				{/* ── Sidebar ───────────────────────────────────────────────────────── */}
 				<aside
 					className={`relative flex min-h-0 shrink-0 flex-col overflow-y-auto border-b border-white/8 px-4 py-5 transition-[width] duration-300 [scrollbar-gutter:stable] lg:border-b-0 lg:border-r ${sidebarClass} ${
 						isSidebarCollapsed ? 'w-full lg:w-[104px]' : 'w-full lg:w-[292px]'
@@ -736,7 +727,9 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 					</div>
 				</aside>
 
+				{/* ── Main workspace ────────────────────────────────────────────────── */}
 				<main className={`min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto [scrollbar-gutter:stable] ${workspaceClass}`}>
+					{/* Header */}
 					<header
 						className={`sticky top-0 z-10 border-b px-5 py-4 backdrop-blur-xl sm:px-6 lg:px-8 ${dividerClass} ${
 							isLight ? 'bg-[rgba(248,250,252,0.78)]' : 'bg-[rgba(9,10,12,0.72)]'
@@ -745,26 +738,26 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 						<div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
 							<div className="min-w-0">
 								<div className={`truncate font-headline text-2xl font-bold tracking-[-0.05em] sm:text-3xl ${mainTextClass}`}>
-									Player control: <span className="text-primary">{selectedGuild?.name ?? 'Choose a server to start listening'}</span>
+									Now Playing: <span className="text-primary">{selectedGuild?.name ?? 'Choose a server to start listening'}</span>
 								</div>
 							</div>
 
 							<div className="flex flex-wrap items-center gap-3">
 								<Link
-								className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-white/58 transition duration-200 hover:border-white/20 hover:text-white"
-								href="/servers"
-							>
-								<svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24">
-									<path d="M15 18l-6-6 6-6" />
-								</svg>
-								Servers
-							</Link>
-							<button className="ghost-button px-4 py-2 text-sm" onClick={openSearchModal} type="button">
-								Search
-							</button>
-							<button className="ghost-button px-4 py-2 text-sm" onClick={onRefreshState} type="button">
-								Refresh
-							</button>
+									className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-white/58 transition duration-200 hover:border-white/20 hover:text-white"
+									href="/servers"
+								>
+									<svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24">
+										<path d="M15 18l-6-6 6-6" />
+									</svg>
+									Servers
+								</Link>
+								<button className="ghost-button px-4 py-2 text-sm" onClick={openSearchModal} type="button">
+									Search
+								</button>
+								<button className="ghost-button px-4 py-2 text-sm" onClick={onRefreshState} type="button">
+									Refresh
+								</button>
 								<div className="relative min-w-[13rem]">
 									<button
 										aria-expanded={isBotMenuOpen}
@@ -799,33 +792,62 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 						</div>
 					</header>
 
+					{/* ── Player content ──────────────────────────────────────────────── */}
 					<div className="px-5 py-5 sm:px-6 lg:px-8 lg:py-6">
-						<div className="mx-auto grid w-full max-w-[1600px] gap-4 2xl:grid-cols-[minmax(0,1.14fr)_minmax(0,300px)]">
-							<div className="grid gap-4">
-								<article className={stageClass} key={playerSurfaceKey}>
-									<div
-										className="absolute inset-0"
-										style={
-											currentTrack?.artworkUrl
-												? {
-														backgroundImage: `linear-gradient(90deg, rgba(8,8,10,0.92) 0%, rgba(8,8,10,0.72) 38%, rgba(8,8,10,0.82) 100%), url(${currentTrack.artworkUrl})`,
-														backgroundPosition: 'center',
-														backgroundSize: 'cover',
-													}
-												: undefined
-										}
-									/>
-									{!currentTrack?.artworkUrl ? (
-										<div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,255,255,0.16),transparent_24%),radial-gradient(circle_at_80%_10%,rgba(112,0,255,0.16),transparent_22%),linear-gradient(180deg,rgba(10,10,12,0.96),rgba(16,17,18,0.9))]" />
-									) : null}
+						<div className="mx-auto grid w-full max-w-[1600px] gap-5">
 
-									<div className="relative grid min-h-[280px] gap-5 px-4 py-4 lg:grid-cols-[1.22fr_0.78fr] lg:px-5 lg:py-4">
-										<div className="flex min-w-0 flex-col justify-end">
-											<div className="mb-3 flex flex-wrap items-center gap-2">
+							{/* Now Playing Hero */}
+							<article className={stageClass} key={playerSurfaceKey}>
+								{/* Full-bleed artwork background */}
+								<div
+									className="absolute inset-0"
+									style={
+										currentTrack?.artworkUrl
+											? {
+													backgroundImage: `linear-gradient(90deg, rgba(8,8,10,0.96) 0%, rgba(8,8,10,0.78) 45%, rgba(8,8,10,0.88) 100%), url(${currentTrack.artworkUrl})`,
+													backgroundPosition: 'center',
+													backgroundSize: 'cover',
+												}
+											: undefined
+									}
+								/>
+								{!currentTrack?.artworkUrl ? (
+									<div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(0,255,255,0.18),transparent_26%),radial-gradient(circle_at_82%_12%,rgba(112,0,255,0.18),transparent_24%),linear-gradient(180deg,rgba(10,10,12,0.97),rgba(16,17,18,0.92))]" />
+								) : null}
+
+								{/* Content grid: art (lg) | info */}
+								<div className="relative flex min-h-[340px] lg:min-h-[400px]">
+									{/* Album art — visible lg+ */}
+									<div className="hidden lg:flex shrink-0 items-center justify-center p-8 pr-6">
+										<div className="relative w-[200px] xl:w-[240px] aspect-square overflow-hidden rounded-[1.75rem] border border-white/12 shadow-[0_28px_80px_rgba(0,0,0,0.55)]">
+											{currentTrack?.artworkUrl ? (
+												// eslint-disable-next-line @next/next/no-img-element
+												<img
+													alt={currentTrack.title ?? 'Current track artwork'}
+													className="h-full w-full object-cover"
+													src={currentTrack.artworkUrl}
+												/>
+											) : (
+												<div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_center,rgba(0,255,255,0.2),transparent_30%),linear-gradient(180deg,rgba(22,24,27,0.97),rgba(12,13,15,0.99))]">
+													<div className="rounded-full border border-primary/25 bg-primary/12 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.22em] text-primary">
+														Lunio
+													</div>
+												</div>
+											)}
+										</div>
+									</div>
+
+									{/* Track info */}
+									<div className="flex min-w-0 flex-1 flex-col justify-between px-6 py-7 lg:px-7">
+										{/* Top: badges + title + artist */}
+										<div className="min-w-0">
+											<div className="mb-5 flex flex-wrap items-center gap-2">
 												<span className="rounded-full border border-primary/25 bg-primary/12 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-primary">
 													{currentTrack ? 'Now Playing' : 'Standby'}
 												</span>
-												<span className={stageStatusChipClass}>{player?.paused ? 'Paused' : currentTrack ? 'Live stream' : 'Waiting'}</span>
+												<span className={stageStatusChipClass}>
+													{player?.paused ? 'Paused' : currentTrack ? 'Live' : 'Waiting'}
+												</span>
 												{autoplayModeEnabled ? (
 													<span className="rounded-full border border-secondary/25 bg-secondary/12 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-secondary">
 														Autoplay On
@@ -833,274 +855,196 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 												) : null}
 											</div>
 
-											<div className="max-w-3xl">
-												<h2
-													className={`truncate font-headline text-[1.8rem] font-bold tracking-[-0.07em] sm:text-[2.15rem] xl:text-[2.9rem] ${mainTextClass}`}
-												>
-													{currentTrack?.title ?? 'No active player'}
-												</h2>
-												<p className={`mt-3 truncate text-lg sm:text-xl ${isLight ? 'text-slate-700' : 'text-white/74'}`}>
-													{currentTrack?.artist ?? playerError ?? 'Join your voice channel from here or start playback in Discord.'}
-												</p>
-												<p className={`mt-3 text-sm leading-6 ${isLight ? 'text-slate-600' : 'text-white/56'}`}>
-													{currentTrackRequester
-														? `Requested by ${currentTrackRequester}`
-														: selectedBot
-															? `${selectedBot.label} is ready for live playback in this workspace.`
-															: 'Select a bot instance to start controlling playback.'}
-												</p>
-											</div>
+											<h2 className={`truncate font-headline text-[2rem] font-bold tracking-[-0.07em] sm:text-[2.6rem] xl:text-[3.1rem] ${mainTextClass}`}>
+												{currentTrack?.title ?? 'No active player'}
+											</h2>
+											<p className={`mt-3 truncate text-xl sm:text-2xl ${isLight ? 'text-slate-700' : 'text-white/72'}`}>
+												{currentTrack?.artist ?? playerError ?? 'Start playback in Discord or join a voice channel.'}
+											</p>
+											{currentTrackRequester ? (
+												<p className={`mt-2.5 text-sm ${faintTextClass}`}>Requested by {currentTrackRequester}</p>
+											) : selectedBot ? (
+												<p className={`mt-2.5 text-sm ${faintTextClass}`}>{selectedBot.label} is ready for live playback.</p>
+											) : null}
+										</div>
 
-											<div className={`mt-4 flex flex-wrap gap-2.5 text-sm ${isLight ? 'text-slate-600' : 'text-white/68'}`}>
+										{/* Bottom: metadata chips + progress */}
+										<div>
+											<div className={`mt-4 mb-5 flex flex-wrap gap-2 text-sm ${isLight ? 'text-slate-600' : 'text-white/68'}`}>
 												<div className={stageInfoChipClass}>
 													Queue · {queueCount} {queueCount === 1 ? 'track' : 'tracks'}
 												</div>
-												<div className={stageInfoChipClass}>Queued time · {formatDuration(queueDuration)}</div>
+												<div className={stageInfoChipClass}>Duration · {formatDuration(queueDuration)}</div>
 												<div className={repeatModeChipClass}>Repeat · {(player?.repeatMode ?? 'off').toUpperCase()}</div>
 											</div>
-										</div>
 
-										<div className="relative hidden min-h-[190px] items-center justify-center lg:flex">
-											<div className={artworkBackdropClass} />
-											<div className={artworkFrameClass}>
-												{currentTrack?.artworkUrl ? (
-													// eslint-disable-next-line @next/next/no-img-element
-													<img
-														alt={currentTrack?.title ?? 'Current track artwork'}
-														className="h-full w-full object-cover"
-														src={currentTrack?.artworkUrl ?? undefined}
-													/>
-												) : (
-													<div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_center,rgba(0,255,255,0.18),transparent_28%),linear-gradient(180deg,rgba(22,24,27,0.95),rgba(12,13,15,0.98))]">
-														<div className="rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.22em] text-primary">
-															Lunio
-														</div>
-													</div>
-												)}
+											{/* Progress scrubber */}
+											<div className="flex items-center justify-between gap-2 mb-2.5">
+												<span className={`text-sm font-bold tabular-nums ${faintTextClass}`}>{formatClock(syncedDisplayPosition)}</span>
+												<span className={`text-sm font-bold tabular-nums ${faintTextClass}`}>{formatClock(trackDuration)}</span>
 											</div>
-										</div>
-									</div>
-								</article>
-
-								<article className={`rounded-[1.9rem] border p-4 ${panelClass}`}>
-									<div className={`mb-4 flex items-center justify-between gap-4 text-sm font-bold ${isLight ? 'text-slate-600' : 'text-white/74'}`}>
-										<span>{formatClock(syncedDisplayPosition)}</span>
-										<span>{formatClock(trackDuration)}</span>
-									</div>
-									<div className="relative">
-										<div className="h-2 rounded-full bg-white/10">
-											<div className="h-full rounded-full bg-gradient-to-r from-primary via-primary to-secondary" style={{ width: `${progressPercent}%` }} />
-										</div>
-										<input
-											className="dashboard-range absolute inset-0 h-2 w-full cursor-pointer appearance-none bg-transparent"
-											disabled={isBusy || !currentTrack || !canUsePlayerDjControls}
-											max={Math.max(trackDuration, 1000)}
-											min={0}
-											onChange={(event) => onScrubChange(Number(event.target.value))}
-											onMouseDown={onScrubStart}
-											onMouseUp={onSubmitSeek}
-											onTouchEnd={onSubmitSeek}
-											onTouchStart={onScrubStart}
-											step={1000}
-											type="range"
-											value={Math.min(syncedDisplayPosition, Math.max(trackDuration, 1000))}
-										/>
-									</div>
-									<div className="mt-5 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,236px)] xl:items-start">
-										<div className="flex min-w-0 flex-wrap items-center gap-3">
-											{!isPlayerConnected ? (
-												<button
-													className="inline-flex min-h-[4.5rem] items-center justify-center rounded-full bg-primary px-8 text-sm font-extrabold uppercase tracking-[0.2em] text-black shadow-[0_18px_45px_rgba(0,255,255,0.24)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
-													disabled={isBusy || !canUseJoinControl}
-													onClick={() => onSendCommand('join')}
-													type="button"
-												>
-													Join Voice
-												</button>
-											) : (
-												<>
-													<button
-														aria-label="Shuffle"
-														className={roundControlButtonClass}
-														disabled={isBusy || queueCount <= 2 || !canUsePlayerDjControls}
-														onClick={() => onSendCommand('shuffle')}
-														type="button"
-													>
-														<PlayerControlIcon name="shuffle" />
-													</button>
-													<button
-														aria-label="Previous"
-														className={roundControlButtonClass}
-														disabled={isBusy || !currentTrack || !canUsePlayerDjControls}
-														onClick={() => onSendCommand('previous')}
-														type="button"
-													>
-														<PlayerControlIcon name="previous" />
-													</button>
-													<button
-														aria-label={player?.paused ? 'Resume' : 'Pause'}
-														className="flex h-[5.5rem] w-[5.5rem] items-center justify-center rounded-full bg-primary text-black shadow-[0_22px_55px_rgba(0,255,255,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
-														disabled={isBusy || !currentTrack || !canUsePlayerDjControls}
-														onClick={() => onSendCommand(player?.paused ? 'resume' : 'pause')}
-														type="button"
-													>
-														<PlayerControlIcon className="h-6 w-6" name={player?.paused ? 'play' : 'pause'} />
-													</button>
-													<button
-														aria-label="Skip"
-														className={roundControlButtonClass}
-														disabled={isBusy || !currentTrack || !canUsePlayerDjControls}
-														onClick={() => onSendCommand('skip')}
-														type="button"
-													>
-														<PlayerControlIcon name="skip" />
-													</button>
-													<button
-														aria-label={`Repeat mode: ${player?.repeatMode ?? 'off'}`}
-														className={`relative flex h-14 w-14 items-center justify-center rounded-full border text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${
-															player?.repeatMode && player?.repeatMode !== 'off'
-																? 'border-primary/25 bg-primary/12 text-primary'
-																: 'border-white/10 bg-white/[0.04] hover:border-primary/20 hover:text-primary'
-														}`}
-														disabled={isBusy || !currentTrack || !canUsePlayerDjControls}
-														onClick={() => onSendCommand('repeat')}
-														type="button"
-													>
-														<PlayerControlIcon name="repeat" />
-														{player?.repeatMode === 'track' ? (
-															<span className="pointer-events-none absolute bottom-[0.45rem] right-[0.5rem] text-[0.62rem] font-black leading-none text-current">
-																1
-															</span>
-														) : player?.repeatMode === 'queue' ? (
-															<span className="pointer-events-none absolute bottom-[0.55rem] left-1/2 -translate-x-1/2 text-[0.8rem] font-black leading-none text-current">
-																.
-															</span>
-														) : null}
-													</button>
-												</>
-											)}
-										</div>
-
-										<div className="flex min-w-0 flex-col gap-3 xl:w-full">
-											<label className="block">
-												<div className="mb-2 flex items-center justify-between gap-3">
-													<span className={`text-xs font-extrabold uppercase tracking-[0.22em] ${isLight ? 'text-slate-500' : 'text-white/38'}`}>
-														Volume
-													</span>
-													<span className={`text-sm font-bold ${mainTextClass}`}>{volumeDraft}%</span>
+											<div className="relative">
+												<div className="h-1.5 rounded-full bg-white/14">
+													<div
+														className="h-full rounded-full bg-gradient-to-r from-primary via-primary to-secondary transition-[width] duration-200"
+														style={{ width: `${progressPercent}%` }}
+													/>
 												</div>
 												<input
-													className="dashboard-range h-2 w-full cursor-pointer appearance-none rounded-full bg-white/10"
-													disabled={isBusy || player?.state !== 'CONNECTED' || !canUsePlayerDjControls}
-													max={200}
-													min={1}
-													onChange={(event) => onVolumeDraftChange(Number(event.target.value))}
-													onMouseUp={onSubmitVolume}
-													onTouchEnd={onSubmitVolume}
-													step={1}
-													type="range"
-													value={volumeDraft}
-												/>
-											</label>
-
-											<div className="flex flex-wrap items-center gap-3">
-												<button
-													className={pillActionButtonClass}
+													className="dashboard-range absolute inset-0 h-1.5 w-full cursor-pointer appearance-none bg-transparent"
 													disabled={isBusy || !currentTrack || !canUsePlayerDjControls}
-													onClick={() => onSendCommand('stop')}
-													type="button"
-												>
-													<PlayerControlIcon className="h-4 w-4" name="stop" />
-													Stop
-												</button>
-												<button
-													className={pillActionButtonClass}
-													disabled={isBusy || !canUseLeaveControl}
-													onClick={() => onSendCommand('leave')}
-													type="button"
-												>
-													<PlayerControlIcon className="h-4 w-4" name="leave" />
-													Leave
-												</button>
+													max={Math.max(trackDuration, 1000)}
+													min={0}
+													onChange={(event) => onScrubChange(Number(event.target.value))}
+													onMouseDown={onScrubStart}
+													onMouseUp={onSubmitSeek}
+													onTouchEnd={onSubmitSeek}
+													onTouchStart={onScrubStart}
+													step={1000}
+													type="range"
+													value={Math.min(syncedDisplayPosition, Math.max(trackDuration, 1000))}
+												/>
 											</div>
-										</div>
-									</div>
-
-									{!hasVoiceChannelContext ? (
-										<div className={messageCardClass}>Join a permitted voice channel to unlock the realtime controls from this dashboard.</div>
-									) : player && !canUseDjControls ? (
-										<div className={messageCardClass}>
-											Lunio can see you, but DJ-gated playback controls are still restricted for your current voice context.
-										</div>
-									) : null}
-								</article>
-
-								<div className="grid gap-4 xl:grid-cols-4">
-									<div className={statCardClass}>
-										<div className={`text-[11px] font-extrabold uppercase tracking-[0.22em] ${microLabelClass}`}>Session</div>
-										<div className={`mt-4 text-3xl font-headline font-bold tracking-[-0.06em] ${mainTextClass}`}>{activityState}</div>
-										<div className={`mt-2 text-sm ${isLight ? 'text-slate-500' : 'text-white/52'}`}>
-											{player?.voiceChannelId ? 'Voice channel attached' : 'Waiting for voice context'}
-										</div>
-									</div>
-									<div className={statCardClass}>
-										<div className={`text-[11px] font-extrabold uppercase tracking-[0.22em] ${microLabelClass}`}>Queue Time</div>
-										<div className={`mt-4 text-3xl font-headline font-bold tracking-[-0.06em] ${mainTextClass}`}>{formatDuration(queueDuration)}</div>
-										<div className={`mt-2 text-sm ${isLight ? 'text-slate-500' : 'text-white/52'}`}>{queueCount} tracks buffered</div>
-									</div>
-									<div className={statCardClass}>
-										<div className={`text-[11px] font-extrabold uppercase tracking-[0.22em] ${microLabelClass}`}>Filters</div>
-										<div className={`mt-4 text-3xl font-headline font-bold tracking-[-0.06em] ${mainTextClass}`}>{activePremiumFilters.length}</div>
-										<div className={`mt-2 text-sm ${isLight ? 'text-slate-500' : 'text-white/52'}`}>
-											{activePremiumFilters.length ? activePremiumFilters.join(', ') : 'No premium filters active'}
-										</div>
-									</div>
-									<div className={statCardClass}>
-										<div className={`text-[11px] font-extrabold uppercase tracking-[0.22em] ${microLabelClass}`}>Autoplay</div>
-										<div className={`mt-4 text-3xl font-headline font-bold tracking-[-0.06em] ${mainTextClass}`}>
-											{formatToggleState(player?.autoplayEnabled)}
-										</div>
-										<div className={`mt-2 text-sm ${isLight ? 'text-slate-500' : 'text-white/52'}`}>
-											{currentTrack ? (currentTrackFromAutoplay ? 'Current track from autoplay' : 'Manual queue source') : 'No active track'}
 										</div>
 									</div>
 								</div>
+							</article>
 
-								<article className={`rounded-[1.8rem] border p-5 shadow-[0_22px_60px_rgba(0,0,0,0.26)] ${getCommandFeedbackToneClasses(commandFeedback.phase)}`}>
-									<div className="flex flex-wrap items-start justify-between gap-4">
-										<div>
-											<div className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-current/72">Latest action</div>
-											<h3 className="mt-3 font-headline text-2xl font-bold tracking-[-0.05em] text-white">{commandFeedback.title}</h3>
-										</div>
-										<span className="rounded-full border border-current/15 bg-black/10 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.2em] text-current">
-											{formatCommandFeedbackPhase(commandFeedback.phase)}
-										</span>
+							{/* Transport controls */}
+							<article className={`rounded-[1.9rem] border p-5 sm:p-6 ${panelClass}`}>
+								<div className="flex flex-wrap items-center justify-between gap-4">
+									{/* Left: secondary actions */}
+									<div className="flex items-center gap-2.5">
+										<button
+											className={pillActionButtonClass}
+											disabled={isBusy || !currentTrack || !canUsePlayerDjControls}
+											onClick={() => onSendCommand('stop')}
+											type="button"
+										>
+											<PlayerControlIcon className="h-4 w-4" name="stop" />
+											Stop
+										</button>
+										<button
+											className={pillActionButtonClass}
+											disabled={isBusy || !canUseLeaveControl}
+											onClick={() => onSendCommand('leave')}
+											type="button"
+										>
+											<PlayerControlIcon className="h-4 w-4" name="leave" />
+											Leave
+										</button>
 									</div>
-									<p className="mt-4 max-w-3xl text-sm leading-7 text-current/90">{commandFeedback.message}</p>
-									<div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-										<div className="rounded-[1.15rem] border border-current/10 bg-black/10 px-4 py-3">
-											<div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-current/70">Command</div>
-											<div className="mt-2 text-sm font-bold text-white">
-												{commandFeedback.commandType ? formatCommandTypeLabel(commandFeedback.commandType) : '--'}
-											</div>
-										</div>
-										<div className="rounded-[1.15rem] border border-current/10 bg-black/10 px-4 py-3">
-											<div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-current/70">Command ID</div>
-											<div className="mt-2 text-sm font-bold text-white">{formatShortCommandId(commandFeedback.commandId)}</div>
-										</div>
-										<div className="rounded-[1.15rem] border border-current/10 bg-black/10 px-4 py-3">
-											<div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-current/70">Instance</div>
-											<div className="mt-2 text-sm font-bold text-white">{commandFeedback.instanceId ?? '--'}</div>
-										</div>
-										<div className="rounded-[1.15rem] border border-current/10 bg-black/10 px-4 py-3">
-											<div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-current/70">Finished</div>
-											<div className="mt-2 text-sm font-bold text-white">{commandFinishedTime}</div>
-										</div>
-									</div>
-								</article>
-							</div>
 
-							<aside className="grid min-w-0 gap-6">
+									{/* Center: main playback controls */}
+									<div className="flex flex-1 items-center justify-center gap-3">
+										{!isPlayerConnected ? (
+											<button
+												className="inline-flex min-h-[4.5rem] items-center justify-center rounded-full bg-primary px-8 text-sm font-extrabold uppercase tracking-[0.2em] text-black shadow-[0_18px_45px_rgba(0,255,255,0.26)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+												disabled={isBusy || !canUseJoinControl}
+												onClick={() => onSendCommand('join')}
+												type="button"
+											>
+												Join Voice
+											</button>
+										) : (
+											<>
+												<button
+													aria-label="Shuffle"
+													className={roundControlButtonClass}
+													disabled={isBusy || queueCount <= 2 || !canUsePlayerDjControls}
+													onClick={() => onSendCommand('shuffle')}
+													type="button"
+												>
+													<PlayerControlIcon name="shuffle" />
+												</button>
+												<button
+													aria-label="Previous"
+													className={roundControlButtonClass}
+													disabled={isBusy || !currentTrack || !canUsePlayerDjControls}
+													onClick={() => onSendCommand('previous')}
+													type="button"
+												>
+													<PlayerControlIcon name="previous" />
+												</button>
+												<button
+													aria-label={player?.paused ? 'Resume' : 'Pause'}
+													className="flex h-[5.5rem] w-[5.5rem] items-center justify-center rounded-full bg-primary text-black shadow-[0_22px_55px_rgba(0,255,255,0.30)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
+													disabled={isBusy || !currentTrack || !canUsePlayerDjControls}
+													onClick={() => onSendCommand(player?.paused ? 'resume' : 'pause')}
+													type="button"
+												>
+													<PlayerControlIcon className="h-6 w-6" name={player?.paused ? 'play' : 'pause'} />
+												</button>
+												<button
+													aria-label="Skip"
+													className={roundControlButtonClass}
+													disabled={isBusy || !currentTrack || !canUsePlayerDjControls}
+													onClick={() => onSendCommand('skip')}
+													type="button"
+												>
+													<PlayerControlIcon name="skip" />
+												</button>
+												<button
+													aria-label={`Repeat mode: ${player?.repeatMode ?? 'off'}`}
+													className={`relative flex h-14 w-14 items-center justify-center rounded-full border text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${
+														player?.repeatMode && player?.repeatMode !== 'off'
+															? 'border-primary/25 bg-primary/12 text-primary'
+															: isLight
+																? 'border-slate-200/80 bg-white/90 text-slate-800 hover:border-primary/20 hover:text-primary'
+																: 'border-white/10 bg-white/[0.04] hover:border-primary/20 hover:text-primary'
+													}`}
+													disabled={isBusy || !currentTrack || !canUsePlayerDjControls}
+													onClick={() => onSendCommand('repeat')}
+													type="button"
+												>
+													<PlayerControlIcon name="repeat" />
+													{player?.repeatMode === 'track' ? (
+														<span className="pointer-events-none absolute bottom-[0.45rem] right-[0.5rem] text-[0.62rem] font-black leading-none text-current">
+															1
+														</span>
+													) : player?.repeatMode === 'queue' ? (
+														<span className="pointer-events-none absolute bottom-[0.55rem] left-1/2 -translate-x-1/2 text-[0.8rem] font-black leading-none text-current">
+															.
+														</span>
+													) : null}
+												</button>
+											</>
+										)}
+									</div>
+
+									{/* Right: volume */}
+									<div className="flex min-w-[150px] max-w-[200px] flex-1 flex-col gap-2">
+										<div className="flex items-center justify-between gap-2">
+											<span className={`text-xs font-extrabold uppercase tracking-[0.22em] ${isLight ? 'text-slate-500' : 'text-white/38'}`}>Vol</span>
+											<span className={`text-sm font-bold ${mainTextClass}`}>{volumeDraft}%</span>
+										</div>
+										<input
+											className="dashboard-range h-2 w-full cursor-pointer appearance-none rounded-full bg-white/10"
+											disabled={isBusy || player?.state !== 'CONNECTED' || !canUsePlayerDjControls}
+											max={200}
+											min={1}
+											onChange={(event) => onVolumeDraftChange(Number(event.target.value))}
+											onMouseUp={onSubmitVolume}
+											onTouchEnd={onSubmitVolume}
+											step={1}
+											type="range"
+											value={volumeDraft}
+										/>
+									</div>
+								</div>
+
+								{!hasVoiceChannelContext ? (
+									<div className={messageCardClass}>Join a permitted voice channel to unlock the realtime controls from this dashboard.</div>
+								) : player && !canUseDjControls ? (
+									<div className={messageCardClass}>
+										Lunio can see you, but DJ-gated playback controls are still restricted for your current voice context.
+									</div>
+								) : null}
+							</article>
+
+							{/* Queue + Premium grid */}
+							<div className="grid gap-5 xl:grid-cols-[1fr_340px]">
+								{/* Queue panel */}
 								<article className={queuePanelClass}>
 									<div className="flex items-center justify-between gap-4">
 										<div>
@@ -1110,23 +1054,23 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 										<div className={queueBadgeClass}>{queueCount} tracks</div>
 									</div>
 									<div className="mt-5 space-y-3">
-										{queuePreview.length ? (
-											queuePreview.map((track, index) => (
+										{queueTracks.length ? (
+											queueTracks.map((track, index) => (
 												<div className={queueRowClass} key={`${track.url}-${index}`}>
 													{track.artworkUrl ? (
 														// eslint-disable-next-line @next/next/no-img-element
-														<img alt={track.title} className="h-14 w-14 rounded-[1rem] border border-white/10 object-cover" src={track.artworkUrl} />
+														<img alt={track.title} className="h-14 w-14 shrink-0 rounded-[1rem] border border-white/10 object-cover" src={track.artworkUrl} />
 													) : (
-														<div className="flex h-14 w-14 items-center justify-center rounded-[1rem] border border-white/10 bg-white/[0.04] text-xs font-extrabold uppercase tracking-[0.18em] text-primary">
+														<div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[1rem] border border-white/10 bg-white/[0.04] text-xs font-extrabold uppercase tracking-[0.18em] text-primary">
 															{String(index + 1).padStart(2, '0')}
 														</div>
 													)}
 													<div className="min-w-0 flex-1">
-														<div className={`truncate text-lg font-bold ${mainTextClass}`}>{track.title}</div>
-														<div className={`mt-1 truncate text-sm ${isLight ? 'text-slate-500' : 'text-white/48'}`}>{track.artist}</div>
+														<div className={`truncate text-sm font-bold ${mainTextClass}`}>{track.title}</div>
+														<div className={`mt-1 truncate text-xs ${isLight ? 'text-slate-500' : 'text-white/48'}`}>{track.artist}</div>
 													</div>
-													<div className="ml-2 flex flex-col items-end gap-2">
-														<div className={`text-sm font-bold ${isLight ? 'text-slate-600' : 'text-white/68'}`}>{formatDuration(track.duration)}</div>
+													<div className="ml-2 flex shrink-0 flex-col items-end gap-2">
+														<div className={`text-sm font-bold tabular-nums ${isLight ? 'text-slate-600' : 'text-white/68'}`}>{formatDuration(track.duration)}</div>
 														<button
 															aria-label={`Remove ${track.title} from queue`}
 															className={`${roundControlButtonClass} h-9 w-9`}
@@ -1140,172 +1084,178 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 												</div>
 											))
 										) : (
-											<div
-												className={`rounded-[1.35rem] border px-4 py-6 text-sm leading-7 ${softSurfaceClass} ${isLight ? 'text-slate-500' : 'text-white/54'}`}
-											>
+											<div className={`rounded-[1.35rem] border px-4 py-6 text-sm leading-7 ${softSurfaceClass} ${isLight ? 'text-slate-500' : 'text-white/54'}`}>
 												No queued tracks yet. Add music from Discord and the queue will appear here in realtime.
 											</div>
 										)}
 									</div>
 								</article>
 
-								<article className={`${premiumPanelClass} scroll-mt-6`} id="premium-studio">
-									<div className="flex items-start justify-between gap-4">
-										<div>
-											<div className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-secondary">Premium Studio</div>
-											<h3 className={`mt-2 font-headline text-3xl font-bold tracking-[-0.05em] ${mainTextClass}`}>Live premium controls</h3>
-										</div>
-										<div className="rounded-full border border-secondary/25 bg-secondary/12 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.2em] text-secondary">
-											{canUsePremiumControls ? 'Unlocked' : 'Standard'}
-										</div>
-									</div>
-									<p className={`mt-4 text-sm leading-7 ${isLight ? 'text-slate-600' : 'text-white/56'}`}>
-										{!canUsePremiumControls
-											? 'Premium is not active for this user or guild right now.'
-											: canUseDjControls
-												? 'You can tune premium playback directly from the dashboard.'
-												: 'Premium is active, but DJ-gated controls are currently unavailable.'}
-									</p>
-
-									<div className="mt-5 grid gap-3">
-										<button
-											className="secondary-button w-full justify-center"
-											disabled={isBusy || !authUser || !canUseAutoplayControl}
-											onClick={() =>
-												onSendPremiumControl('autoplay', {
-													enabled: !autoplayModeEnabled,
-												})
-											}
-											type="button"
-										>
-											{autoplayModeEnabled ? 'Turn Autoplay Off' : 'Turn Autoplay On'}
-										</button>
-										<label className={`block ${insetPanelClass}`}>
-											<div className="flex items-center justify-between gap-3">
-												<span className="field-label">Bassboost</span>
-												<span className={`text-sm font-bold ${mainTextClass}`}>{bassboostDraft}</span>
+								{/* Right column: Premium Studio + Command feedback */}
+								<div className="grid content-start gap-5">
+									{/* Premium Studio */}
+									<article className={`${premiumPanelClass} scroll-mt-6`} id="premium-studio">
+										<div className="flex items-start justify-between gap-4">
+											<div>
+												<div className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-secondary">Premium Studio</div>
+												<h3 className={`mt-2 font-headline text-3xl font-bold tracking-[-0.05em] ${mainTextClass}`}>Sound controls</h3>
 											</div>
-											<input
-												className="dashboard-range mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-white/10"
-												disabled={isBusy || !authUser || !canUsePremiumDjControls}
-												max={3}
-												min={-3}
-												onChange={(event) => onBassboostDraftChange(Number(event.target.value))}
-												onMouseUp={() =>
-													onSendPremiumControl('bassboost', {
-														level: bassboostDraft,
-													})
-												}
-												onTouchEnd={() =>
-													onSendPremiumControl('bassboost', {
-														level: bassboostDraft,
-													})
-												}
-												step={1}
-												type="range"
-												value={bassboostDraft}
-											/>
-										</label>
-
-										<label className={`block ${insetPanelClass}`}>
-											<div className="flex items-center justify-between gap-3">
-												<span className="field-label">Speed</span>
-												<span className={`text-sm font-bold ${mainTextClass}`}>{speedDraft.toFixed(1)}x</span>
+											<div className="rounded-full border border-secondary/25 bg-secondary/12 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.2em] text-secondary">
+												{canUsePremiumControls ? 'Unlocked' : 'Standard'}
 											</div>
-											<input
-												className="dashboard-range mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-white/10"
-												disabled={isBusy || !authUser || !canUsePremiumDjControls}
-												max={2}
-												min={0.1}
-												onChange={(event) => onSpeedDraftChange(Number(event.target.value))}
-												onMouseUp={() =>
-													onSendPremiumControl('speed', {
-														value: Number(speedDraft.toFixed(1)),
-													})
-												}
-												onTouchEnd={() =>
-													onSendPremiumControl('speed', {
-														value: Number(speedDraft.toFixed(1)),
-													})
-												}
-												step={0.1}
-												type="range"
-												value={speedDraft}
-											/>
-										</label>
-
-										<div className="grid grid-cols-2 gap-3">
-											<button
-												className="dashboard-mini-button"
-												disabled={isBusy || !authUser || !canUsePremiumDjControls}
-												onClick={() =>
-													onSendPremiumControl('filter', {
-														filter: 'nightcore',
-														enabled: !playerFilters.nightcore.enabled,
-													})
-												}
-												type="button"
-											>
-												{playerFilters.nightcore.enabled ? 'Nightcore Off' : 'Nightcore On'}
-											</button>
-											<button
-												className="dashboard-mini-button"
-												disabled={isBusy || !authUser || !canUsePremiumDjControls}
-												onClick={() =>
-													onSendPremiumControl('filter', {
-														filter: 'vaporwave',
-														enabled: !playerFilters.vaporwave.enabled,
-													})
-												}
-												type="button"
-											>
-												{playerFilters.vaporwave.enabled ? 'Vaporwave Off' : 'Vaporwave On'}
-											</button>
-											<button
-												className="dashboard-mini-button"
-												disabled={isBusy || !authUser || !canUsePremiumDjControls}
-												onClick={() =>
-													onSendPremiumControl('filter', {
-														filter: 'demon',
-														enabled: !playerFilters.demon.enabled,
-													})
-												}
-												type="button"
-											>
-												{playerFilters.demon.enabled ? 'Demon Off' : 'Demon On'}
-											</button>
-											<button
-												className="dashboard-mini-button"
-												disabled={isBusy || !authUser || !canUsePremiumDjControls}
-												onClick={() => onSendPremiumControl('filter/reset', {})}
-												type="button"
-											>
-												Reset Filters
-											</button>
 										</div>
-									</div>
+										<p className={`mt-4 text-sm leading-7 ${isLight ? 'text-slate-600' : 'text-white/56'}`}>
+											{!canUsePremiumControls
+												? 'Premium is not active for this user or guild right now.'
+												: canUseDjControls
+													? 'You can tune premium playback directly from the dashboard.'
+													: 'Premium is active, but DJ-gated controls are currently unavailable.'}
+										</p>
 
-									<div className={`mt-5 rounded-[1.3rem] border px-4 py-3 text-sm leading-7 ${softSurfaceClass} ${isLight ? 'text-slate-600' : 'text-white/56'}`}>
-										{activePremiumFilters.length ? `Active now: ${activePremiumFilters.join(', ')}` : 'No premium filters are active right now.'}
-									</div>
+										<div className="mt-5 grid gap-3">
+											<button
+												className="secondary-button w-full justify-center"
+												disabled={isBusy || !authUser || !canUseAutoplayControl}
+												onClick={() =>
+													onSendPremiumControl('autoplay', {
+														enabled: !autoplayModeEnabled,
+													})
+												}
+												type="button"
+											>
+												{autoplayModeEnabled ? 'Turn Autoplay Off' : 'Turn Autoplay On'}
+											</button>
+											<label className={`block ${insetPanelClass}`}>
+												<div className="flex items-center justify-between gap-3">
+													<span className="field-label">Bassboost</span>
+													<span className={`text-sm font-bold ${mainTextClass}`}>{bassboostDraft}</span>
+												</div>
+												<input
+													className="dashboard-range mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-white/10"
+													disabled={isBusy || !authUser || !canUsePremiumDjControls}
+													max={3}
+													min={-3}
+													onChange={(event) => onBassboostDraftChange(Number(event.target.value))}
+													onMouseUp={() => onSendPremiumControl('bassboost', { level: bassboostDraft })}
+													onTouchEnd={() => onSendPremiumControl('bassboost', { level: bassboostDraft })}
+													step={1}
+													type="range"
+													value={bassboostDraft}
+												/>
+											</label>
 
-									{selectedGuild?.canManage ? (
-										<Link className="secondary-button mt-5 w-full justify-center" href={guildSettingsHref}>
-											Open Guild Settings
-										</Link>
-									) : (
-										<div
-											className={`mt-5 rounded-[1.3rem] border px-4 py-3 text-sm leading-7 ${softSurfaceClass} ${isLight ? 'text-slate-600' : 'text-white/56'}`}
-										>
-											Premium filters are controlled from Discord commands by members with the right access.
+											<label className={`block ${insetPanelClass}`}>
+												<div className="flex items-center justify-between gap-3">
+													<span className="field-label">Speed</span>
+													<span className={`text-sm font-bold ${mainTextClass}`}>{speedDraft.toFixed(1)}x</span>
+												</div>
+												<input
+													className="dashboard-range mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-white/10"
+													disabled={isBusy || !authUser || !canUsePremiumDjControls}
+													max={2}
+													min={0.1}
+													onChange={(event) => onSpeedDraftChange(Number(event.target.value))}
+													onMouseUp={() => onSendPremiumControl('speed', { value: Number(speedDraft.toFixed(1)) })}
+													onTouchEnd={() => onSendPremiumControl('speed', { value: Number(speedDraft.toFixed(1)) })}
+													step={0.1}
+													type="range"
+													value={speedDraft}
+												/>
+											</label>
+
+											<div className="grid grid-cols-2 gap-3">
+												<button
+													className="dashboard-mini-button"
+													disabled={isBusy || !authUser || !canUsePremiumDjControls}
+													onClick={() => onSendPremiumControl('filter', { filter: 'nightcore', enabled: !playerFilters.nightcore.enabled })}
+													type="button"
+												>
+													{playerFilters.nightcore.enabled ? 'Nightcore Off' : 'Nightcore On'}
+												</button>
+												<button
+													className="dashboard-mini-button"
+													disabled={isBusy || !authUser || !canUsePremiumDjControls}
+													onClick={() => onSendPremiumControl('filter', { filter: 'vaporwave', enabled: !playerFilters.vaporwave.enabled })}
+													type="button"
+												>
+													{playerFilters.vaporwave.enabled ? 'Vaporwave Off' : 'Vaporwave On'}
+												</button>
+												<button
+													className="dashboard-mini-button"
+													disabled={isBusy || !authUser || !canUsePremiumDjControls}
+													onClick={() => onSendPremiumControl('filter', { filter: 'demon', enabled: !playerFilters.demon.enabled })}
+													type="button"
+												>
+													{playerFilters.demon.enabled ? 'Demon Off' : 'Demon On'}
+												</button>
+												<button
+													className="dashboard-mini-button"
+													disabled={isBusy || !authUser || !canUsePremiumDjControls}
+													onClick={() => onSendPremiumControl('filter/reset', {})}
+													type="button"
+												>
+													Reset Filters
+												</button>
+											</div>
 										</div>
-									)}
-								</article>
-							</aside>
+
+										<div className={`mt-5 rounded-[1.3rem] border px-4 py-3 text-sm leading-7 ${softSurfaceClass} ${isLight ? 'text-slate-600' : 'text-white/56'}`}>
+											{activePremiumFilters.length ? `Active now: ${activePremiumFilters.join(', ')}` : 'No premium filters are active right now.'}
+										</div>
+
+										{selectedGuild?.canManage ? (
+											<Link className="secondary-button mt-5 w-full justify-center" href={guildSettingsHref}>
+												Open Guild Settings
+											</Link>
+										) : (
+											<div className={`mt-5 rounded-[1.3rem] border px-4 py-3 text-sm leading-7 ${softSurfaceClass} ${isLight ? 'text-slate-600' : 'text-white/56'}`}>
+												Premium filters are controlled from Discord commands by members with the right access.
+											</div>
+										)}
+									</article>
+
+									{/* Command feedback */}
+									<article className={`rounded-[1.8rem] border p-5 shadow-[0_22px_60px_rgba(0,0,0,0.26)] ${getCommandFeedbackToneClasses(commandFeedback.phase)}`}>
+										<div className="flex flex-wrap items-start justify-between gap-4">
+											<div>
+												<div className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-current/72">Latest action</div>
+												<h3 className="mt-3 font-headline text-xl font-bold tracking-[-0.05em] text-white">{commandFeedback.title}</h3>
+											</div>
+											<span className="rounded-full border border-current/15 bg-black/10 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.2em] text-current">
+												{formatCommandFeedbackPhase(commandFeedback.phase)}
+											</span>
+										</div>
+										<p className="mt-3 text-sm leading-6 text-current/88">{commandFeedback.message}</p>
+										<div className="mt-4 grid grid-cols-2 gap-2.5">
+											<div className="rounded-[1.15rem] border border-current/10 bg-black/10 px-3 py-2.5">
+												<div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-current/70">Command</div>
+												<div className="mt-1.5 text-sm font-bold text-white">
+													{commandFeedback.commandType ? formatCommandTypeLabel(commandFeedback.commandType) : '--'}
+												</div>
+											</div>
+											<div className="rounded-[1.15rem] border border-current/10 bg-black/10 px-3 py-2.5">
+												<div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-current/70">ID</div>
+												<div className="mt-1.5 text-sm font-bold text-white">{formatShortCommandId(commandFeedback.commandId)}</div>
+											</div>
+											<div className="rounded-[1.15rem] border border-current/10 bg-black/10 px-3 py-2.5">
+												<div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-current/70">Instance</div>
+												<div className="mt-1.5 text-sm font-bold text-white">{commandFeedback.instanceId ?? '--'}</div>
+											</div>
+											<div className="rounded-[1.15rem] border border-current/10 bg-black/10 px-3 py-2.5">
+												<div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-current/70">Finished</div>
+												<div className="mt-1.5 text-sm font-bold text-white">{commandFinishedTime}</div>
+											</div>
+										</div>
+									</article>
+								</div>
+							</div>
+
 						</div>
 					</div>
 				</main>
 			</div>
+
+			{/* Search modal */}
 			{isSearchModalOpen
 				? createPortal(
 						<div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm" onClick={closeSearchModal}>
@@ -1355,14 +1305,12 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 								<div className="mt-5">
 									<div className="text-xs font-extrabold uppercase tracking-[0.22em] text-primary">Results</div>
 
-									{/* Error */}
 									{searchError ? (
 										<div className={`mt-3 rounded-[1.2rem] border px-4 py-3 text-sm leading-7 ${softSurfaceClass} ${isLight ? 'text-rose-600' : 'text-rose-200'}`}>
 											{searchError}
 										</div>
 									) : null}
 
-									{/* Skeleton rows — shown while loading with no results yet */}
 									{isSearchLoading && !searchResults.length && !searchPlaylist && !searchError ? (
 										<div className="mt-3 space-y-3">
 											{([62, 78, 54, 70] as const).map((titleWidth, i) => (
@@ -1378,7 +1326,6 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 										</div>
 									) : null}
 
-									{/* Playlist card */}
 									{searchPlaylist ? (
 										<div
 											className={`mt-3 rounded-[1.25rem] border px-4 py-4 transition-opacity duration-200 ${softSurfaceClass} ${isSearchLoading ? 'opacity-50' : '[animation:fade-in-up_0.22s_ease_forwards]'}`}
@@ -1407,9 +1354,7 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 													disabled={isBusy || Boolean(searchDisabledReason) || queueingSearchUrl === searchPlaylist.url}
 													onClick={async () => {
 														const didQueue = await onSearchResultAdd(searchPlaylist.url);
-														if (didQueue) {
-															closeSearchModal();
-														}
+														if (didQueue) closeSearchModal();
 													}}
 													type="button"
 												>
@@ -1419,14 +1364,12 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 										</div>
 									) : null}
 
-									{/* Empty hint */}
 									{!isSearchLoading && !searchPlaylist && !searchResults.length && !searchError ? (
 										<div className={`mt-3 rounded-[1.2rem] border px-4 py-3 text-sm leading-7 ${softSurfaceClass} ${faintTextClass}`}>
 											Type at least 3 characters to see matching tracks here.
 										</div>
 									) : null}
 
-									{/* Track results — dim while refreshing, fade in when fresh */}
 									{searchResults.length ? (
 										<div
 											className={`mt-3 max-h-[21rem] space-y-3 overflow-y-auto pr-1 transition-opacity duration-200 ${isSearchLoading ? 'opacity-50' : '[animation:fade-in-up_0.22s_ease_forwards]'}`}
@@ -1459,9 +1402,7 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 															disabled={isBusy || Boolean(searchDisabledReason) || isQueueingThisResult}
 															onClick={async () => {
 																const didQueue = await onSearchResultAdd(result.url, result.trackData ?? null);
-																if (didQueue) {
-																	closeSearchModal();
-																}
+																if (didQueue) closeSearchModal();
 															}}
 															type="button"
 														>

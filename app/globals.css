@@ -39,6 +39,10 @@
 	--surface-strong: rgba(0, 0, 0, 0.3);
 	--border-subtle: rgba(255, 255, 255, 0.1);
 	--shadow-soft: 0 20px 80px rgba(0, 0, 0, 0.45);
+	--scrollbar-track: rgba(255, 255, 255, 0.02);
+	--scrollbar-thumb: rgba(255, 255, 255, 0.14);
+	--scrollbar-thumb-hover: rgba(0, 255, 255, 0.24);
+	--scrollbar-thumb-active: rgba(253, 104, 179, 0.26);
 }
 
 html[data-theme='light'] {
@@ -66,12 +70,18 @@ html[data-theme='light'] {
 	--surface-strong: rgba(231, 237, 244, 0.85);
 	--border-subtle: rgba(15, 23, 42, 0.09);
 	--shadow-soft: 0 24px 80px rgba(43, 61, 82, 0.12);
+	--scrollbar-track: rgba(15, 23, 42, 0.05);
+	--scrollbar-thumb: rgba(15, 23, 42, 0.18);
+	--scrollbar-thumb-hover: rgba(14, 158, 184, 0.28);
+	--scrollbar-thumb-active: rgba(218, 74, 145, 0.28);
 }
 
 /* ─── Base ────────────────────────────────────────────────────────── */
 html {
 	scroll-behavior: smooth;
 	scrollbar-gutter: stable;
+	scrollbar-width: thin;
+	scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 body {
@@ -81,6 +91,47 @@ body {
 	transition:
 		background-color 160ms ease,
 		color 160ms ease;
+}
+
+* {
+	scrollbar-width: thin;
+	scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+*::-webkit-scrollbar {
+	width: 12px;
+	height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+	border: 3px solid transparent;
+	border-radius: 999px;
+	background:
+		linear-gradient(180deg, rgb(var(--color-primary) / 0.18), rgb(var(--color-secondary) / 0.14)) padding-box,
+		linear-gradient(180deg, transparent, transparent) border-box;
+	box-shadow:
+		inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+		0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+	background:
+		linear-gradient(180deg, rgb(var(--color-primary) / 0.28), rgb(var(--color-secondary) / 0.22)) padding-box,
+		linear-gradient(180deg, transparent, transparent) border-box;
+}
+
+*::-webkit-scrollbar-thumb:active {
+	background:
+		linear-gradient(180deg, rgb(var(--color-primary) / 0.22), rgb(var(--color-secondary) / 0.3)) padding-box,
+		linear-gradient(180deg, transparent, transparent) border-box;
+}
+
+*::-webkit-scrollbar-corner {
+	background: transparent;
 }
 
 body::before {
