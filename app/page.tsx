@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { SiteShell } from '@/components/site-shell';
 import { useSiteLanguage } from '@/components/site-language-provider';
 import { apiJson, type StatsResponse } from '@/lib/api';
+import { LUNIO_LOGO_SRC } from '@/lib/brand';
 
 const MAIN_INVITE_URL = 'https://discord.com/oauth2/authorize?client_id=945030475779551415&scope=bot+applications.commands&permissions=8';
 const SECONDARY_INVITE_URL = 'https://discord.com/oauth2/authorize?client_id=945474723846950944&scope=bot+applications.commands&permissions=8';
@@ -102,7 +103,7 @@ function DashboardPreview({ label }: { label: string }) {
 				<div className="dash-sidebar hidden flex-col gap-1 p-3 md:flex">
 					<div className="flex items-center gap-2 px-2 py-2">
 						{/* eslint-disable-next-line @next/next/no-img-element */}
-						<img alt="" className="h-6 w-6 rounded-full" height={24} src="/lunio-logo.png" width={24} />
+						<img alt="" className="h-6 w-6 rounded-full" height={24} src={LUNIO_LOGO_SRC} width={24} />
 						<span className="text-sm font-bold">Lunio</span>
 					</div>
 					<div className="dash-inset mb-3 mt-1 flex items-center gap-2 px-2 py-1.5">

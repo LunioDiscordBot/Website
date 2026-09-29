@@ -6,6 +6,7 @@ import { useSiteLanguage } from '@/components/site-language-provider';
 import { Spinner } from '@/components/spinner';
 import { API_BASE_URL, API_PREFIX, apiJson, type AuthUser } from '@/lib/api';
 import { clearAuthClientState } from '@/lib/auth-storage';
+import { LUNIO_LOGO_SRC } from '@/lib/brand';
 
 export function LoginClient() {
 	const { messages } = useSiteLanguage();
@@ -84,7 +85,7 @@ export function LoginClient() {
 
 			<div className="dash-card p-6 sm:p-8">
 				{/* eslint-disable-next-line @next/next/no-img-element */}
-				<img alt="" className="h-10 w-10 rounded-full" height={40} src="/lunio-logo.png" width={40} />
+				<img alt="" className="h-10 w-10 rounded-full" height={40} src={LUNIO_LOGO_SRC} width={40} />
 				<h1 className="mt-5 font-headline text-2xl font-bold tracking-tight">{messages.login.title}</h1>
 				<p className="mt-2 text-sm leading-6 text-muted">{messages.login.intro}</p>
 
