@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { apiJson, type AuthGuild, type AuthGuildsResponse, type AuthUser } from '@/lib/api';
 import { buildDashboardPath } from '@/lib/dashboard-routes';
 import { DashboardMiniPlayerBar } from './dashboard-mini-player-bar';
+import { DashboardServerSwitcher } from './dashboard-server-switcher';
 import { useDashboardPlayerOptional } from './dashboard-player-provider';
 
 type ActiveKey = 'overview' | 'servers' | 'guild-settings' | 'account-settings' | 'playlists' | 'premium';
@@ -189,7 +190,7 @@ export function ShellIcon({ name, className = 'h-[18px] w-[18px]' }: { name: She
 	}
 }
 
-function Avatar({ src, label, className }: { src?: string | null; label: string; className: string }) {
+export function Avatar({ src, label, className }: { src?: string | null; label: string; className: string }) {
 	if (src) {
 		// eslint-disable-next-line @next/next/no-img-element
 		return <img alt="" className={`${className} shrink-0 object-cover`} height={32} src={src} width={32} />;
@@ -207,6 +208,7 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 	const dashboardPlayer = useDashboardPlayerOptional();
 	const [authUser, setAuthUser] = useState<AuthUser | null>(null);
 	const [guilds, setGuilds] = useState<AuthGuild[]>([]);
+	const [guildsState, setGuildsState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
 	const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 	const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 	const [hasLoadedSidebarPrefs, setHasLoadedSidebarPrefs] = useState(false);
@@ -246,20 +248,26 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 	const effectiveBotId = botId || rememberedBotId || '';
 	const effectiveGuildId = guildId || rememberedGuildId || '';
 
+	// The server switcher lists every shared server, so load guilds as soon as the user is known.
 	useEffect(() => {
-		if (!effectiveGuildId || !authUser) return;
+		if (!authUser) return;
 		let active = true;
+		setGuildsState('loading');
 		void apiJson<AuthGuildsResponse>('/api/auth/guilds')
 			.then((response) => {
-				if (active) setGuilds(response.guilds ?? []);
+				if (!active) return;
+				setGuilds(response.guilds ?? []);
+				setGuildsState('ready');
 			})
 			.catch(() => {
-				if (active) setGuilds([]);
+				if (!active) return;
+				setGuilds([]);
+				setGuildsState('error');
 			});
 		return () => {
 			active = false;
 		};
-	}, [effectiveGuildId, authUser]);
+	}, [authUser]);
 
 	useEffect(() => {
 		setIsMobileNavOpen(false);
@@ -379,7 +387,7 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 
 			<aside
 				aria-label="Dashboard"
-				className={`dash-sidebar fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col transition-transform duration-200 lg:static lg:z-auto lg:max-w-none lg:translate-x-0 lg:transition-[width] ${
+				className={`dash-sidebar fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col transition-transform duration-200 lg:static lg:z-30 lg:max-w-none lg:translate-x-0 lg:transition-[width] ${
 					isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'
 				} ${collapsed ? 'lg:w-[4.25rem]' : 'lg:w-64'}`}
 				id="dashboard-sidebar"
@@ -412,28 +420,15 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 				</div>
 
 				<div className={`px-3 ${collapsed ? 'lg:px-2' : ''}`}>
-					<Link
-						aria-current={activeKey === 'servers' ? 'page' : undefined}
-						className={`dash-inset flex w-full items-center gap-3 px-2.5 py-2 text-left transition-colors duration-150 hover:border-[var(--dash-border-strong)] ${
-							collapsed ? 'lg:justify-center lg:px-0' : ''
-						}`}
-						href="/servers"
-						prefetch={false}
-						title={collapsed ? (selectedGuild?.name ?? 'Select a server') : 'Switch server'}
-					>
-						{selectedGuild ? (
-							<Avatar className="h-8 w-8 rounded-md" label={selectedGuild.name} src={selectedGuild.iconUrl} />
-						) : (
-							<span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--dash-active)] text-muted">
-								<ShellIcon className="h-4 w-4" name="servers" />
-							</span>
-						)}
-						<span className={`min-w-0 flex-1 ${collapsed ? 'lg:sr-only' : ''}`}>
-							<span className="block truncate text-sm font-semibold">{selectedGuild?.name ?? (hasServer ? 'Current server' : 'Select a server')}</span>
-							<span className="block truncate text-xs text-muted">{hasServer ? 'Switch server' : 'Choose where Lunio plays'}</span>
-						</span>
-						<ShellIcon className={`h-4 w-4 shrink-0 text-muted ${collapsed ? 'lg:hidden' : ''}`} name="selector" />
-					</Link>
+					<DashboardServerSwitcher
+						activeKey={activeKey}
+						collapsed={collapsed}
+						currentBotId={effectiveBotId}
+						currentGuildId={effectiveGuildId}
+						guilds={guilds}
+						guildsState={guildsState}
+						isSignedIn={Boolean(authUser)}
+					/>
 				</div>
 
 				<nav aria-label="Dashboard navigation" className={`mt-5 flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-3 pb-4 ${collapsed ? 'lg:px-2' : ''}`}>
