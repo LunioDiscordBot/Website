@@ -8,6 +8,7 @@ import { buildDashboardPath } from '@/lib/dashboard-routes';
 import { DashboardMiniPlayerBar } from './dashboard-mini-player-bar';
 import { DashboardServerSwitcher } from './dashboard-server-switcher';
 import { useDashboardPlayerOptional } from './dashboard-player-provider';
+import { LUNIO_LOGO_SRC } from '@/lib/brand';
 
 type ActiveKey = 'overview' | 'servers' | 'guild-settings' | 'account-settings' | 'playlists' | 'premium';
 
@@ -395,7 +396,7 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 				<div className={`flex h-16 shrink-0 items-center gap-2 px-4 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
 					<Link className={`flex min-w-0 items-center gap-2.5 rounded-lg ${collapsed ? 'lg:hidden' : ''}`} href="/" prefetch={false}>
 						{/* eslint-disable-next-line @next/next/no-img-element */}
-						<img alt="" className="h-7 w-7 rounded-full object-cover" height={28} src="/lunio-logo.png" width={28} />
+						<img alt="" className="h-7 w-7 rounded-full object-cover" height={28} src={LUNIO_LOGO_SRC} width={28} />
 						<span className="font-headline text-lg font-bold tracking-tight" translate="no">
 							Lunio
 						</span>

@@ -6,6 +6,7 @@ import { cn } from '@/lib/cn';
 import { HeaderAccount } from '@/components/header-account';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useSiteLanguage } from '@/components/site-language-provider';
+import { LUNIO_LOGO_SRC } from '@/lib/brand';
 
 type NavigationItem = {
 	href: string;
@@ -82,7 +83,7 @@ export function SiteShell({ currentPath, children }: SiteShellProps) {
 				<div className="shell flex h-16 items-center gap-6">
 					<Link className="flex shrink-0 items-center gap-2.5 rounded-lg" href="/" prefetch={false}>
 						{/* eslint-disable-next-line @next/next/no-img-element */}
-						<img alt="" className="h-8 w-8 rounded-full object-cover" height={32} src="/lunio-logo.png" width={32} />
+						<img alt="" className="h-8 w-8 rounded-full object-cover" height={32} src={LUNIO_LOGO_SRC} width={32} />
 						<span className="font-headline text-xl font-bold tracking-tight" translate="no">
 							Lunio
 						</span>
@@ -153,7 +154,7 @@ export function SiteShell({ currentPath, children }: SiteShellProps) {
 					<div>
 						<Link className="inline-flex items-center gap-2.5 rounded-lg" href="/" prefetch={false}>
 							{/* eslint-disable-next-line @next/next/no-img-element */}
-							<img alt="" className="h-8 w-8 rounded-full object-cover" height={32} src="/lunio-logo.png" width={32} />
+							<img alt="" className="h-8 w-8 rounded-full object-cover" height={32} src={LUNIO_LOGO_SRC} width={32} />
 							<span className="font-headline text-xl font-bold tracking-tight" translate="no">
 								Lunio
 							</span>
