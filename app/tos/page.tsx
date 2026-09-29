@@ -58,10 +58,14 @@ export default function TosPage() {
 						body: (
 							<>
 								Für rechtliche oder supportbezogene Fragen kontaktiere{' '}
-								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
-									lavalinklunio@gmail.com
+								<a className={legalLinkClass} href="mailto:support@luniobot.com">
+									support@luniobot.com
 								</a>
-								. Support-Server: discord.gg/rrqEFukVUZ.
+								. Support-Server:{' '}
+								<a className={legalLinkClass} href="https://discord.gg/rrqEFukVUZ" rel="noreferrer" target="_blank">
+									discord.gg/rrqEFukVUZ
+								</a>
+								.
 							</>
 						),
 					},
@@ -116,10 +120,14 @@ export default function TosPage() {
 						body: (
 							<>
 								For legal or support-related questions, contact{' '}
-								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
-									lavalinklunio@gmail.com
+								<a className={legalLinkClass} href="mailto:support@luniobot.com">
+									support@luniobot.com
 								</a>
-								. Support server: discord.gg/rrqEFukVUZ.
+								. Support server:{' '}
+								<a className={legalLinkClass} href="https://discord.gg/rrqEFukVUZ" rel="noreferrer" target="_blank">
+									discord.gg/rrqEFukVUZ
+								</a>
+								.
 							</>
 						),
 					},

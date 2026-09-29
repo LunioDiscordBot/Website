@@ -15,8 +15,8 @@ export default function PrivacyPage() {
 							<>
 								Diese Datenschutzerklärung erläutert, wie Lunio personenbezogene Daten im Zusammenhang mit Website, Dashboard, Discord-Bot, Support-Anfragen und
 								Premium-Diensten verarbeitet. Kontakt:{' '}
-								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
-									lavalinklunio@gmail.com
+								<a className={legalLinkClass} href="mailto:support@luniobot.com">
+									support@luniobot.com
 								</a>
 								.
 							</>
@@ -60,8 +60,8 @@ export default function PrivacyPage() {
 							<>
 								Abhängig von deinem Standort kannst du Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung, Widerspruch, Datenübertragbarkeit und Beschwerde
 								bei einer Aufsichtsbehörde haben. Anfragen können an{' '}
-								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
-									lavalinklunio@gmail.com
+								<a className={legalLinkClass} href="mailto:support@luniobot.com">
+									support@luniobot.com
 								</a>{' '}
 								gesendet werden.
 							</>
@@ -76,10 +76,14 @@ export default function PrivacyPage() {
 						body: (
 							<>
 								Für Datenschutzanfragen oder Fragen kontaktiere{' '}
-								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
-									lavalinklunio@gmail.com
+								<a className={legalLinkClass} href="mailto:support@luniobot.com">
+									support@luniobot.com
 								</a>
-								. Support-Server: discord.gg/rrqEFukVUZ.
+								. Support-Server:{' '}
+								<a className={legalLinkClass} href="https://discord.gg/rrqEFukVUZ" rel="noreferrer" target="_blank">
+									discord.gg/rrqEFukVUZ
+								</a>
+								.
 							</>
 						),
 					},
@@ -91,8 +95,8 @@ export default function PrivacyPage() {
 							<>
 								This Privacy Policy explains how Lunio processes personal data in connection with the website, dashboard, Discord bot, support interactions, and
 								premium services. Contact:{' '}
-								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
-									lavalinklunio@gmail.com
+								<a className={legalLinkClass} href="mailto:support@luniobot.com">
+									support@luniobot.com
 								</a>
 								.
 							</>
@@ -136,8 +140,8 @@ export default function PrivacyPage() {
 							<>
 								Depending on your location, you may have rights relating to access, correction, deletion, restriction, objection, portability, and complaint to a
 								supervisory authority. Requests may be sent to{' '}
-								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
-									lavalinklunio@gmail.com
+								<a className={legalLinkClass} href="mailto:support@luniobot.com">
+									support@luniobot.com
 								</a>
 								.
 							</>
@@ -152,10 +156,14 @@ export default function PrivacyPage() {
 						body: (
 							<>
 								For privacy-related requests or questions, contact{' '}
-								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
-									lavalinklunio@gmail.com
+								<a className={legalLinkClass} href="mailto:support@luniobot.com">
+									support@luniobot.com
 								</a>
-								. Support server: discord.gg/rrqEFukVUZ.
+								. Support server:{' '}
+								<a className={legalLinkClass} href="https://discord.gg/rrqEFukVUZ" rel="noreferrer" target="_blank">
+									discord.gg/rrqEFukVUZ
+								</a>
+								.
 							</>
 						),
 					},

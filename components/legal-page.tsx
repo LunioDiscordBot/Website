@@ -9,7 +9,7 @@ export type LegalSection = {
 	body: ReactNode;
 };
 
-export const legalLinkClass = 'font-medium text-primary underline-offset-2 hover:underline';
+export const legalLinkClass = 'font-medium text-primary underline decoration-primary/40 underline-offset-2 transition-colors duration-150 hover:decoration-primary';
 
 function sectionId(title: string, index: number) {
 	return `section-${index + 1}-${title

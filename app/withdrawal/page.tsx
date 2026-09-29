@@ -26,8 +26,8 @@ export default function WithdrawalPage() {
 						body: (
 							<>
 								Um dein Widerrufsrecht auszuüben, sende eine eindeutige Erklärung per E-Mail an{' '}
-								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
-									lavalinklunio@gmail.com
+								<a className={legalLinkClass} href="mailto:support@luniobot.com">
+									support@luniobot.com
 								</a>
 								. Bitte gib genügend Informationen an, um deinen Kauf zuzuordnen, etwa Discord-User-ID, betroffene Guild, Kaufdatum und das betroffene
 								Premium-Produkt oder Abonnement.
@@ -43,8 +43,8 @@ export default function WithdrawalPage() {
 						body: (
 							<>
 								Widerrufserklärungen und rechtliche Rückfragen können an{' '}
-								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
-									lavalinklunio@gmail.com
+								<a className={legalLinkClass} href="mailto:support@luniobot.com">
+									support@luniobot.com
 								</a>{' '}
 								gesendet werden.
 							</>
@@ -69,8 +69,8 @@ export default function WithdrawalPage() {
 						body: (
 							<>
 								To exercise a withdrawal right, send a clear statement by email to{' '}
-								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
-									lavalinklunio@gmail.com
+								<a className={legalLinkClass} href="mailto:support@luniobot.com">
+									support@luniobot.com
 								</a>
 								. Please include enough information to identify your purchase, such as the Discord user ID, relevant guild, purchase date, and the premium product
 								or subscription involved.
@@ -86,8 +86,8 @@ export default function WithdrawalPage() {
 						body: (
 							<>
 								Withdrawal requests and related legal inquiries may be sent to{' '}
-								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
-									lavalinklunio@gmail.com
+								<a className={legalLinkClass} href="mailto:support@luniobot.com">
+									support@luniobot.com
 								</a>
 								.
 							</>
