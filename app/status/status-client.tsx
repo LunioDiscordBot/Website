@@ -29,13 +29,21 @@ type FeedItem = {
 
 const BOT_STORAGE_KEY = 'lunio:web:botId';
 
-const getShardTone = (status: BotInstance['shards'][number]['status']) => {
-	if (status === 'ready') return 'status-shard-ready';
-	if (status === 'connecting' || status === 'identifying' || status === 'resuming' || status === 'waiting_for_guilds' || status === 'reconnecting' || status === 'nearly') {
-		return 'status-shard-warn';
-	}
+const WARNING_SHARD_STATUSES = new Set(['connecting', 'identifying', 'resuming', 'waiting_for_guilds', 'reconnecting', 'nearly']);
 
-	return 'status-shard-danger';
+const TONE_DOT = {
+	ok: 'bg-success',
+	warn: 'bg-amber-400',
+	down: 'bg-danger',
+	idle: 'bg-muted',
+} as const;
+
+type Tone = keyof typeof TONE_DOT;
+
+const getShardTone = (status: BotInstance['shards'][number]['status']): Tone => {
+	if (status === 'ready') return 'ok';
+	if (WARNING_SHARD_STATUSES.has(status)) return 'warn';
+	return 'down';
 };
 
 const getInstanceHealth = (instance: BotInstance) => {
@@ -56,18 +64,28 @@ const getInstanceHealth = (instance: BotInstance) => {
 	return 'Operational';
 };
 
-const getHealthTone = (label: string) => {
-	if (label === 'Operational') return 'status-badge-operational';
-	if (label === 'Recovering') return 'status-badge-recovering';
-	return 'status-badge-degraded';
+const getHealthTone = (label: string): Tone => {
+	if (label === 'Operational') return 'ok';
+	if (label === 'Recovering') return 'warn';
+	if (label === 'Degraded') return 'down';
+	return 'idle';
 };
 
-const getHealthCardAccent = (label: string) => {
-	if (label === 'Operational') return 'status-summary-card-operational';
-	if (label === 'Recovering') return 'status-summary-card-recovering';
-	if (label === 'Degraded') return 'status-summary-card-degraded';
-	return '';
+const HEALTH_HEADLINE: Record<string, string> = {
+	Operational: 'All systems operational',
+	Recovering: 'Some shards are reconnecting',
+	Degraded: 'Degraded performance',
+	Waiting: 'Waiting for instances to report',
 };
+
+function StatusBadge({ label }: { label: string }) {
+	return (
+		<span className="dash-badge">
+			<span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${TONE_DOT[getHealthTone(label)]}`} />
+			{label}
+		</span>
+	);
+}
 
 const formatLatency = (value: number | null | undefined) => {
 	if (typeof value !== 'number' || !Number.isFinite(value)) return '--';
@@ -333,239 +351,204 @@ export function StatusClient() {
 		});
 	}, [realtimeFeed, state.instances]);
 
+	const globalTone = getHealthTone(globalHealth);
+	const summaryStats = [
+		{ label: 'Servers', value: formatExactNumber(state.stats?.totalGuilds) },
+		{ label: 'Users', value: formatCompactNumber(state.stats?.totalUsers) },
+		{ label: 'Active players', value: formatCompactNumber(state.stats?.totalPlayers) },
+		{ label: 'Average latency', value: formatLatency(averageLatency) },
+		{ label: 'Shards', value: formatExactNumber(state.stats?.totalShards) },
+	];
+
 	return (
-		<div className="space-y-8">
-			<section className="status-hero-card">
-				<div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-					<div>
-						<div className="eyebrow">Network operations</div>
-						<h2 className="font-headline text-4xl font-bold tracking-[-0.06em] text-white sm:text-5xl">Live health across the Lunio runtime</h2>
-						<p className="mt-4 max-w-2xl text-base leading-8 text-muted">
-							Real infrastructure visibility for guild load, shard recovery, latency, and active player traffic.
-						</p>
-					</div>
-
-					<div className="flex flex-wrap items-center gap-3">
-						<div className={`status-badge ${getHealthTone(globalHealth)}`}>{globalHealth}</div>
-						<div className="status-badge status-badge-neutral">telemetry 30s</div>
-					</div>
+		<div className="grid gap-8">
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+				<div>
+					<h1 className="font-headline text-4xl font-bold tracking-tight sm:text-5xl">System Status</h1>
+					<p className="mt-3 max-w-2xl text-base leading-7 text-muted">Live health for every Lunio instance: shards, latency, and player load.</p>
 				</div>
-
-				<div className="mt-8 flex flex-wrap gap-3">
-					<button
-						aria-pressed={!selectedBotId}
-						className={`status-filter-pill ${!selectedBotId ? 'status-filter-pill-active' : 'status-filter-pill-idle'}`}
-						onClick={() => selectBot('')}
-						type="button"
-					>
-						All Bots
-					</button>
-					{botOptions.map((bot) => (
-						<button
-							aria-pressed={selectedBotId === bot.botId}
-							className={`status-filter-pill ${selectedBotId === bot.botId ? 'status-filter-pill-active' : 'status-filter-pill-idle'}`}
-							key={bot.botId}
-							onClick={() => selectBot(bot.botId)}
-							type="button"
-						>
-							{bot.label}
+				{botOptions.length > 1 ? (
+					<div aria-label="Filter by bot" className="flex flex-wrap gap-1.5" role="group">
+						<button aria-pressed={!selectedBotId} className="dash-btn h-8 px-3" onClick={() => selectBot('')} type="button">
+							All Bots
 						</button>
-					))}
-				</div>
+						{botOptions.map((bot) => (
+							<button aria-pressed={selectedBotId === bot.botId} className="dash-btn h-8 px-3" key={bot.botId} onClick={() => selectBot(bot.botId)} type="button">
+								{bot.label}
+							</button>
+						))}
+					</div>
+				) : null}
+			</div>
 
-				<div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-					<article className={`status-summary-card ${getHealthCardAccent(globalHealth)}`}>
-						<div className="metric-label">Global status</div>
-						<div className="mt-3 font-headline text-3xl font-bold tracking-[-0.05em] text-white">{globalHealth}</div>
-					</article>
-					<article className="status-summary-card">
-						<div className="metric-label">Total guilds</div>
-						<div className="mt-3 font-headline text-3xl font-bold tracking-[-0.05em] text-white">{formatCompactNumber(state.stats?.totalGuilds)}</div>
-					</article>
-					<article className="status-summary-card">
-						<div className="metric-label">Total users</div>
-						<div className="mt-3 font-headline text-3xl font-bold tracking-[-0.05em] text-primary">{formatCompactNumber(state.stats?.totalUsers)}</div>
-					</article>
-					<article className="status-summary-card">
-						<div className="metric-label">Active players</div>
-						<div className="mt-3 font-headline text-3xl font-bold tracking-[-0.05em] text-secondary">{formatCompactNumber(state.stats?.totalPlayers)}</div>
-					</article>
-					<article className="status-summary-card">
-						<div className="metric-label">Average latency</div>
-						<div className="mt-3 font-headline text-3xl font-bold tracking-[-0.05em] text-white">{formatLatency(averageLatency)}</div>
-					</article>
+			<section aria-live="polite" className="dash-card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+				<div className="flex items-center gap-3">
+					<span className={`relative flex h-3 w-3 shrink-0 rounded-full ${TONE_DOT[globalTone]}`}>
+						{globalTone === 'ok' ? <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full bg-success/60" /> : null}
+					</span>
+					<div>
+						<h2 className="text-lg font-semibold">{isInitialLoading ? 'Checking status…' : (HEALTH_HEADLINE[globalHealth] ?? globalHealth)}</h2>
+						{state.error ? <p className="mt-0.5 text-sm text-danger">{state.error}</p> : null}
+					</div>
 				</div>
+				<p className="text-sm text-muted">Live updates · refreshes every 10&nbsp;s</p>
 			</section>
 
-			<div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-				<section className="status-panel-card">
-					<div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-						<div>
-							<div className="metric-label">Cluster fabric</div>
-							<h3 className="mt-2 font-headline text-3xl font-bold tracking-[-0.05em] text-white">Cluster overview</h3>
-						</div>
-						<div className="text-sm text-muted">Select a cluster to inspect shard topology.</div>
+			<dl className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
+				{summaryStats.map((stat) => (
+					<div className="dash-card p-5" key={stat.label}>
+						<dt className="text-sm text-muted">{stat.label}</dt>
+						<dd className="mt-2 font-headline text-2xl font-bold tabular-nums">{stat.value}</dd>
+					</div>
+				))}
+			</dl>
+
+			<div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+				<section aria-labelledby="instances-heading" className="grid gap-3">
+					<div className="flex items-baseline justify-between gap-3">
+						<h2 className="text-base font-semibold" id="instances-heading">
+							Instances
+						</h2>
+						<span className="text-sm text-muted">Select one to see its shards</span>
 					</div>
 
-					<div className="mt-6 space-y-4">
-						{state.error ? <div className="rounded-[1.6rem] border border-danger/30 bg-danger/10 p-5 text-sm text-red-100">{state.error}</div> : null}
+					{!state.error && state.instances.length === 0 ? (
+						<div className="dash-card flex items-center gap-3 px-5 py-8 text-sm text-muted">
+							{isInitialLoading ? <Spinner className="h-4 w-4 text-primary" /> : null}
+							{isInitialLoading ? 'Loading instances…' : 'No instances are reporting right now.'}
+						</div>
+					) : null}
 
-						{!state.error && state.instances.length === 0 ? (
-							<div className="status-empty-card flex items-center gap-3">
-								{isInitialLoading ? <Spinner className="h-4 w-4 text-primary" /> : null}
-								{isInitialLoading ? 'Loading instances…' : 'No active instances are reporting yet.'}
-							</div>
-						) : null}
+					{state.instances.map((instance) => {
+						const instanceKey = `${instance.botId}:${instance.instanceId}`;
+						const health = getInstanceHealth(instance);
+						const selected = selectedInstance ? `${selectedInstance.botId}:${selectedInstance.instanceId}` === instanceKey : false;
+						const warningCount = instance.shards.filter((shard) => WARNING_SHARD_STATUSES.has(shard.status)).length;
+						const dangerCount = instance.shards.filter((shard) => shard.status === 'disconnected' || shard.status === 'idle').length;
 
-						{state.instances.map((instance) => {
-							const instanceKey = `${instance.botId}:${instance.instanceId}`;
-							const health = getInstanceHealth(instance);
-							const selected = selectedInstanceId === instanceKey;
-							const warningCount = instance.shards.filter(
-								(shard) =>
-									shard.status === 'reconnecting' ||
-									shard.status === 'identifying' ||
-									shard.status === 'resuming' ||
-									shard.status === 'waiting_for_guilds' ||
-									shard.status === 'nearly'
-							).length;
-							const dangerCount = instance.shards.filter((shard) => shard.status === 'disconnected' || shard.status === 'idle').length;
-
-							return (
-								<button
-									className={`status-cluster-card ${selected ? 'status-cluster-card-active' : ''}`}
-									key={instanceKey}
-									onClick={() => setSelectedInstanceId(instanceKey)}
-									type="button"
-								>
-									<div className="flex flex-col gap-5 text-left">
-										<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-											<div>
-												<div className="text-xs font-extrabold uppercase tracking-[0.24em] text-primary">{instance.botId}</div>
-												<h4 className="mt-2 font-headline text-3xl font-bold tracking-[-0.06em] text-white">{instance.instanceId}</h4>
-												<p className="mt-2 text-sm text-muted">{instance.region}</p>
-											</div>
-
-											<div className="flex flex-wrap gap-2">
-												<div className={`status-badge ${getHealthTone(health)}`}>{health}</div>
-												<div className="status-badge status-badge-neutral">{formatLatency(instance.latency)}</div>
-											</div>
+						return (
+							<button
+								aria-pressed={selected}
+								className={`dash-card w-full p-5 text-left transition-colors duration-150 hover:border-[var(--dash-border-strong)] ${selected ? 'border-primary/50 ring-1 ring-primary/30' : ''}`}
+								key={instanceKey}
+								onClick={() => setSelectedInstanceId(instanceKey)}
+								type="button"
+							>
+								<div className="flex flex-wrap items-start justify-between gap-3">
+									<div className="min-w-0">
+										<div className="truncate text-base font-semibold" translate="no">
+											{instance.instanceId}
 										</div>
-
-										<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-											<div className="status-mini-stat">
-												<span>Guilds</span>
-												<strong>{formatCompactNumber(instance.guildCount)}</strong>
-											</div>
-											<div className="status-mini-stat">
-												<span>Users</span>
-												<strong>{formatCompactNumber(instance.userCount)}</strong>
-											</div>
-											<div className="status-mini-stat">
-												<span>Players</span>
-												<strong>{formatCompactNumber(instance.playerCount)}</strong>
-											</div>
-											<div className="status-mini-stat">
-												<span>Memory</span>
-												<strong>{formatCompactNumber(instance.memoryMB)} MB</strong>
-											</div>
-										</div>
-
-										<div className="grid gap-3 sm:grid-cols-3">
-											<div className="status-inline-stat">
-												<span>Shards</span>
-												<strong>{instance.shards.length}</strong>
-											</div>
-											<div className="status-inline-stat">
-												<span>Recovering</span>
-												<strong>{warningCount}</strong>
-											</div>
-											<div className="status-inline-stat">
-												<span>Offline</span>
-												<strong>{dangerCount}</strong>
-											</div>
+										<div className="mt-0.5 truncate text-sm text-muted">
+											<span translate="no">{instance.botId}</span> · {instance.region}
 										</div>
 									</div>
-								</button>
-							);
-						})}
-					</div>
+									<div className="flex flex-wrap gap-1.5">
+										<StatusBadge label={health} />
+										<span className="dash-badge tabular-nums">{formatLatency(instance.latency)}</span>
+									</div>
+								</div>
+								<dl className="mt-4 grid grid-cols-3 gap-x-4 gap-y-3 text-sm sm:grid-cols-6">
+									{[
+										['Servers', formatCompactNumber(instance.guildCount)],
+										['Users', formatCompactNumber(instance.userCount)],
+										['Players', formatCompactNumber(instance.playerCount)],
+										['Memory', `${formatCompactNumber(instance.memoryMB)} MB`],
+										['Shards', String(instance.shards.length)],
+										['Issues', String(warningCount + dangerCount)],
+									].map(([label, value]) => (
+										<div key={label}>
+											<dt className="text-xs text-muted">{label}</dt>
+											<dd className="mt-0.5 font-medium tabular-nums">{value}</dd>
+										</div>
+									))}
+								</dl>
+							</button>
+						);
+					})}
 				</section>
 
-				<aside className="status-panel-card">
-					<div className="metric-label">Live signal</div>
-					<h3 className="mt-2 font-headline text-3xl font-bold tracking-[-0.05em] text-white">Event feed</h3>
-					<p className="mt-3 text-sm leading-7 text-muted">Operational snapshots focused on health shifts, recovery, and active runtime load.</p>
-
-					<div className="mt-6 space-y-3">
-						{liveFeedItems.length ? (
-							liveFeedItems.slice(0, 5).map((item) => (
-								<article className="status-feed-card" key={item.id}>
-									<div className="text-xs font-extrabold uppercase tracking-[0.22em] text-primary">{item.label}</div>
-									<div className="mt-2 text-base font-bold text-white">{item.title}</div>
-									<p className="mt-1 text-sm leading-7 text-muted">{item.body}</p>
-								</article>
-							))
-						) : (
-							<div className="status-empty-card">Waiting for instances to identify with the broker.</div>
-						)}
-					</div>
+				<aside aria-labelledby="events-heading" className="dash-card">
+					<h2 className="px-5 py-4 text-base font-semibold" id="events-heading">
+						Recent Events
+					</h2>
+					{liveFeedItems.length ? (
+						<ol aria-live="polite" className="dash-divider border-t">
+							{liveFeedItems.slice(0, 5).map((item) => (
+								<li className="dash-divider border-b px-5 py-3.5 last:border-b-0" key={item.id}>
+									<div className="flex items-center gap-2 text-xs font-medium text-muted">
+										<span
+											aria-hidden="true"
+											className={`h-1.5 w-1.5 rounded-full ${
+												item.label === 'Alert' || item.label === 'Degraded'
+													? TONE_DOT.down
+													: item.label === 'Recovery' || item.label === 'Recovering'
+														? TONE_DOT.warn
+														: TONE_DOT.ok
+											}`}
+										/>
+										{item.label}
+									</div>
+									<div className="mt-1 text-sm font-medium">{item.title}</div>
+									<p className="mt-0.5 break-words text-sm text-muted">{item.body}</p>
+								</li>
+							))}
+						</ol>
+					) : (
+						<p className="dash-divider border-t px-5 py-8 text-sm text-muted">Waiting for instances to connect to the broker.</p>
+					)}
 				</aside>
 			</div>
 
-			<section className="status-panel-card">
-				<div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-					<div>
-						<div className="metric-label">Shard topology</div>
-						<h3 className="mt-2 font-headline text-3xl font-bold tracking-[-0.05em] text-white">
-							{selectedInstance ? `${selectedInstance.instanceId} shard view` : 'Select a cluster'}
-						</h3>
-					</div>
+			<section aria-labelledby="shards-heading" className="grid gap-3">
+				<div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+					<h2 className="text-base font-semibold" id="shards-heading">
+						{selectedInstance ? (
+							<>
+								Shards · <span translate="no">{selectedInstance.instanceId}</span>
+							</>
+						) : (
+							'Shards'
+						)}
+					</h2>
 					{selectedInstance ? (
-						<div className="text-sm text-muted">
-							{formatExactNumber(selectedInstance.guildCount)} guilds, {formatCompactNumber(selectedInstance.userCount)} users,{' '}
+						<span className="text-sm text-muted">
+							{formatExactNumber(selectedInstance.guildCount)} servers · {formatCompactNumber(selectedInstance.userCount)} users · up{' '}
 							{formatUptime(selectedInstance.uptimeMs)}
-						</div>
+						</span>
 					) : null}
 				</div>
 
 				{!selectedInstance ? (
-					<div className="mt-6 status-empty-card">Choose a cluster above to inspect its shard layout.</div>
+					<div className="dash-card px-5 py-8 text-sm text-muted">Select an instance above to see its shards.</div>
 				) : (
-					<div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+					<ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 						{selectedInstance.shards.map((shard) => (
-							<article className={`status-shard-card ${getShardTone(shard.status)}`} key={shard.shardId}>
-								<div className="flex items-start justify-between gap-3">
-									<div>
-										<div className="text-xs font-extrabold uppercase tracking-[0.22em] text-white/60">Shard {shard.shardId}</div>
-										<div className="mt-2 font-headline text-2xl font-bold tracking-[-0.05em] text-white">{shard.status}</div>
+							<li className="dash-card p-4" key={shard.shardId}>
+								<div className="flex items-center justify-between gap-3">
+									<div className="flex items-center gap-2">
+										<span aria-hidden="true" className={`h-2 w-2 rounded-full ${TONE_DOT[getShardTone(shard.status)]}`} />
+										<span className="text-sm font-semibold">Shard {shard.shardId}</span>
 									</div>
-									<div className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.2em] text-white/70">
-										{formatLatency(shard.latency)}
-									</div>
+									<span className="text-xs tabular-nums text-muted">{formatLatency(shard.latency)}</span>
 								</div>
-
-								<div className="mt-5 grid gap-3">
-									<div className="status-inline-stat">
-										<span>Guilds</span>
-										<strong>{formatExactNumber(shard.guildCount)}</strong>
-									</div>
-									<div className="status-inline-stat">
-										<span>Users</span>
-										<strong>{formatCompactNumber(shard.userCount)}</strong>
-									</div>
-									<div className="status-inline-stat">
-										<span>Players</span>
-										<strong>{formatCompactNumber(shard.playerCount)}</strong>
-									</div>
-									<div className="status-inline-stat">
-										<span>Uptime</span>
-										<strong>{formatUptime(shard.uptimeMs)}</strong>
-									</div>
-								</div>
-							</article>
+								<div className="mt-1 text-xs capitalize text-muted">{shard.status.replace(/_/g, ' ')}</div>
+								<dl className="dash-divider mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t pt-3 text-sm">
+									{[
+										['Servers', formatExactNumber(shard.guildCount)],
+										['Users', formatCompactNumber(shard.userCount)],
+										['Players', formatCompactNumber(shard.playerCount)],
+										['Uptime', formatUptime(shard.uptimeMs)],
+									].map(([label, value]) => (
+										<div key={label}>
+											<dt className="text-xs text-muted">{label}</dt>
+											<dd className="font-medium tabular-nums">{value}</dd>
+										</div>
+									))}
+								</dl>
+							</li>
 						))}
-					</div>
+					</ul>
 				)}
 			</section>
 		</div>

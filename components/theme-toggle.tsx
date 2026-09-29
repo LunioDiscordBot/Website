@@ -82,14 +82,14 @@ export function ThemeToggle() {
 	return (
 		<button
 			aria-label={`Theme: ${currentLabel}. Click to switch to ${nextLabel}.`}
-			className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-muted transition hover:bg-white/[0.08] hover:text-white"
+			className="dash-btn dash-btn-icon text-muted hover:text-text"
 			onClick={cycleTheme}
 			title={`Theme: ${currentLabel}. Click to switch to ${nextLabel}.`}
 			type="button"
 		>
-			<span className="inline-flex items-center justify-center text-primary" key={`${preference}-${animationTick}`}>
+			<span className="inline-flex items-center justify-center" key={`${preference}-${animationTick}`}>
 				<span className="inline-flex animate-[theme-pop_260ms_ease] items-center justify-center">
-					<ThemeIcon className="h-[18px] w-[18px]" preference={preference} />
+					<ThemeIcon className="h-[17px] w-[17px]" preference={preference} />
 				</span>
 			</span>
 		</button>

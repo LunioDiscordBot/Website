@@ -4,6 +4,7 @@ import { buildDashboardPath } from '@/lib/dashboard-routes';
 import { getPreferredBotId as getPreferredBotFromList } from '@/lib/bot-preference';
 import { DashboardRouteState } from '@/components/dashboard-route-state';
 import { DashboardPlayerLayout } from './dashboard-player-layout';
+import { DashboardWorkspaceShell } from './dashboard-workspace-shell';
 import { useDashboardPlayerOptional } from './dashboard-player-provider';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -1022,18 +1023,21 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 		playerFilters.pitch.enabled ? `Pitch ${playerFilters.pitch.level ?? 1}` : null,
 	].filter(Boolean) as string[];
 
-	if (dashboardRouteMissingGuild || dashboardRouteMissingBot) {
+	if (dashboardRouteMissingGuild || dashboardRouteMissingBot || dashboardRouteBotNotInGuild) {
 		return (
-			<DashboardRouteState
-				title="Dashboard not available"
-				message="That bot or server route does not exist for your current session. Pick a server you actually share with Lunio."
-			/>
-		);
-	}
-
-	if (dashboardRouteBotNotInGuild) {
-		return (
-			<DashboardRouteState title="Bot not in this server" message="The selected bot is not connected to this server right now, so this dashboard route cannot be opened." />
+			<DashboardWorkspaceShell activeKey="overview" hideMiniPlayerBar title="Overview">
+				{dashboardRouteBotNotInGuild ? (
+					<DashboardRouteState
+						title="Bot not in this server"
+						message="This bot isn’t in the selected server right now. Invite it from the server list, or pick another server."
+					/>
+				) : (
+					<DashboardRouteState
+						title="Dashboard not available"
+						message="This server or bot isn’t available to your account. Pick a server you share with Lunio from the server list."
+					/>
+				)}
+			</DashboardWorkspaceShell>
 		);
 	}
 

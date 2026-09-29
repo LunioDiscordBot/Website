@@ -1,15 +1,7 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { useSiteLanguage } from '@/components/site-language-provider';
-import { SiteShell } from '@/components/site-shell';
-
-type LegalSection = {
-	title: string;
-	body: ReactNode;
-};
-
-const emailLinkClass = 'font-bold text-primary transition hover:text-white';
+import { LegalPage, legalLinkClass, type LegalSection } from '@/components/legal-page';
 
 export default function TosPage() {
 	const { language, messages } = useSiteLanguage();
@@ -66,7 +58,7 @@ export default function TosPage() {
 						body: (
 							<>
 								Für rechtliche oder supportbezogene Fragen kontaktiere{' '}
-								<a className={emailLinkClass} href="mailto:lavalinklunio@gmail.com">
+								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
 									lavalinklunio@gmail.com
 								</a>
 								. Support-Server: discord.gg/rrqEFukVUZ.
@@ -124,7 +116,7 @@ export default function TosPage() {
 						body: (
 							<>
 								For legal or support-related questions, contact{' '}
-								<a className={emailLinkClass} href="mailto:lavalinklunio@gmail.com">
+								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
 									lavalinklunio@gmail.com
 								</a>
 								. Support server: discord.gg/rrqEFukVUZ.
@@ -133,31 +125,5 @@ export default function TosPage() {
 					},
 				];
 
-	return (
-		<SiteShell currentPath="/tos">
-			<section className="py-16 sm:py-24">
-				<div className="shell">
-					<div className="grid gap-8 xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)] xl:items-start">
-						<div className="xl:sticky xl:top-24">
-							<div className="eyebrow">{messages.legal.eyebrow}</div>
-							<h1 className="section-title max-w-sm">{messages.legal.tosTitle}</h1>
-							<p className="section-copy mt-5 max-w-sm">{messages.legal.tosIntro}</p>
-							<div className="mt-4 text-sm text-muted">{messages.legal.effectiveDate}</div>
-						</div>
-
-						<div className="panel p-8 sm:p-10">
-							<div className="grid gap-5">
-								{sections.map((section) => (
-									<div className="rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-5" key={section.title}>
-										<h2 className="font-headline text-2xl font-bold tracking-[-0.04em] text-white">{section.title}</h2>
-										<div className="mt-3 text-sm leading-7 text-muted">{section.body}</div>
-									</div>
-								))}
-							</div>
-						</div>
-					</div>
-				</div>
-			</section>
-		</SiteShell>
-	);
+	return <LegalPage currentPath="/tos" intro={messages.legal.tosIntro} sections={sections} title={messages.legal.tosTitle} />;
 }

@@ -1,15 +1,7 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { useSiteLanguage } from '@/components/site-language-provider';
-import { SiteShell } from '@/components/site-shell';
-
-type LegalSection = {
-	title: string;
-	body: ReactNode;
-};
-
-const emailLinkClass = 'font-bold text-primary transition hover:text-white';
+import { LegalPage, legalLinkClass, type LegalSection } from '@/components/legal-page';
 
 export default function PrivacyPage() {
 	const { language, messages } = useSiteLanguage();
@@ -23,7 +15,7 @@ export default function PrivacyPage() {
 							<>
 								Diese Datenschutzerklärung erläutert, wie Lunio personenbezogene Daten im Zusammenhang mit Website, Dashboard, Discord-Bot, Support-Anfragen und
 								Premium-Diensten verarbeitet. Kontakt:{' '}
-								<a className={emailLinkClass} href="mailto:lavalinklunio@gmail.com">
+								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
 									lavalinklunio@gmail.com
 								</a>
 								.
@@ -68,7 +60,7 @@ export default function PrivacyPage() {
 							<>
 								Abhängig von deinem Standort kannst du Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung, Widerspruch, Datenübertragbarkeit und Beschwerde
 								bei einer Aufsichtsbehörde haben. Anfragen können an{' '}
-								<a className={emailLinkClass} href="mailto:lavalinklunio@gmail.com">
+								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
 									lavalinklunio@gmail.com
 								</a>{' '}
 								gesendet werden.
@@ -84,7 +76,7 @@ export default function PrivacyPage() {
 						body: (
 							<>
 								Für Datenschutzanfragen oder Fragen kontaktiere{' '}
-								<a className={emailLinkClass} href="mailto:lavalinklunio@gmail.com">
+								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
 									lavalinklunio@gmail.com
 								</a>
 								. Support-Server: discord.gg/rrqEFukVUZ.
@@ -99,7 +91,7 @@ export default function PrivacyPage() {
 							<>
 								This Privacy Policy explains how Lunio processes personal data in connection with the website, dashboard, Discord bot, support interactions, and
 								premium services. Contact:{' '}
-								<a className={emailLinkClass} href="mailto:lavalinklunio@gmail.com">
+								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
 									lavalinklunio@gmail.com
 								</a>
 								.
@@ -144,7 +136,7 @@ export default function PrivacyPage() {
 							<>
 								Depending on your location, you may have rights relating to access, correction, deletion, restriction, objection, portability, and complaint to a
 								supervisory authority. Requests may be sent to{' '}
-								<a className={emailLinkClass} href="mailto:lavalinklunio@gmail.com">
+								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
 									lavalinklunio@gmail.com
 								</a>
 								.
@@ -160,7 +152,7 @@ export default function PrivacyPage() {
 						body: (
 							<>
 								For privacy-related requests or questions, contact{' '}
-								<a className={emailLinkClass} href="mailto:lavalinklunio@gmail.com">
+								<a className={legalLinkClass} href="mailto:lavalinklunio@gmail.com">
 									lavalinklunio@gmail.com
 								</a>
 								. Support server: discord.gg/rrqEFukVUZ.
@@ -169,31 +161,5 @@ export default function PrivacyPage() {
 					},
 				];
 
-	return (
-		<SiteShell currentPath="/privacy">
-			<section className="py-16 sm:py-24">
-				<div className="shell">
-					<div className="grid gap-8 xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)] xl:items-start">
-						<div className="xl:sticky xl:top-24">
-							<div className="eyebrow">{messages.legal.eyebrow}</div>
-							<h1 className="section-title max-w-sm">{messages.legal.privacyTitle}</h1>
-							<p className="section-copy mt-5 max-w-sm">{messages.legal.privacyIntro}</p>
-							<div className="mt-4 text-sm text-muted">{messages.legal.effectiveDate}</div>
-						</div>
-
-						<div className="panel p-8 sm:p-10">
-							<div className="grid gap-5">
-								{sections.map((section) => (
-									<div className="rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-5" key={section.title}>
-										<h2 className="font-headline text-2xl font-bold tracking-[-0.04em] text-white">{section.title}</h2>
-										<div className="mt-3 text-sm leading-7 text-muted">{section.body}</div>
-									</div>
-								))}
-							</div>
-						</div>
-					</div>
-				</div>
-			</section>
-		</SiteShell>
-	);
+	return <LegalPage currentPath="/privacy" intro={messages.legal.privacyIntro} sections={sections} title={messages.legal.privacyTitle} />;
 }
