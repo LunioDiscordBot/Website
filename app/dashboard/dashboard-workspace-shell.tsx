@@ -1,14 +1,17 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
-import { apiJson, type AuthUser } from '@/lib/api';
+import { apiJson, type AuthGuild, type AuthGuildsResponse, type AuthUser } from '@/lib/api';
 import { buildDashboardPath } from '@/lib/dashboard-routes';
 import { DashboardMiniPlayerBar } from './dashboard-mini-player-bar';
 import { useDashboardPlayerOptional } from './dashboard-player-provider';
 
+type ActiveKey = 'overview' | 'servers' | 'guild-settings' | 'account-settings' | 'playlists' | 'premium';
+
 type DashboardWorkspaceShellProps = {
-	activeKey: 'overview' | 'servers' | 'guild-settings' | 'account-settings' | 'playlists' | 'premium';
+	activeKey: ActiveKey;
 	title: string;
 	subtitle?: string;
 	botId?: string | null;
@@ -20,31 +23,45 @@ type DashboardWorkspaceShellProps = {
 	hideMiniPlayerBar?: boolean;
 };
 
-type SidebarLink = {
-	key: Exclude<DashboardWorkspaceShellProps['activeKey'], 'servers'> | 'home' | 'commands' | 'status' | 'support';
+type ShellIconName =
+	| 'home'
+	| 'overview'
+	| 'servers'
+	| 'settings'
+	| 'playlists'
+	| 'premium'
+	| 'commands'
+	| 'status'
+	| 'account'
+	| 'support'
+	| 'collapse'
+	| 'menu'
+	| 'close'
+	| 'selector'
+	| 'external';
+
+type NavLink = {
+	key: string;
 	label: string;
-	caption: string;
-	icon: 'home' | 'overview' | 'settings' | 'playlists' | 'premium' | 'commands' | 'status' | 'account' | 'support' | 'collapse' | 'chevron';
+	icon: ShellIconName;
 	href?: string;
 	active?: boolean;
-	disabled?: boolean;
-	comingSoon?: boolean;
+	disabledReason?: string;
 	external?: boolean;
 };
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'lunio:web:dashboardSidebarCollapsed';
-const SIDEBAR_NOTICE_STORAGE_KEY = 'lunio:web:dashboardSidebarNoticeDismissed:workspace';
 const DASHBOARD_BOT_ID_STORAGE_KEY = 'lunio:web:botId';
 const DASHBOARD_GUILD_ID_STORAGE_KEY = 'lunio:web:guildId';
 const SUPPORT_SERVER_URL = 'https://discord.gg/rrqEFukVUZ';
 
-function DashboardSidebarIcon({ name, className = 'h-5 w-5' }: { name: SidebarLink['icon']; className?: string }) {
+export function ShellIcon({ name, className = 'h-[18px] w-[18px]' }: { name: ShellIconName; className?: string }) {
 	const sharedProps = {
 		className,
 		viewBox: '0 0 24 24',
 		fill: 'none',
 		stroke: 'currentColor',
-		strokeWidth: 1.9,
+		strokeWidth: 1.8,
 		strokeLinecap: 'round' as const,
 		strokeLinejoin: 'round' as const,
 		'aria-hidden': true,
@@ -56,131 +73,171 @@ function DashboardSidebarIcon({ name, className = 'h-5 w-5' }: { name: SidebarLi
 				<svg {...sharedProps}>
 					<path d="M4.75 10.5 12 4l7.25 6.5" />
 					<path d="M6.5 9.5v9h11v-9" />
-					<path d="M10 18v-4h4v4" />
+					<path d="M10 18.5v-4h4v4" />
 				</svg>
 			);
 		case 'overview':
 			return (
 				<svg {...sharedProps}>
-					<path d="M7.5 5v14l11-7-11-7Z" />
+					<circle cx="12" cy="12" r="8.25" />
+					<path d="m10.25 8.75 4.75 3.25-4.75 3.25v-6.5Z" />
+				</svg>
+			);
+		case 'servers':
+			return (
+				<svg {...sharedProps}>
+					<rect x="4.5" y="5" width="15" height="5" rx="1.5" />
+					<rect x="4.5" y="14" width="15" height="5" rx="1.5" />
+					<path d="M8 7.5h.01" />
+					<path d="M8 16.5h.01" />
 				</svg>
 			);
 		case 'settings':
 			return (
 				<svg {...sharedProps}>
 					<path d="M5 7h8" />
-					<path d="M15 7h4" />
+					<path d="M16 7h3" />
 					<path d="M11 17h8" />
-					<path d="M5 17h2" />
-					<circle cx="11" cy="7" r="2" />
-					<circle cx="9" cy="17" r="2" />
+					<path d="M5 17h3" />
+					<circle cx="14.5" cy="7" r="1.75" />
+					<circle cx="9.5" cy="17" r="1.75" />
 				</svg>
 			);
 		case 'playlists':
 			return (
 				<svg {...sharedProps}>
-					<path d="M8 6h10" />
-					<path d="M8 10h10" />
-					<path d="M8 14h6" />
-					<path d="M7 18a2 2 0 1 1-2-2 2 2 0 0 1 2 2Z" />
-					<path d="M17 17a2 2 0 1 1-2-2 2 2 0 0 1 2 2Z" />
+					<path d="M4.5 6.5h11" />
+					<path d="M4.5 11h11" />
+					<path d="M4.5 15.5h6" />
+					<path d="M18 9.5v7.25" />
+					<circle cx="16.25" cy="16.75" r="1.75" />
 				</svg>
 			);
 		case 'premium':
 			return (
 				<svg {...sharedProps}>
-					<path d="m12 3.75 7.25 7.25L12 20.25 4.75 11 12 3.75Z" />
-					<path d="M8.25 11h7.5" />
-					<path d="m10.25 7.25 1.75 3.75 1.75-3.75" />
+					<path d="M5 9.5 8.5 5h7L19 9.5 12 19 5 9.5Z" />
+					<path d="M5 9.5h14" />
 				</svg>
 			);
 		case 'commands':
 			return (
 				<svg {...sharedProps}>
-					<rect x="4.5" y="5" width="15" height="14" rx="2" />
-					<path d="m8 10 2.75 2L8 14.75" />
-					<path d="M13.5 14.75H16" />
+					<rect x="4" y="5" width="16" height="14" rx="2" />
+					<path d="m8 10 2.5 2L8 14" />
+					<path d="M13 14h3" />
 				</svg>
 			);
 		case 'status':
 			return (
 				<svg {...sharedProps}>
-					<path d="M5 14h2.5l2-5 3 8 2-5H19" />
+					<path d="M4 12h3.5l2-5 4 10 2-5H20" />
 				</svg>
 			);
 		case 'account':
 			return (
 				<svg {...sharedProps}>
-					<circle cx="12" cy="8" r="3.25" />
-					<path d="M5.5 18.5c1.8-3 4.15-4.5 6.5-4.5s4.7 1.5 6.5 4.5" />
+					<circle cx="12" cy="8.5" r="3.25" />
+					<path d="M5.5 19c1.6-2.9 3.9-4.25 6.5-4.25S16.9 16.1 18.5 19" />
 				</svg>
 			);
 		case 'support':
 			return (
 				<svg {...sharedProps}>
-					<path d="M5 13.5v-1a7 7 0 1 1 14 0v1" />
-					<path d="M5.5 13.5h-.25A1.75 1.75 0 0 0 3.5 15.25v.5A1.75 1.75 0 0 0 5.25 17.5H7v-4Z" />
-					<path d="M19 13.5h.25A1.75 1.75 0 0 1 21 15.25v.5A1.75 1.75 0 0 1 19.25 17.5H17v-4Z" />
-					<path d="M9.5 20h5" />
+					<circle cx="12" cy="12" r="8.25" />
+					<path d="M9.75 9.5a2.35 2.35 0 0 1 4.5.9c0 1.6-2.25 2-2.25 3.35" />
+					<path d="M12 16.75h.01" />
 				</svg>
 			);
 		case 'collapse':
 			return (
 				<svg {...sharedProps}>
-					<rect x="4.5" y="5" width="15" height="14" rx="2.5" />
-					<path d="M9 5v14" />
+					<rect x="4" y="5" width="16" height="14" rx="2" />
+					<path d="M9.5 5v14" />
 				</svg>
 			);
-		case 'chevron':
+		case 'menu':
 			return (
 				<svg {...sharedProps}>
-					<path d="m9 6 6 6-6 6" />
+					<path d="M4.5 7h15" />
+					<path d="M4.5 12h15" />
+					<path d="M4.5 17h15" />
+				</svg>
+			);
+		case 'close':
+			return (
+				<svg {...sharedProps}>
+					<path d="M6 6l12 12" />
+					<path d="M18 6 6 18" />
+				</svg>
+			);
+		case 'selector':
+			return (
+				<svg {...sharedProps}>
+					<path d="m8.5 9.5 3.5-3.5 3.5 3.5" />
+					<path d="m8.5 14.5 3.5 3.5 3.5-3.5" />
+				</svg>
+			);
+		case 'external':
+			return (
+				<svg {...sharedProps}>
+					<path d="M14 5h5v5" />
+					<path d="M19 5 11 13" />
+					<path d="M17 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h4" />
 				</svg>
 			);
 	}
 }
 
+function Avatar({ src, label, className }: { src?: string | null; label: string; className: string }) {
+	if (src) {
+		// eslint-disable-next-line @next/next/no-img-element
+		return <img alt="" className={`${className} shrink-0 object-cover`} height={32} src={src} width={32} />;
+	}
+
+	return (
+		<span aria-hidden="true" className={`${className} flex shrink-0 items-center justify-center bg-primary/15 text-xs font-bold text-primary`}>
+			{label.slice(0, 1).toUpperCase()}
+		</span>
+	);
+}
+
 export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, guildId, canManageGuild, headerActions, children, hideMiniPlayerBar }: DashboardWorkspaceShellProps) {
+	const pathname = usePathname();
 	const dashboardPlayer = useDashboardPlayerOptional();
 	const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+	const [guilds, setGuilds] = useState<AuthGuild[]>([]);
 	const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-	const [showSidebarNotice, setShowSidebarNotice] = useState(true);
+	const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 	const [hasLoadedSidebarPrefs, setHasLoadedSidebarPrefs] = useState(false);
 	const [rememberedBotId, setRememberedBotId] = useState('');
 	const [rememberedGuildId, setRememberedGuildId] = useState('');
 
 	useEffect(() => {
-		const storedSidebarState = window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY);
-		setIsSidebarCollapsed(storedSidebarState === 'true');
-		setShowSidebarNotice(window.localStorage.getItem(SIDEBAR_NOTICE_STORAGE_KEY) !== 'true');
-		setRememberedBotId(window.localStorage.getItem(DASHBOARD_BOT_ID_STORAGE_KEY) || '');
-		setRememberedGuildId(window.localStorage.getItem(DASHBOARD_GUILD_ID_STORAGE_KEY) || '');
+		try {
+			setIsSidebarCollapsed(window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true');
+			setRememberedBotId(window.localStorage.getItem(DASHBOARD_BOT_ID_STORAGE_KEY) || '');
+			setRememberedGuildId(window.localStorage.getItem(DASHBOARD_GUILD_ID_STORAGE_KEY) || '');
+		} catch {}
 		setHasLoadedSidebarPrefs(true);
 	}, []);
 
 	useEffect(() => {
 		if (!hasLoadedSidebarPrefs) return;
-		window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(isSidebarCollapsed));
+		try {
+			window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(isSidebarCollapsed));
+		} catch {}
 	}, [hasLoadedSidebarPrefs, isSidebarCollapsed]);
 
 	useEffect(() => {
-		if (!hasLoadedSidebarPrefs) return;
-		window.localStorage.setItem(SIDEBAR_NOTICE_STORAGE_KEY, String(!showSidebarNotice));
-	}, [hasLoadedSidebarPrefs, showSidebarNotice]);
-
-	useEffect(() => {
 		let active = true;
-
 		void apiJson<AuthUser>('/api/auth/me')
 			.then((user) => {
-				if (!active) return;
-				setAuthUser(user);
+				if (active) setAuthUser(user);
 			})
 			.catch(() => {
-				if (!active) return;
-				setAuthUser(null);
+				if (active) setAuthUser(null);
 			});
-
 		return () => {
 			active = false;
 		};
@@ -188,342 +245,260 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 
 	const effectiveBotId = botId || rememberedBotId || '';
 	const effectiveGuildId = guildId || rememberedGuildId || '';
-	const accountDisplayName = authUser ? authUser.globalName || authUser.username : 'Dashboard guest';
-	const accountHandle = authUser?.username ? `@${authUser.username}` : 'Profile & preferences';
-	const canOpenOverview = Boolean(effectiveBotId && effectiveGuildId);
-	const canOpenGuildSettings = Boolean(effectiveBotId && effectiveGuildId) && (canManageGuild !== false || activeKey === 'guild-settings');
+
+	useEffect(() => {
+		if (!effectiveGuildId || !authUser) return;
+		let active = true;
+		void apiJson<AuthGuildsResponse>('/api/auth/guilds')
+			.then((response) => {
+				if (active) setGuilds(response.guilds ?? []);
+			})
+			.catch(() => {
+				if (active) setGuilds([]);
+			});
+		return () => {
+			active = false;
+		};
+	}, [effectiveGuildId, authUser]);
+
+	useEffect(() => {
+		setIsMobileNavOpen(false);
+	}, [pathname]);
+
+	useEffect(() => {
+		if (!isMobileNavOpen) return;
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') setIsMobileNavOpen(false);
+		};
+		window.addEventListener('keydown', onKeyDown);
+		return () => window.removeEventListener('keydown', onKeyDown);
+	}, [isMobileNavOpen]);
+
+	const selectedGuild = guilds.find((guild) => guild.guildId === effectiveGuildId) ?? null;
+	const accountDisplayName = authUser ? authUser.globalName || authUser.username : 'Guest';
+	const accountHandle = authUser?.username ? `@${authUser.username}` : 'Not signed in';
+	const hasServer = Boolean(effectiveBotId && effectiveGuildId);
+	const guildCanManage = canManageGuild ?? selectedGuild?.canManage;
+	const canOpenGuildSettings = hasServer && (guildCanManage !== false || activeKey === 'guild-settings');
 	const hasMiniPlayerBar = !hideMiniPlayerBar && Boolean(dashboardPlayer?.hasIdentity && dashboardPlayer.player?.currentTrack);
-	const sidebarPrimaryLinks: SidebarLink[] = [
-		{
-			key: 'home',
-			label: 'Home',
-			caption: 'Main site',
-			icon: 'home',
-			href: process.env.NEXT_PUBLIC_PUBLIC_SITE_URL || '/',
-			external: true,
-		},
+	const collapsed = isSidebarCollapsed;
+
+	const workspaceLinks: NavLink[] = [
 		{
 			key: 'overview',
 			label: 'Overview',
-			caption: 'Player control',
 			icon: 'overview',
-			href: canOpenOverview ? buildDashboardPath(effectiveBotId, effectiveGuildId) : undefined,
+			href: hasServer ? buildDashboardPath(effectiveBotId, effectiveGuildId) : undefined,
 			active: activeKey === 'overview',
-			disabled: !canOpenOverview,
-		},
-		{
-			key: 'guild-settings',
-			label: 'Guild settings',
-			caption: canOpenGuildSettings ? 'Tune this server' : 'Pick a server first',
-			icon: 'settings',
-			href: canOpenGuildSettings ? buildDashboardPath(effectiveBotId, effectiveGuildId, 'settings') : undefined,
-			active: activeKey === 'guild-settings',
-			disabled: !canOpenGuildSettings,
+			disabledReason: hasServer ? undefined : 'Select a server first',
 		},
 		{
 			key: 'playlists',
 			label: 'Playlists',
-			caption: canOpenOverview ? 'Saved queues' : 'Pick a server first',
 			icon: 'playlists',
-			href: canOpenOverview ? buildDashboardPath(effectiveBotId, effectiveGuildId, 'playlists') : undefined,
+			href: hasServer ? buildDashboardPath(effectiveBotId, effectiveGuildId, 'playlists') : undefined,
 			active: activeKey === 'playlists',
-			disabled: !canOpenOverview,
+			disabledReason: hasServer ? undefined : 'Select a server first',
+		},
+		{
+			key: 'guild-settings',
+			label: 'Server Settings',
+			icon: 'settings',
+			href: canOpenGuildSettings ? buildDashboardPath(effectiveBotId, effectiveGuildId, 'settings') : undefined,
+			active: activeKey === 'guild-settings',
+			disabledReason: canOpenGuildSettings ? undefined : hasServer ? 'Requires Manage Server permission' : 'Select a server first',
 		},
 		{
 			key: 'premium',
 			label: 'Premium',
-			caption: canOpenGuildSettings ? 'Billing & access' : 'Requires Manage Guild',
 			icon: 'premium',
 			href: canOpenGuildSettings ? buildDashboardPath(effectiveBotId, effectiveGuildId, 'premium') : undefined,
 			active: activeKey === 'premium',
-			disabled: !canOpenGuildSettings,
+			disabledReason: canOpenGuildSettings ? undefined : hasServer ? 'Requires Manage Server permission' : 'Select a server first',
 		},
 	];
-	const sidebarExploreLinks: SidebarLink[] = [
-		{
-			key: 'commands',
-			label: 'Commands',
-			caption: 'Public docs',
-			icon: 'commands',
-			href: '/commands',
-		},
-		{
-			key: 'status',
-			label: 'Status',
-			caption: 'System health',
-			icon: 'status',
-			href: '/status',
-		},
-	];
-	const sidebarFooterLinks: SidebarLink[] = [
-		{
-			key: 'account-settings',
-			label: 'Settings',
-			caption: 'Account',
-			icon: 'account',
-			href: '/settings',
-			active: activeKey === 'account-settings',
-		},
-		{
-			key: 'support',
-			label: 'Help Center',
-			caption: 'Support server',
-			icon: 'support',
-			href: SUPPORT_SERVER_URL,
-			external: true,
-		},
+	const resourceLinks: NavLink[] = [
+		{ key: 'home', label: 'Website', icon: 'home', href: process.env.NEXT_PUBLIC_PUBLIC_SITE_URL || '/' },
+		{ key: 'commands', label: 'Commands', icon: 'commands', href: '/commands' },
+		{ key: 'status', label: 'Status', icon: 'status', href: '/status' },
+		{ key: 'support', label: 'Support Server', icon: 'support', href: SUPPORT_SERVER_URL, external: true },
 	];
 
-	const renderSidebarLink = (item: SidebarLink) => {
-		const isComingSoon = Boolean(item.comingSoon);
-		const className = `group flex w-full items-center gap-3 rounded-[1.15rem] border py-3 text-left transition ${
-			isSidebarCollapsed ? 'justify-center px-0' : 'px-3'
-		} ${
-			item.active
-				? 'border-primary/25 bg-primary/12 text-white shadow-[0_14px_40px_rgba(0,255,255,0.12)]'
-				: item.disabled
-					? isComingSoon
-						? 'cursor-not-allowed border-secondary/12 bg-secondary/[0.04] text-white/72 hover:border-secondary/20 hover:bg-secondary/[0.07] hover:text-white'
-						: 'border-white/6 bg-transparent text-white/32'
-					: 'border-transparent bg-transparent text-white/72 hover:border-white/10 hover:bg-white/[0.035] hover:text-white'
-		}`;
-
+	const renderNavLink = (item: NavLink) => {
 		const content = (
 			<>
-				<div
-					className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] border ${
-						item.active
-							? 'border-primary/18 bg-primary/12 text-primary'
-							: item.disabled
-								? isComingSoon
-									? 'border-secondary/20 bg-secondary/[0.07] text-secondary/70'
-									: 'border-white/6 bg-white/[0.02] text-white/24'
-								: 'border-white/10 bg-white/[0.03] text-white/78 group-hover:border-primary/20 group-hover:text-primary'
-					}`}
-				>
-					<DashboardSidebarIcon name={item.icon} />
-				</div>
-				{isSidebarCollapsed ? null : (
-					<div className="min-w-0 flex-1">
-						<div className="truncate text-sm font-bold">{item.label}</div>
-						<div className="mt-1 truncate text-xs text-white/42">{item.caption}</div>
-					</div>
-				)}
-				{!isSidebarCollapsed && item.comingSoon ? (
-					<span className="rounded-full bg-secondary/12 px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-secondary">Soon</span>
-				) : null}
+				<ShellIcon name={item.icon} />
+				<span className={`min-w-0 flex-1 truncate ${collapsed ? 'lg:sr-only' : ''}`}>{item.label}</span>
+				{item.external && !collapsed ? <ShellIcon className="h-3.5 w-3.5 shrink-0 opacity-60" name="external" /> : null}
 			</>
 		);
+		const className = `dash-nav-item ${collapsed ? 'lg:justify-center lg:px-0' : ''}`;
+		const tooltip = item.disabledReason ?? (collapsed ? item.label : undefined);
 
-		const tooltip = item.comingSoon ? 'Coming soon' : isSidebarCollapsed ? item.label : item.caption;
-
-		if (!item.href || item.disabled) {
+		if (!item.href) {
 			return (
-				<div
-					aria-disabled={item.disabled}
-					className={className}
-					key={item.key}
-					onClick={(event) => {
-						if (item.disabled) {
-							event.preventDefault();
-						}
-					}}
-					title={tooltip}
-				>
-					{content}
-				</div>
+				<li key={item.key}>
+					<span aria-disabled="true" className={className} title={tooltip}>
+						{content}
+					</span>
+				</li>
 			);
 		}
 
 		if (item.external) {
-			const shouldOpenNewTab = item.key === 'support';
 			return (
-				<a className={className} href={item.href} key={item.key} rel={shouldOpenNewTab ? 'noreferrer' : undefined} target={shouldOpenNewTab ? '_blank' : undefined} title={tooltip}>
-					{content}
-				</a>
+				<li key={item.key}>
+					<a className={className} href={item.href} rel="noreferrer" target="_blank" title={tooltip}>
+						{content}
+						<span className="sr-only"> (opens in a new tab)</span>
+					</a>
+				</li>
 			);
 		}
 
 		return (
-			<Link className={className} href={item.href} key={item.key} title={tooltip}>
-				{content}
-			</Link>
+			<li key={item.key}>
+				<Link aria-current={item.active ? 'page' : undefined} className={className} href={item.href} prefetch={false} title={tooltip}>
+					{content}
+				</Link>
+			</li>
 		);
 	};
 
 	return (
-		<div className="relative min-h-screen overflow-x-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-5">
-			<div className="mx-auto flex h-[calc(100vh-1.5rem)] max-w-[1820px] overflow-hidden rounded-[2rem] border border-white/10 bg-[rgba(9,10,12,0.88)] shadow-[0_28px_90px_rgba(0,0,0,0.42)] backdrop-blur-xl">
-				<aside
-					className={`flex min-h-0 shrink-0 flex-col overflow-y-auto border-r border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] px-4 py-5 transition-[width] duration-300 [scrollbar-gutter:stable] ${
-						isSidebarCollapsed ? 'w-[104px]' : 'w-[292px]'
-					}`}
-				>
-					{isSidebarCollapsed ? (
-						/* ── Collapsed header: avatar + toggle stacked vertically ── */
-						<div className="flex flex-col items-center gap-2">
-							<Link
-								className="flex h-11 w-11 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary transition hover:border-primary/40 hover:bg-primary/20"
-								href="/settings"
-								title={accountDisplayName}
-							>
-								{authUser?.avatarUrl ? (
-									// eslint-disable-next-line @next/next/no-img-element
-									<img
-										alt={authUser.username ?? 'Signed in user'}
-										className="h-11 w-11 rounded-full object-cover"
-										src={authUser.avatarUrl}
-									/>
-								) : (
-									<span className="text-sm font-black">{accountDisplayName.slice(0, 1).toUpperCase()}</span>
-								)}
-							</Link>
-							<button
-								aria-label="Expand sidebar"
-								className="flex h-8 w-11 items-center justify-center rounded-[0.75rem] border border-white/10 bg-white/[0.035] text-white/72 transition hover:border-primary/20 hover:text-primary"
-								onClick={() => setIsSidebarCollapsed(false)}
-								type="button"
-							>
-								<DashboardSidebarIcon className="h-4 w-4 rotate-180" name="collapse" />
-							</button>
-						</div>
-					) : (
-						/* ── Expanded header: full user card + collapse button side by side ── */
-						<div className="flex items-center gap-3">
-							<Link
-								className="flex min-w-0 flex-1 items-center gap-3 rounded-[1.2rem] border border-white/10 bg-white/[0.035] px-3 py-3 text-left transition hover:border-primary/20 hover:bg-white/[0.05]"
-								href="/settings"
-								title="Open account settings"
-							>
-								{authUser?.avatarUrl ? (
-									// eslint-disable-next-line @next/next/no-img-element
-									<img
-										alt={authUser.username ?? 'Signed in user'}
-										className="h-11 w-11 rounded-full border border-primary/20 object-cover"
-										src={authUser.avatarUrl}
-									/>
-								) : (
-									<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-sm font-black text-primary">
-										{accountDisplayName.slice(0, 1).toUpperCase()}
-									</div>
-								)}
-								<div className="min-w-0 flex-1">
-									<div className="truncate text-sm font-bold text-white">{accountDisplayName}</div>
-									<div className="mt-1 truncate text-xs text-white/42">{accountHandle}</div>
-								</div>
-								<DashboardSidebarIcon className="h-4 w-4 shrink-0 text-white/38" name="chevron" />
-							</Link>
-							<button
-								aria-label="Collapse sidebar"
-								className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] border border-white/10 bg-white/[0.035] text-white/72 transition hover:border-primary/20 hover:text-primary"
-								onClick={() => setIsSidebarCollapsed(true)}
-								type="button"
-							>
-								<DashboardSidebarIcon className="h-5 w-5" name="collapse" />
-							</button>
-						</div>
-					)}
+		<div className="dash-app flex h-dvh overflow-hidden font-body">
+			{isMobileNavOpen ? (
+				<button
+					aria-label="Close navigation"
+					className="fixed inset-0 z-40 cursor-default bg-black/50 lg:hidden"
+					onClick={() => setIsMobileNavOpen(false)}
+					tabIndex={-1}
+					type="button"
+				/>
+			) : null}
 
-					<div className="mt-8">
-						<div className={`px-2 text-[11px] font-extrabold uppercase tracking-[0.24em] text-white/28 ${isSidebarCollapsed ? 'sr-only' : ''}`}>Workspace</div>
-						<nav className="mt-3 grid gap-2">{sidebarPrimaryLinks.map(renderSidebarLink)}</nav>
-					</div>
+			<aside
+				aria-label="Dashboard"
+				className={`dash-sidebar fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col transition-transform duration-200 lg:static lg:z-auto lg:max-w-none lg:translate-x-0 lg:transition-[width] ${
+					isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'
+				} ${collapsed ? 'lg:w-[4.25rem]' : 'lg:w-64'}`}
+				id="dashboard-sidebar"
+			>
+				<div className={`flex h-16 shrink-0 items-center gap-2 px-4 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+					<Link className={`flex min-w-0 items-center gap-2.5 rounded-lg ${collapsed ? 'lg:hidden' : ''}`} href="/" prefetch={false}>
+						{/* eslint-disable-next-line @next/next/no-img-element */}
+						<img alt="" className="h-7 w-7 rounded-full object-cover" height={28} src="/lunio-logo.png" width={28} />
+						<span className="font-headline text-lg font-bold tracking-tight" translate="no">
+							Lunio
+						</span>
+					</Link>
+					<button
+						aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+						className="dash-btn dash-btn-icon ml-auto hidden border-transparent bg-transparent text-muted hover:text-text lg:inline-flex"
+						onClick={() => setIsSidebarCollapsed((current) => !current)}
+						title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+						type="button"
+					>
+						<ShellIcon name="collapse" />
+					</button>
+					<button
+						aria-label="Close navigation"
+						className="dash-btn dash-btn-icon ml-auto border-transparent bg-transparent text-muted lg:hidden"
+						onClick={() => setIsMobileNavOpen(false)}
+						type="button"
+					>
+						<ShellIcon name="close" />
+					</button>
+				</div>
 
-					<div className="mt-4 border-t border-white/7 pt-4">
-						<div className={`px-2 text-[11px] font-extrabold uppercase tracking-[0.24em] text-white/28 ${isSidebarCollapsed ? 'sr-only' : ''}`}>Explore</div>
-						<nav className="mt-3 grid gap-2">{sidebarExploreLinks.map(renderSidebarLink)}</nav>
-					</div>
+				<div className={`px-3 ${collapsed ? 'lg:px-2' : ''}`}>
+					<Link
+						aria-current={activeKey === 'servers' ? 'page' : undefined}
+						className={`dash-inset flex w-full items-center gap-3 px-2.5 py-2 text-left transition-colors duration-150 hover:border-[var(--dash-border-strong)] ${
+							collapsed ? 'lg:justify-center lg:px-0' : ''
+						}`}
+						href="/servers"
+						prefetch={false}
+						title={collapsed ? (selectedGuild?.name ?? 'Select a server') : 'Switch server'}
+					>
+						{selectedGuild ? (
+							<Avatar className="h-8 w-8 rounded-md" label={selectedGuild.name} src={selectedGuild.iconUrl} />
+						) : (
+							<span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--dash-active)] text-muted">
+								<ShellIcon className="h-4 w-4" name="servers" />
+							</span>
+						)}
+						<span className={`min-w-0 flex-1 ${collapsed ? 'lg:sr-only' : ''}`}>
+							<span className="block truncate text-sm font-semibold">{selectedGuild?.name ?? (hasServer ? 'Current server' : 'Select a server')}</span>
+							<span className="block truncate text-xs text-muted">{hasServer ? 'Switch server' : 'Choose where Lunio plays'}</span>
+						</span>
+						<ShellIcon className={`h-4 w-4 shrink-0 text-muted ${collapsed ? 'lg:hidden' : ''}`} name="selector" />
+					</Link>
+				</div>
 
-					<div className="mt-4 flex-1">
-						{showSidebarNotice && !isSidebarCollapsed ? (
-							<div className="rounded-[1.5rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.28)]">
-								<div className="flex items-start justify-between gap-3">
-									<span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-primary">
-										New
-									</span>
-									<button
-										aria-label="Dismiss notice"
-										className="rounded-full p-1 text-white/35 transition hover:bg-white/5 hover:text-white"
-										onClick={() => setShowSidebarNotice(false)}
-										type="button"
-									>
-										<svg
-											aria-hidden="true"
-											className="h-4 w-4"
-											fill="none"
-											stroke="currentColor"
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth="2"
-											viewBox="0 0 24 24"
-										>
-											<path d="M6 6 18 18" />
-											<path d="M18 6 6 18" />
-										</svg>
-									</button>
-								</div>
-								<div className="mt-4 text-base font-bold text-white">Dashboard workspace</div>
-								<p className="mt-2 text-sm leading-6 text-white/55">
-									Servers, guild settings, and account preferences now live inside the same Lunio control room.
-								</p>
-							</div>
-						) : null}
+				<nav aria-label="Dashboard navigation" className={`mt-5 flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-3 pb-4 ${collapsed ? 'lg:px-2' : ''}`}>
+					<div>
+						<div className={`dash-label mb-1.5 px-2.5 ${collapsed ? 'lg:sr-only' : ''}`}>Workspace</div>
+						<ul className="grid gap-0.5">{workspaceLinks.map(renderNavLink)}</ul>
 					</div>
+					<div>
+						<div className={`dash-label mb-1.5 px-2.5 ${collapsed ? 'lg:sr-only' : ''}`}>Resources</div>
+						<ul className="grid gap-0.5">{resourceLinks.map(renderNavLink)}</ul>
+					</div>
+				</nav>
 
-					<div className="mt-4 border-t border-white/7 pt-4">
-						<nav className="grid gap-2">{sidebarFooterLinks.map(renderSidebarLink)}</nav>
+				<div className={`dash-divider border-t p-3 ${collapsed ? 'lg:px-2' : ''}`}>
+					<Link
+						aria-current={activeKey === 'account-settings' ? 'page' : undefined}
+						className={`dash-nav-item h-auto py-2 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}
+						href="/settings"
+						prefetch={false}
+						title={collapsed ? `${accountDisplayName} — Account settings` : 'Account settings'}
+					>
+						<Avatar className="h-8 w-8 rounded-full" label={accountDisplayName} src={authUser?.avatarUrl} />
+						<span className={`min-w-0 flex-1 ${collapsed ? 'lg:sr-only' : ''}`}>
+							<span className="block truncate text-sm font-semibold text-text">{accountDisplayName}</span>
+							<span className="block truncate text-xs">{accountHandle}</span>
+						</span>
+						<ShellIcon className={`h-4 w-4 shrink-0 ${collapsed ? 'lg:hidden' : ''}`} name="account" />
+					</Link>
+				</div>
+			</aside>
+
+			<div className="relative flex min-w-0 flex-1 flex-col">
+				<header className="dash-topbar flex min-h-16 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-6 lg:px-8">
+					<button
+						aria-controls="dashboard-sidebar"
+						aria-expanded={isMobileNavOpen}
+						aria-label="Open navigation"
+						className="dash-btn dash-btn-icon lg:hidden"
+						onClick={() => setIsMobileNavOpen(true)}
+						type="button"
+					>
+						<ShellIcon name="menu" />
+					</button>
+					<div className="min-w-0 flex-1">
+						<h1 className="truncate text-lg font-semibold tracking-tight sm:text-xl">{title}</h1>
+						{subtitle ? <p className="hidden truncate text-sm text-muted sm:block">{subtitle}</p> : null}
 					</div>
-				</aside>
+					{headerActions ? <div className="flex flex-wrap items-center gap-2">{headerActions}</div> : null}
+				</header>
 
 				<main
-					className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto [scrollbar-gutter:stable] bg-[radial-gradient(circle_at_top,rgba(0,255,255,0.08),transparent_28%),radial-gradient(circle_at_75%_10%,rgba(112,0,255,0.12),transparent_20%),linear-gradient(180deg,rgba(255,255,255,0.015),rgba(255,255,255,0))]"
-					style={{ scrollPaddingBottom: hasMiniPlayerBar ? '10rem' : undefined }}
+					className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable]"
+					id="main-content"
+					style={{ scrollPaddingBottom: hasMiniPlayerBar ? '7rem' : undefined }}
+					tabIndex={-1}
 				>
-					<header className="sticky top-0 z-10 border-b border-white/7 bg-[rgba(9,10,12,0.72)] px-5 py-4 backdrop-blur-xl sm:px-6 lg:px-8">
-						<div className="mx-auto flex w-full max-w-[1520px] flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-							<div className="min-w-0">
-								<div className="text-[11px] font-extrabold uppercase tracking-[0.24em] text-primary">Dashboard</div>
-								<h1 className="mt-2 truncate font-headline text-3xl font-bold tracking-[-0.05em] text-white">{title}</h1>
-								{subtitle ? <p className="mt-2 max-w-3xl text-sm leading-6 text-white/52">{subtitle}</p> : null}
-								{effectiveGuildId ? (
-									<div className="mt-3 flex flex-wrap items-center gap-2">
-										<span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/58">
-											Server: {effectiveGuildId}
-										</span>
-										<Link
-											className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/45 transition hover:border-white/20 hover:text-white"
-											href="/servers"
-										>
-											<svg aria-hidden="true" className="h-3 w-3" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24">
-												<path d="M15 18l-6-6 6-6" />
-											</svg>
-											Change
-										</Link>
-									</div>
-								) : activeKey !== 'servers' ? (
-									<div className="mt-3">
-										<Link
-											className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/45 transition hover:border-primary/20 hover:text-primary"
-											href="/servers"
-										>
-											Pick a server
-											<svg aria-hidden="true" className="h-3 w-3" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24">
-												<path d="M9 18l6-6-6-6" />
-											</svg>
-										</Link>
-									</div>
-								) : null}
-							</div>
-							{headerActions ? <div className="flex shrink-0 flex-wrap items-center gap-3">{headerActions}</div> : null}
-						</div>
-					</header>
-
-					<div className="px-5 pb-5 pt-5 sm:px-6 lg:px-8 lg:pb-6 lg:pt-6" style={{ paddingBottom: hasMiniPlayerBar ? '10rem' : undefined }}>
-						<div className="mx-auto w-full max-w-[1520px]">{children}</div>
+					<div
+						className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
+						style={{ paddingBottom: hasMiniPlayerBar ? 'calc(7rem + env(safe-area-inset-bottom))' : undefined }}
+					>
+						{children}
 					</div>
 				</main>
+				{hideMiniPlayerBar ? null : <DashboardMiniPlayerBar />}
 			</div>
-			{hideMiniPlayerBar ? null : <DashboardMiniPlayerBar />}
 		</div>
 	);
 }

@@ -43,6 +43,17 @@
 	--scrollbar-thumb: rgba(255, 255, 255, 0.14);
 	--scrollbar-thumb-hover: rgba(0, 255, 255, 0.24);
 	--scrollbar-thumb-active: rgba(253, 104, 179, 0.26);
+
+	/* Dashboard surfaces — flat, low-contrast layers */
+	--dash-bg: #0b0c0d;
+	--dash-sidebar: #0f1011;
+	--dash-card: #141517;
+	--dash-subtle: rgba(255, 255, 255, 0.04);
+	--dash-active: rgba(255, 255, 255, 0.07);
+	--dash-border: rgba(255, 255, 255, 0.08);
+	--dash-border-strong: rgba(255, 255, 255, 0.14);
+	--dash-track: rgba(255, 255, 255, 0.12);
+	--dash-on-primary: 4 16 20;
 }
 
 html[data-theme='light'] {
@@ -74,14 +85,73 @@ html[data-theme='light'] {
 	--scrollbar-thumb: rgba(15, 23, 42, 0.18);
 	--scrollbar-thumb-hover: rgba(14, 158, 184, 0.28);
 	--scrollbar-thumb-active: rgba(218, 74, 145, 0.28);
+
+	--dash-bg: #f5f6f8;
+	--dash-sidebar: #ffffff;
+	--dash-card: #ffffff;
+	--dash-subtle: rgba(15, 23, 42, 0.04);
+	--dash-active: rgba(15, 23, 42, 0.06);
+	--dash-border: rgba(15, 23, 42, 0.09);
+	--dash-border-strong: rgba(15, 23, 42, 0.16);
+	--dash-track: rgba(15, 23, 42, 0.12);
 }
 
 /* ─── Base ────────────────────────────────────────────────────────── */
 html {
-	scroll-behavior: smooth;
 	scrollbar-gutter: stable;
 	scrollbar-width: thin;
 	scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+	-webkit-tap-highlight-color: rgb(var(--color-primary) / 0.14);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	html {
+		scroll-behavior: smooth;
+	}
+}
+
+a,
+button,
+input,
+select,
+textarea,
+label,
+summary,
+[role='button'] {
+	touch-action: manipulation;
+}
+
+h1,
+h2,
+h3 {
+	text-wrap: balance;
+}
+
+[id] {
+	scroll-margin-top: 5.5rem;
+}
+
+.skip-link {
+	position: fixed;
+	left: 1rem;
+	top: 1rem;
+	z-index: 200;
+	transform: translateY(-200%);
+	border-radius: 0.5rem;
+	background: rgb(var(--color-primary));
+	padding: 0.625rem 1rem;
+	font-size: 0.875rem;
+	font-weight: 700;
+	color: rgb(var(--dash-on-primary, 4 16 20));
+}
+
+.skip-link:focus-visible {
+	transform: translateY(0);
+}
+
+/* Skip-link target is a landmark, not a control — it receives focus programmatically only. */
+#main-content:focus {
+	outline: none;
 }
 
 body {
@@ -583,21 +653,314 @@ body::before {
 	.dashboard-range::-webkit-slider-thumb {
 		-webkit-appearance: none;
 		appearance: none;
-		width: 18px;
-		height: 18px;
+		width: 16px;
+		height: 16px;
 		border-radius: 9999px;
 		background: #ffffff;
-		border: 3px solid #00ffff;
-		box-shadow: 0 0 18px rgba(0, 255, 255, 0.35);
+		border: 2px solid rgb(var(--color-primary));
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 	}
 
 	.dashboard-range::-moz-range-thumb {
-		width: 18px;
-		height: 18px;
+		width: 16px;
+		height: 16px;
 		border-radius: 9999px;
 		background: #ffffff;
-		border: 3px solid #00ffff;
-		box-shadow: 0 0 18px rgba(0, 255, 255, 0.35);
+		border: 2px solid rgb(var(--color-primary));
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+	}
+
+	.field-select option,
+	.dash-select option {
+		background-color: rgb(var(--color-surface));
+		color: rgb(var(--color-text));
+	}
+
+	/* Dashboard ───────────────────────────────────────────────────── */
+
+	.dash-app {
+		position: relative;
+		z-index: 10;
+		background: var(--dash-bg);
+		color: rgb(var(--color-text));
+	}
+
+	.dash-sidebar {
+		background: var(--dash-sidebar);
+		border-right: 1px solid var(--dash-border);
+		overscroll-behavior: contain;
+	}
+
+	.dash-topbar {
+		background: var(--dash-bg);
+		border-bottom: 1px solid var(--dash-border);
+	}
+
+	.dash-card {
+		border: 1px solid var(--dash-border);
+		border-radius: 0.75rem;
+		background: var(--dash-card);
+	}
+
+	.dash-inset {
+		border: 1px solid var(--dash-border);
+		border-radius: 0.5rem;
+		background: var(--dash-subtle);
+	}
+
+	.dash-divider {
+		border-color: var(--dash-border);
+	}
+
+	.dash-label {
+		@apply text-xs font-semibold text-muted;
+	}
+
+	.dash-nav-item {
+		@apply flex h-9 w-full items-center gap-3 rounded-lg px-2.5 text-sm font-medium text-muted transition-colors duration-150;
+	}
+
+	.dash-nav-item:hover {
+		background: var(--dash-subtle);
+		color: rgb(var(--color-text));
+	}
+
+	.dash-nav-item[aria-current='page'] {
+		background: var(--dash-active);
+		color: rgb(var(--color-text));
+	}
+
+	.dash-nav-item[aria-current='page'] svg {
+		color: rgb(var(--color-primary));
+	}
+
+	.dash-nav-item[aria-disabled='true'] {
+		cursor: not-allowed;
+		opacity: 0.45;
+	}
+
+	.dash-nav-item[aria-disabled='true']:hover {
+		background: transparent;
+		color: rgb(var(--color-muted));
+	}
+
+	.dash-btn {
+		@apply inline-flex h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3.5 text-sm font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-45;
+		border: 1px solid var(--dash-border);
+		background: var(--dash-card);
+		color: rgb(var(--color-text));
+	}
+
+	.dash-btn:not(:disabled):hover {
+		border-color: var(--dash-border-strong);
+		background: var(--dash-subtle);
+	}
+
+	.dash-btn-primary {
+		border-color: transparent;
+		background: rgb(var(--color-primary));
+		color: rgb(var(--dash-on-primary));
+	}
+
+	.dash-btn-primary:not(:disabled):hover {
+		border-color: transparent;
+		background: rgb(var(--color-primary) / 0.86);
+	}
+
+	.dash-btn-danger:not(:disabled):hover {
+		border-color: rgb(var(--color-danger) / 0.4);
+		background: rgb(var(--color-danger) / 0.1);
+		color: rgb(var(--color-danger));
+	}
+
+	.dash-btn-icon {
+		@apply w-9 px-0;
+	}
+
+	.dash-btn[aria-pressed='true'] {
+		border-color: rgb(var(--color-primary) / 0.45);
+		background: rgb(var(--color-primary) / 0.12);
+		color: rgb(var(--color-primary));
+	}
+
+	.dash-badge {
+		@apply inline-flex h-6 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2 text-xs font-semibold;
+		border: 1px solid var(--dash-border);
+		background: var(--dash-subtle);
+		color: rgb(var(--color-muted));
+	}
+
+	.dash-badge-primary {
+		border-color: rgb(var(--color-primary) / 0.3);
+		background: rgb(var(--color-primary) / 0.1);
+		color: rgb(var(--color-primary));
+	}
+
+	.dash-badge-secondary {
+		border-color: rgb(var(--color-secondary) / 0.3);
+		background: rgb(var(--color-secondary) / 0.1);
+		color: rgb(var(--color-secondary));
+	}
+
+	.dash-select {
+		@apply h-9 appearance-none rounded-lg pl-3 pr-9 text-sm font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-45;
+		border: 1px solid var(--dash-border);
+		background-color: var(--dash-card);
+		color: rgb(var(--color-text));
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+		background-position: right 0.65rem center;
+		background-repeat: no-repeat;
+	}
+
+	.dash-select:not(:disabled):hover {
+		border-color: var(--dash-border-strong);
+	}
+
+	.dash-input {
+		@apply h-10 w-full rounded-lg px-3 text-sm transition-colors duration-150 placeholder:text-muted disabled:cursor-not-allowed disabled:opacity-45;
+		border: 1px solid var(--dash-border);
+		background: var(--dash-subtle);
+		color: rgb(var(--color-text));
+	}
+
+	.dash-input:focus-visible {
+		outline: 2px solid rgb(var(--color-primary) / 0.5);
+		outline-offset: 0;
+		border-color: rgb(var(--color-primary) / 0.5);
+	}
+
+	/* Slider with a CSS-driven filled track: set --fill on the element. */
+	.dash-slider {
+		--fill: 0%;
+		@apply h-1.5 w-full cursor-pointer appearance-none rounded-full disabled:cursor-not-allowed disabled:opacity-45;
+		background: linear-gradient(to right, rgb(var(--color-primary)) var(--fill), var(--dash-track) var(--fill));
+	}
+
+	.dash-slider:focus-visible {
+		outline-offset: 4px;
+	}
+
+	.dash-slider::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 14px;
+		height: 14px;
+		border-radius: 9999px;
+		background: #ffffff;
+		border: 2px solid rgb(var(--color-primary));
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+	}
+
+	.dash-slider::-moz-range-thumb {
+		width: 14px;
+		height: 14px;
+		border-radius: 9999px;
+		background: #ffffff;
+		border: 2px solid rgb(var(--color-primary));
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+	}
+
+	.dash-switch {
+		@apply relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-45;
+		background: var(--dash-track);
+	}
+
+	.dash-switch::after {
+		content: '';
+		@apply absolute left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-150;
+	}
+
+	.dash-switch[aria-checked='true'] {
+		background: rgb(var(--color-primary));
+	}
+
+	.dash-switch[aria-checked='true']::after {
+		transform: translateX(1rem);
+	}
+
+	.dash-row {
+		content-visibility: auto;
+		contain-intrinsic-size: auto 3.5rem;
+	}
+
+	/* Shared site components rendered inside the dashboard shell: flatten to the dashboard system. */
+	.dash-app :is(.panel, .glass, .dashboard-panel-card, .dashboard-side-card, .dashboard-hero-card, .dashboard-player-card, .status-panel-card) {
+		border: 1px solid var(--dash-border);
+		border-radius: 0.75rem;
+		background: var(--dash-card);
+		box-shadow: none;
+		backdrop-filter: none;
+	}
+
+	.dash-app :is(.dashboard-context-card, .dashboard-meta-card, .dashboard-stat-row, .dashboard-queue-row, .dashboard-empty-card, .status-mini-stat, .status-inline-stat) {
+		border: 1px solid var(--dash-border);
+		border-radius: 0.5rem;
+		background: var(--dash-subtle);
+		box-shadow: none;
+	}
+
+	.dash-app :is(.metric-label, .field-label) {
+		letter-spacing: normal;
+		text-transform: none;
+		font-size: 0.8125rem;
+		font-weight: 600;
+	}
+
+	.dash-app .eyebrow {
+		margin-bottom: 0.75rem;
+		border-radius: 0.375rem;
+		padding: 0.25rem 0.5rem;
+		letter-spacing: 0.02em;
+		text-transform: none;
+		box-shadow: none;
+	}
+
+	.dash-app .field-input {
+		border-color: var(--dash-border);
+		border-radius: 0.5rem;
+		background: var(--dash-subtle);
+		color: rgb(var(--color-text));
+	}
+
+	.dash-app .field-select {
+		background-color: var(--dash-subtle);
+	}
+
+	.dash-app :is(.primary-button, .secondary-button, .ghost-button) {
+		border-radius: 0.5rem;
+		padding: 0.5rem 0.875rem;
+		font-size: 0.875rem;
+		box-shadow: none;
+		transform: none;
+	}
+
+	.dash-app .primary-button {
+		background: rgb(var(--color-primary));
+		color: rgb(var(--dash-on-primary));
+	}
+
+	.dash-app .primary-button:hover {
+		background: rgb(var(--color-primary) / 0.86);
+	}
+
+	.dash-app .secondary-button {
+		border-color: var(--dash-border);
+		background: var(--dash-card);
+		color: rgb(var(--color-text));
+	}
+
+	.dash-app :is(.secondary-button, .ghost-button):hover {
+		border-color: var(--dash-border-strong);
+		background: var(--dash-subtle);
+	}
+
+	.dash-app :is(.primary-button, .secondary-button, .ghost-button):disabled {
+		cursor: not-allowed;
+		opacity: 0.45;
+	}
+
+	.dash-app .font-headline {
+		letter-spacing: -0.02em;
 	}
 
 	/* Status ───────────────────────────────────────────────────────── */
@@ -754,6 +1117,36 @@ body::before {
 		background-image: radial-gradient(rgba(255, 255, 255, 0.18) 0.7px, transparent 0.7px);
 		background-size: 5px 5px;
 		mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.18));
+	}
+
+	.landing-stage[data-motion='paused'] *,
+	.landing-stage[data-motion='paused'] *::before,
+	.landing-stage[data-motion='paused'] *::after {
+		animation-play-state: paused !important;
+	}
+
+	.landing-motion-toggle {
+		position: fixed;
+		left: 1rem;
+		bottom: max(1rem, env(safe-area-inset-bottom));
+		z-index: 30;
+		display: none;
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		border-radius: 0.5rem;
+		padding: 0.45rem 0.75rem;
+		background: rgba(6, 7, 8, 0.6);
+		color: rgba(255, 255, 255, 0.72);
+		font-size: 0.75rem;
+		font-weight: 700;
+		backdrop-filter: blur(12px);
+		transition:
+			color 160ms ease,
+			border-color 160ms ease;
+	}
+
+	.landing-motion-toggle:hover {
+		border-color: rgba(255, 255, 255, 0.24);
+		color: white;
 	}
 
 	.landing-section {
@@ -1494,6 +1887,25 @@ html[data-theme='light'] .landing-section-rail {
 	}
 }
 
+/* Reduced-motion users never see motion to pause. On mobile, sit above the bottom tab bar. */
+@media (prefers-reduced-motion: no-preference) {
+	.landing-motion-toggle {
+		display: inline-flex;
+	}
+}
+
+@media (max-width: 767px) {
+	.landing-motion-toggle {
+		bottom: calc(5.25rem + env(safe-area-inset-bottom));
+	}
+}
+
+html[data-theme='light'] .landing-motion-toggle {
+	border-color: rgba(15, 23, 42, 0.12);
+	background: rgba(255, 255, 255, 0.8);
+	color: rgb(var(--color-text) / 0.72);
+}
+
 @media (max-width: 900px) {
 	.landing-app-grid {
 		grid-template-columns: 1fr;
@@ -1544,5 +1956,15 @@ html[data-theme='light'] .landing-section-rail {
 	.landing-kicker,
 	.landing-app-wrap {
 		animation: none !important;
+	}
+
+	/* Global safety net: collapse non-essential motion. Spinners keep turning as loading feedback. */
+	*:not(.animate-spin),
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
 	}
 }

@@ -10,7 +10,7 @@ export default async function DashboardSettingsPage({ searchParams }: { searchPa
 	}
 
 	return (
-		<DashboardWorkspaceShell activeKey="guild-settings" subtitle="Tune Lunio for the selected server once a guild has been chosen." title="Guild settings">
+		<DashboardWorkspaceShell activeKey="guild-settings" subtitle="Select a server to configure how Lunio behaves there." title="Server Settings">
 			<DashboardSettingsClient />
 		</DashboardWorkspaceShell>
 	);

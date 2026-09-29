@@ -5,13 +5,7 @@ export default async function GuildDashboardSettingsPage({ params }: { params: P
 	const { botId, guildId } = await params;
 
 	return (
-		<DashboardWorkspaceShell
-			activeKey="guild-settings"
-			botId={botId}
-			guildId={guildId}
-			subtitle="Tune the live guild configuration without leaving the dashboard workspace."
-			title="Guild settings"
-		>
+		<DashboardWorkspaceShell activeKey="guild-settings" botId={botId} guildId={guildId} subtitle="Configure how Lunio behaves in this server." title="Server Settings">
 			<DashboardSettingsClient botIdFromQuery={botId} guildIdFromQuery={guildId} />
 		</DashboardWorkspaceShell>
 	);

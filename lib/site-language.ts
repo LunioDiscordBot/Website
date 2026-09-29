@@ -88,7 +88,7 @@ export const siteMessages = {
 			rememberMe: 'Keep me signed in on this device for up to 30 days. If unchecked, the session ends when the browser is closed or after a shorter timeout.',
 			openServers: 'Open Servers',
 			signOut: 'Sign Out',
-			loggingOut: 'Logging out...',
+			loggingOut: 'Logging out…',
 			continueWithDiscord: 'Continue with Discord',
 		},
 		servers: {
@@ -240,7 +240,7 @@ export const siteMessages = {
 			rememberMe: 'Auf diesem Gerät bis zu 30 Tage angemeldet bleiben. Wenn deaktiviert, endet die Sitzung beim Schließen des Browsers oder nach einer kürzeren Zeit.',
 			openServers: 'Server öffnen',
 			signOut: 'Abmelden',
-			loggingOut: 'Abmeldung...',
+			loggingOut: 'Abmeldung…',
 			continueWithDiscord: 'Mit Discord fortfahren',
 		},
 		servers: {

@@ -25,6 +25,7 @@ export function DashboardPremiumClient({ botId, guildId }: DashboardPremiumClien
 	const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
 	const [isPortalLoading, setIsPortalLoading] = useState(false);
 	const [isTransferLoading, setIsTransferLoading] = useState(false);
+	const [confirmTransfer, setConfirmTransfer] = useState(false);
 	const [notice, setNotice] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
@@ -95,6 +96,12 @@ export function DashboardPremiumClient({ botId, guildId }: DashboardPremiumClien
 		}
 	};
 
+	useEffect(() => {
+		if (!confirmTransfer) return;
+		const timeout = window.setTimeout(() => setConfirmTransfer(false), 5000);
+		return () => window.clearTimeout(timeout);
+	}, [confirmTransfer]);
+
 	const transferPremium = async () => {
 		if (!targetGuildId) return;
 		setIsTransferLoading(true);
@@ -142,10 +149,10 @@ export function DashboardPremiumClient({ botId, guildId }: DashboardPremiumClien
 					</div>
 				</div>
 
-				{error ? <div className="mt-6 rounded-[1.4rem] border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-red-100">{error}</div> : null}
-				{notice ? <div className="mt-6 rounded-[1.4rem] border border-primary/25 bg-primary/10 px-4 py-3 text-sm text-primary">{notice}</div> : null}
+				{error ? <div role="alert" className="mt-6 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-red-100">{error}</div> : null}
+				{notice ? <div role="status" className="mt-6 rounded-xl border border-primary/25 bg-primary/10 px-4 py-3 text-sm text-primary">{notice}</div> : null}
 				{!isConfigured ? (
-					<div className="mt-6 rounded-[1.4rem] border border-secondary/25 bg-secondary/10 px-4 py-3 text-sm text-secondary">
+					<div className="mt-6 rounded-xl border border-secondary/25 bg-secondary/10 px-4 py-3 text-sm text-secondary">
 						Lemon Squeezy is not configured on the API server yet. Add the API key, store ID, variant ID, and webhook secret before real checkout can open.
 					</div>
 				) : null}
@@ -172,8 +179,13 @@ export function DashboardPremiumClient({ botId, guildId }: DashboardPremiumClien
 					<div className="metric-label">Server transfer</div>
 					<h3 className="mt-2 font-headline text-3xl font-bold tracking-[-0.05em] text-white">Move premium</h3>
 					<p className="mt-3 text-sm leading-6 text-muted">Move the website subscription to another connected server you manage. This is limited to once every 30 days.</p>
+					<label className="sr-only" htmlFor="premium-transfer-target">
+						Server to move Premium to
+					</label>
 					<select
-						className="field-input mt-5"
+						className="field-select mt-5"
+						id="premium-transfer-target"
+						name="transferTarget"
 						disabled={!active || !premium?.canTransferNow || isTransferLoading || transferTargets.length === 0}
 						onChange={(event) => setTargetGuildId(event.target.value)}
 						value={targetGuildId}
@@ -187,11 +199,18 @@ export function DashboardPremiumClient({ botId, guildId }: DashboardPremiumClien
 					<button
 						className="secondary-button mt-4 inline-flex w-full items-center justify-center gap-2"
 						disabled={!active || !premium?.canTransferNow || !targetGuildId || isTransferLoading}
-						onClick={() => void transferPremium()}
+						onClick={() => {
+							if (!confirmTransfer) {
+								setConfirmTransfer(true);
+								return;
+							}
+							setConfirmTransfer(false);
+							void transferPremium();
+						}}
 						type="button"
 					>
 						{isTransferLoading ? <Spinner className="h-4 w-4" /> : null}
-						Move premium
+						{confirmTransfer ? `Confirm Move to ${transferTargets.find((guild) => guild.guildId === targetGuildId)?.name ?? 'Server'}` : 'Move Premium'}
 					</button>
 					<p className="mt-3 text-xs leading-5 text-white/42">You must have Manage Guild on both the current server and target server.</p>
 				</article>

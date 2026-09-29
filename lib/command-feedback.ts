@@ -75,7 +75,7 @@ export function getCommandFeedbackToneClasses(phase: CommandFeedback['phase']) {
 export function formatShortCommandId(commandId?: string) {
 	if (!commandId) return '--';
 	if (commandId.length <= 14) return commandId;
-	return `${commandId.slice(0, 8)}...${commandId.slice(-4)}`;
+	return `${commandId.slice(0, 8)}…${commandId.slice(-4)}`;
 }
 
 export function buildSendingCommandFeedback(commandType: BrokerCommandType, message = 'Sending this request to Lunio.'): CommandFeedback {

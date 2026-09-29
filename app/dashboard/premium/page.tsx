@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export default function PremiumPickerPage() {
 	return (
-		<DashboardWorkspaceShell activeKey="premium" subtitle="Pick a server first so Lunio knows where premium should be attached." title="Manage premium">
+		<DashboardWorkspaceShell activeKey="premium" subtitle="Select a server to manage its Premium plan." title="Premium">
 			<div className="dashboard-panel-card">
 				<div className="metric-label">Server required</div>
 				<h2 className="mt-3 font-headline text-4xl font-bold tracking-[-0.06em] text-white">Choose a server to manage premium.</h2>

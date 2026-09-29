@@ -54,17 +54,23 @@ export function SiteShell({ currentPath, children, home = false }: SiteShellProp
 				<div className="shell flex items-center justify-between gap-4 py-4">
 					<Link className="flex items-center gap-3" href="/">
 						{/* eslint-disable-next-line @next/next/no-img-element */}
-						<img alt="Lunio" className="h-11 w-11 rounded-full object-cover" src="/lunio-logo.png" />
+						<img alt="" className="h-11 w-11 rounded-full object-cover" height={44} src="/lunio-logo.png" width={44} />
 						<span className="font-headline text-3xl font-bold tracking-[-0.06em] text-primary drop-shadow-[0_0_10px_rgba(0,255,255,0.32)]">Lunio</span>
 					</Link>
 
-					<nav className="hidden items-center gap-6 md:flex">
+					<nav aria-label="Main" className="hidden items-center gap-6 md:flex">
 						{navigation.map((item) => {
 							const itemPath = getNavigationPathname(item.href);
 							const isActive = item.activePaths?.includes(normalizedCurrentPath) || normalizedCurrentPath === itemPath;
 
 							return (
-								<Link key={item.href} className={cn('top-link', isActive && 'top-link-active')} href={item.href} prefetch={false}>
+								<Link
+									aria-current={isActive ? 'page' : undefined}
+									key={item.href}
+									className={cn('top-link', isActive && 'top-link-active')}
+									href={item.href}
+									prefetch={false}
+								>
 									{item.label}
 								</Link>
 							);
@@ -78,7 +84,9 @@ export function SiteShell({ currentPath, children, home = false }: SiteShellProp
 				</div>
 			</header>
 
-			<main>{children}</main>
+			<main id="main-content" tabIndex={-1}>
+				{children}
+			</main>
 
 			<footer className="mt-24 border-t border-white/10 bg-black/25">
 				<div className="shell py-14">
@@ -86,7 +94,7 @@ export function SiteShell({ currentPath, children, home = false }: SiteShellProp
 						<div className="text-center lg:text-left">
 							<Link className="inline-flex items-center gap-4" href="/">
 								{/* eslint-disable-next-line @next/next/no-img-element */}
-								<img alt="Lunio" className="h-14 w-14 rounded-full object-cover" src="/lunio-logo.png" />
+								<img alt="" className="h-14 w-14 rounded-full object-cover" height={56} src="/lunio-logo.png" width={56} />
 								<span className="font-headline text-4xl font-bold tracking-[-0.06em] text-white">Lunio</span>
 							</Link>
 
@@ -158,13 +166,17 @@ export function SiteShell({ currentPath, children, home = false }: SiteShellProp
 				</div>
 			</footer>
 
-			<nav className="fixed bottom-4 left-1/2 z-40 flex w-[min(calc(100%-1rem),34rem)] -translate-x-1/2 rounded-full border border-white/10 bg-black/60 p-2 backdrop-blur-xl md:hidden">
+			<nav
+				aria-label="Main"
+				className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-40 flex w-[min(calc(100%-1rem),34rem)] -translate-x-1/2 rounded-full border border-white/10 bg-black/60 p-2 backdrop-blur-xl md:hidden"
+			>
 				{navigation.map((item) => {
 					const itemPath = getNavigationPathname(item.href);
 					const isActive = item.activePaths?.includes(normalizedCurrentPath) || normalizedCurrentPath === itemPath;
 
 					return (
 						<Link
+							aria-current={isActive ? 'page' : undefined}
 							key={item.href}
 							className={cn(
 								'flex-1 rounded-full px-3 py-2 text-center text-xs font-bold uppercase tracking-[0.18em] text-muted transition',

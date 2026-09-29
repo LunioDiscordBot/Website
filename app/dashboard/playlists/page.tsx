@@ -10,7 +10,7 @@ export default async function DashboardPlaylistsPage({ searchParams }: { searchP
 	}
 
 	return (
-		<DashboardWorkspaceShell activeKey="playlists" subtitle="Pick a server first, then manage your saved Lunio playlists." title="Playlists">
+		<DashboardWorkspaceShell activeKey="playlists" subtitle="Select a server to manage your saved playlists." title="Playlists">
 			<DashboardPlaylistClient />
 		</DashboardWorkspaceShell>
 	);

@@ -89,8 +89,15 @@ function createShader(gl: WebGLRenderingContext, type: number, source: string) {
 	return shader;
 }
 
-export function LandingShader() {
+export function LandingShader({ paused = false }: { paused?: boolean }) {
 	const canvasRef = useRef<HTMLCanvasElement | null>(null);
+	const pausedRef = useRef(paused);
+	const resumeRef = useRef<(() => void) | null>(null);
+
+	useEffect(() => {
+		pausedRef.current = paused;
+		if (!paused) resumeRef.current?.();
+	}, [paused]);
 
 	useEffect(() => {
 		const canvas = canvasRef.current;
@@ -148,13 +155,23 @@ export function LandingShader() {
 			gl.uniform2f(pointerLocation, pointer.x, pointer.y);
 			gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-			if (!reducedMotion) {
+			if (!reducedMotion && !pausedRef.current && document.visibilityState === 'visible') {
 				animationFrame = window.requestAnimationFrame(render);
+			} else {
+				animationFrame = 0;
 			}
 		};
 
+		// Restart the loop after a pause or when the tab becomes visible again.
+		const resume = () => {
+			if (reducedMotion || animationFrame || pausedRef.current || document.visibilityState !== 'visible') return;
+			animationFrame = window.requestAnimationFrame(render);
+		};
+		resumeRef.current = resume;
+
 		window.addEventListener('pointermove', onPointerMove);
 		window.addEventListener('resize', resize);
+		document.addEventListener('visibilitychange', resume);
 		animationFrame = window.requestAnimationFrame((now) => {
 			start = now;
 			render(now);
@@ -163,6 +180,8 @@ export function LandingShader() {
 		return () => {
 			window.removeEventListener('pointermove', onPointerMove);
 			window.removeEventListener('resize', resize);
+			document.removeEventListener('visibilitychange', resume);
+			resumeRef.current = null;
 			window.cancelAnimationFrame(animationFrame);
 			gl.deleteProgram(program);
 			gl.deleteShader(vertexShader);

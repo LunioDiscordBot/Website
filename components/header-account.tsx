@@ -34,8 +34,16 @@ export function HeaderAccount() {
 			}
 		};
 
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') setOpen(false);
+		};
+
 		window.addEventListener('mousedown', onPointerDown);
-		return () => window.removeEventListener('mousedown', onPointerDown);
+		window.addEventListener('keydown', onKeyDown);
+		return () => {
+			window.removeEventListener('mousedown', onPointerDown);
+			window.removeEventListener('keydown', onKeyDown);
+		};
 	}, []);
 
 	const logout = async () => {
@@ -64,13 +72,17 @@ export function HeaderAccount() {
 	return (
 		<div className="relative" ref={containerRef}>
 			<button
+				aria-controls="header-account-menu"
+				aria-expanded={open}
+				aria-haspopup="menu"
+				aria-label={`Account menu for ${user.globalName || user.username}`}
 				className="flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-2 py-2 pr-4 transition hover:bg-white/[0.08]"
 				onClick={() => setOpen((current) => !current)}
 				type="button"
 			>
 				{user.avatarUrl ? (
 					// eslint-disable-next-line @next/next/no-img-element
-					<img alt={user.username} className="h-9 w-9 rounded-full border border-white/10 object-cover" src={user.avatarUrl} />
+					<img alt="" className="h-9 w-9 rounded-full border border-white/10 object-cover" height={36} src={user.avatarUrl} width={36} />
 				) : (
 					<div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-primary/10 font-headline text-sm font-bold text-primary">
 						{(user.username ?? 'U').slice(0, 1).toUpperCase()}
@@ -83,7 +95,7 @@ export function HeaderAccount() {
 			</button>
 
 			{open ? (
-				<div className="account-menu absolute right-0 top-[calc(100%+0.75rem)] z-50 w-64 p-2">
+				<div className="account-menu absolute right-0 top-[calc(100%+0.75rem)] z-50 w-64 p-2" id="header-account-menu">
 					<div className="account-menu-surface px-4 py-3">
 						<div className="font-bold text-tertiary">{user.globalName || user.username}</div>
 						<div className="mt-1 text-sm text-muted">@{user.username}</div>
@@ -99,7 +111,7 @@ export function HeaderAccount() {
 							onClick={() => void logout()}
 							type="button"
 						>
-							{busy ? 'Logging out...' : 'Logout'}
+							{busy ? 'Logging out…' : 'Logout'}
 						</button>
 					</div>
 				</div>

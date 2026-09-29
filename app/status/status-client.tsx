@@ -91,8 +91,22 @@ export function StatusClient() {
 	const [selectedInstanceId, setSelectedInstanceId] = useState('');
 	const [realtimeFeed, setRealtimeFeed] = useState<FeedItem[]>([]);
 
+	// Keep the bot filter in the URL (?bot=) so filtered views can be shared and survive reloads.
+	const selectBot = (botId: string) => {
+		try {
+			if (botId) window.localStorage.setItem(BOT_STORAGE_KEY, botId);
+			else window.localStorage.removeItem(BOT_STORAGE_KEY);
+		} catch {}
+		const url = new URL(window.location.href);
+		if (botId) url.searchParams.set('bot', botId);
+		else url.searchParams.delete('bot');
+		window.history.replaceState(null, '', url);
+		setSelectedBotId(botId);
+	};
+
 	useEffect(() => {
-		const savedBotId = window.localStorage.getItem(BOT_STORAGE_KEY) || '';
+		const botIdFromUrl = new URLSearchParams(window.location.search).get('bot');
+		const savedBotId = botIdFromUrl ?? window.localStorage.getItem(BOT_STORAGE_KEY) ?? '';
 		setSelectedBotId(savedBotId);
 
 		let active = true;
@@ -339,23 +353,19 @@ export function StatusClient() {
 
 				<div className="mt-8 flex flex-wrap gap-3">
 					<button
+						aria-pressed={!selectedBotId}
 						className={`status-filter-pill ${!selectedBotId ? 'status-filter-pill-active' : 'status-filter-pill-idle'}`}
-						onClick={() => {
-							window.localStorage.removeItem(BOT_STORAGE_KEY);
-							setSelectedBotId('');
-						}}
+						onClick={() => selectBot('')}
 						type="button"
 					>
 						All Bots
 					</button>
 					{botOptions.map((bot) => (
 						<button
+							aria-pressed={selectedBotId === bot.botId}
 							className={`status-filter-pill ${selectedBotId === bot.botId ? 'status-filter-pill-active' : 'status-filter-pill-idle'}`}
 							key={bot.botId}
-							onClick={() => {
-								window.localStorage.setItem(BOT_STORAGE_KEY, bot.botId);
-								setSelectedBotId(bot.botId);
-							}}
+							onClick={() => selectBot(bot.botId)}
 							type="button"
 						>
 							{bot.label}
@@ -403,7 +413,7 @@ export function StatusClient() {
 						{!state.error && state.instances.length === 0 ? (
 							<div className="status-empty-card flex items-center gap-3">
 								{isInitialLoading ? <Spinner className="h-4 w-4 text-primary" /> : null}
-								{isInitialLoading ? 'Loading instances...' : 'No active instances are reporting yet.'}
+								{isInitialLoading ? 'Loading instances…' : 'No active instances are reporting yet.'}
 							</div>
 						) : null}
 

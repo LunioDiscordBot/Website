@@ -5,6 +5,8 @@ import { Spinner } from '@/components/spinner';
 import { buildDashboardPath } from '@/lib/dashboard-routes';
 import { getPreferredBotId as getPreferredBotFromList } from '@/lib/bot-preference';
 import { DashboardRouteState } from '@/components/dashboard-route-state';
+import { useSiteLanguage } from '@/components/site-language-provider';
+import { formatDateTime, formatTimeOfDay } from '@/lib/format';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -215,55 +217,33 @@ function useSelectMenuPosition(isOpen: boolean) {
 function DashboardSingleSelect({
 	disabled,
 	emptyLabel,
-	isOpen,
+	name,
 	onSelect,
-	onToggle,
 	options,
 	value,
 }: {
 	disabled?: boolean;
 	emptyLabel: string;
-	isOpen: boolean;
+	name: string;
 	onSelect: (value: string) => void;
-	onToggle: () => void;
 	options: Array<{ value: string; label: string }>;
-	value: string;
+	value: string | null;
 }) {
-	const selected = options.find((option) => option.value === value);
-	const { triggerRef, position } = useSelectMenuPosition(isOpen);
+	const hasSelection = options.some((option) => option.value === value);
 
 	return (
-		<div className="relative mt-2">
-			<button aria-expanded={isOpen} aria-haspopup="listbox" className="dashboard-select" disabled={disabled} onClick={onToggle} ref={triggerRef} type="button">
-				<span className="truncate pr-8">{selected?.label ?? emptyLabel}</span>
-			</button>
-			{isOpen && position
-				? createPortal(
-						<div
-							className="dashboard-select-menu max-h-72 overflow-y-auto"
-							role="listbox"
-							style={{
-								left: `${position.left}px`,
-								top: `${position.top}px`,
-								width: `${position.width}px`,
-							}}
-						>
-							{options.map((option) => (
-								<button
-									className={`dashboard-select-option ${value === option.value ? 'dashboard-select-option-active' : ''}`}
-									key={option.value}
-									onClick={() => onSelect(option.value)}
-									role="option"
-									type="button"
-								>
-									<span className="truncate">{option.label}</span>
-								</button>
-							))}
-						</div>,
-						document.body
-					)
-				: null}
-		</div>
+		<select className="field-select" disabled={disabled} name={name} onChange={(event) => onSelect(event.target.value)} value={hasSelection ? (value ?? '') : ''}>
+			{hasSelection ? null : (
+				<option disabled value="">
+					{emptyLabel}
+				</option>
+			)}
+			{options.map((option) => (
+				<option key={option.value} value={option.value}>
+					{option.label}
+				</option>
+			))}
+		</select>
 	);
 }
 
@@ -292,7 +272,7 @@ function DashboardMultiSelect({
 	};
 
 	return (
-		<div className="relative mt-2">
+		<div className="relative mt-2" data-select-root="">
 			<button
 				aria-expanded={isOpen}
 				aria-haspopup="listbox"
@@ -307,7 +287,9 @@ function DashboardMultiSelect({
 			{isOpen && position
 				? createPortal(
 						<div
-							className="dashboard-select-menu max-h-80 overflow-y-auto p-2"
+							aria-multiselectable="true"
+							className="dashboard-select-menu max-h-80 overflow-y-auto overscroll-contain p-2"
+							data-select-root=""
 							role="listbox"
 							style={{
 								left: `${position.left}px`,
@@ -319,6 +301,7 @@ function DashboardMultiSelect({
 								const checked = value.includes(option.value);
 								return (
 									<button
+										aria-selected={checked}
 										className={`dashboard-select-option flex items-center justify-between gap-3 ${checked ? 'dashboard-select-option-active' : ''}`}
 										key={option.value}
 										onClick={() => toggleOption(option.value)}
@@ -326,7 +309,7 @@ function DashboardMultiSelect({
 										type="button"
 									>
 										<span className="truncate">{option.label}</span>
-										<span className="text-xs font-extrabold uppercase tracking-[0.16em] text-white/70">{checked ? 'Selected' : 'Add'}</span>
+										<span className="text-xs font-extrabold uppercase tracking-wide text-white/70">{checked ? 'Selected' : 'Add'}</span>
 									</button>
 								);
 							})}
@@ -358,6 +341,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 	const [showUnsavedPrompt, setShowUnsavedPrompt] = useState(false);
 	const [flashUnsaved, setFlashUnsaved] = useState(false);
 	const [pendingHref, setPendingHref] = useState<string | null>(null);
+	const { language } = useSiteLanguage();
 	const [openMenu, setOpenMenu] = useState<string | null>(null);
 	const allowImmediateNavigationRef = useRef(false);
 
@@ -467,6 +451,22 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 	const toggleMenu = (menu: string) => {
 		setOpenMenu((current) => (current === menu ? null : menu));
 	};
+
+	useEffect(() => {
+		if (!openMenu) return;
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') setOpenMenu(null);
+		};
+		const onPointerDown = (event: PointerEvent) => {
+			if (!(event.target instanceof Element) || !event.target.closest('[data-select-root]')) setOpenMenu(null);
+		};
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('pointerdown', onPointerDown);
+		return () => {
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('pointerdown', onPointerDown);
+		};
+	}, [openMenu]);
 
 	const handleSave = async () => {
 		if (!botId || !guildId) {
@@ -703,7 +703,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 			{flashUnsaved ? <div className="unsaved-flash" /> : null}
 			{showUnsavedPrompt ? (
 				<div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 px-4 backdrop-blur-sm">
-					<div className="panel w-full max-w-lg rounded-[2rem] border border-danger/30 bg-[#150b0b]/95 p-7 shadow-[0_30px_100px_rgba(159,5,25,0.35)]">
+					<div className="panel w-full max-w-lg rounded-xl border border-danger/30 bg-[#150b0b]/95 p-7">
 						<div className="eyebrow !mb-3 !border-danger/30 !bg-danger/10 !text-red-100">Unsaved changes</div>
 						<h2 className="font-headline text-3xl font-bold tracking-[-0.05em] text-white">Leave without saving?</h2>
 						<p className="mt-4 text-sm leading-7 text-white/75">
@@ -771,7 +771,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 									<path d="M20 12a8 8 0 1 1-2.34-5.66" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
 									<path d="M20 4v6h-6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
 								</svg>
-								{isRefreshingMetadata ? 'Refreshing...' : 'Fetch channels & roles'}
+								{isRefreshingMetadata ? 'Refreshing…' : 'Fetch channels & roles'}
 							</button>
 							<Link className="ghost-button px-4 py-2 text-sm" href="/servers">
 								Change server
@@ -790,12 +790,10 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 								<DashboardSingleSelect
 									disabled={isLoading || guildConnectedBots.length <= 1}
 									emptyLabel="Select bot"
-									isOpen={openMenu === 'bot'}
+									name="bot"
 									onSelect={(value) => {
-										setOpenMenu(null);
 										router.push(buildDashboardPath(value, guildId, 'settings'));
 									}}
-									onToggle={() => toggleMenu('bot')}
 									options={(guildConnectedBots.length ? guildConnectedBots : botOptions.map((bot) => bot.botId))
 										.map((connectedBotId) => botOptions.find((bot) => bot.botId === connectedBotId))
 										.filter(Boolean)
@@ -829,9 +827,9 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 				<div className="dashboard-empty-card">Open settings from the server picker or the dashboard so the selected guild and bot are already attached.</div>
 			) : null}
 
-			{error ? <div className="rounded-[1.5rem] border border-danger/30 bg-danger/10 p-5 text-sm text-red-100">{error}</div> : null}
+			{error ? <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-5 text-sm text-red-100">{error}</div> : null}
 
-			{notice ? <div className="rounded-[1.5rem] border border-primary/20 bg-primary/10 p-5 text-sm text-primary">{notice}</div> : null}
+			{notice ? <div role="status" className="rounded-xl border border-primary/20 bg-primary/10 p-5 text-sm text-primary">{notice}</div> : null}
 
 			<section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
 				<div className="grid gap-6">
@@ -898,9 +896,9 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 								},
 							].map((mode) => (
 								<button
-									className={`rounded-[1.5rem] border p-5 text-left transition ${
+									className={`rounded-xl border p-5 text-left transition ${
 										mode.active
-											? 'border-primary/35 bg-[linear-gradient(180deg,rgba(0,255,255,0.12),rgba(255,255,255,0.03))] shadow-[0_20px_70px_rgba(0,255,255,0.08)]'
+											? 'border-primary/35 bg-[linear-gradient(180deg,rgba(0,255,255,0.12),rgba(255,255,255,0.03))]'
 											: 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]'
 									}`}
 									disabled={!canManage || isLoading}
@@ -911,7 +909,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 									<div className="flex items-center justify-between gap-3">
 										<div className="text-lg font-bold text-white">{mode.title}</div>
 										<span
-											className={`rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.22em] ${mode.active ? 'bg-primary/15 text-primary' : 'bg-white/[0.06] text-white/55'}`}
+											className={`rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide ${mode.active ? 'bg-primary/15 text-primary' : 'bg-white/[0.06] text-white/55'}`}
 										>
 											{mode.active ? 'Selected' : 'Available'}
 										</span>
@@ -927,12 +925,10 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 								<DashboardSingleSelect
 									disabled={!canManage || isLoading || !form.CustomChannel}
 									emptyLabel="Select a text channel"
-									isOpen={openMenu === 'panel-channel'}
+									name="panelChannel"
 									onSelect={(value) => {
 										updateField('mChannelID', value);
-										setOpenMenu(null);
 									}}
-									onToggle={() => toggleMenu('panel-channel')}
 									options={panelChannelOptions}
 									value={form.mChannelID}
 								/>
@@ -944,12 +940,10 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 								<DashboardSingleSelect
 									disabled={!canManage || isLoading}
 									emptyLabel="Disabled"
-									isOpen={openMenu === 'logs-channel'}
+									name="logsChannel"
 									onSelect={(value) => {
 										updateField('LogsChannelID', value);
-										setOpenMenu(null);
 									}}
-									onToggle={() => toggleMenu('logs-channel')}
 									options={logsChannelOptions}
 									value={form.LogsChannelID}
 								/>
@@ -961,12 +955,10 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 								<DashboardSingleSelect
 									disabled={!canManage || isLoading}
 									emptyLabel="Select language"
-									isOpen={openMenu === 'language'}
+									name="language"
 									onSelect={(value) => {
 										updateField('Language', value);
-										setOpenMenu(null);
 									}}
-									onToggle={() => toggleMenu('language')}
 									options={LANGUAGE_OPTIONS.map((language) => ({
 										value: language,
 										label: language,
@@ -976,7 +968,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 							</label>
 						</div>
 
-						<div className="mt-6 rounded-[1.4rem] border border-white/10 bg-black/25 px-4 py-4 text-sm text-white/72">
+						<div className="mt-6 rounded-xl border border-white/10 bg-black/25 px-4 py-4 text-sm text-white/72">
 							<strong className="text-white">Heads up:</strong> while the request room is enabled, Lunio turns off standard announcement messages and inline
 							player-control embeds to avoid duplicate control surfaces.
 						</div>
@@ -987,7 +979,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 						<h2 className="mt-2 font-headline text-3xl font-bold tracking-[-0.05em] text-white">Listening defaults</h2>
 						<p className="mt-4 text-sm leading-7 text-muted">Tune how Lunio behaves before anyone starts shaping the queue live.</p>
 
-						<div className="mt-6 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+						<div className="mt-6 rounded-xl border border-white/10 bg-white/[0.03] p-5">
 							<div className="flex items-center justify-between gap-3">
 								<span className="field-label">
 									Default volume
@@ -996,6 +988,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 								<span className="text-sm font-bold text-white">{form.DefaultVol}%</span>
 							</div>
 							<input
+								aria-label="Default volume"
 								className="dashboard-range mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-white/10"
 								disabled={!canManage || isLoading || !premiumEnabled}
 								max={200}
@@ -1008,7 +1001,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 							{!premiumEnabled ? <p className="mt-2 text-sm text-muted">Premium-only default applied when Lunio creates a fresh player.</p> : null}
 						</div>
 
-						<label className="mt-5 flex items-start gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80">
+						<label className="mt-5 flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80">
 							<input
 								checked={form.twentyFourSeven}
 								className="mt-1 h-4 w-4 rounded border-white/20 bg-black/30 text-primary focus:ring-primary/30"
@@ -1030,7 +1023,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 								{ key: 'VoiceStatus', label: 'Enable voice status updates for the player.' },
 								{ key: 'Ephemeral', label: 'Respond with ephemeral command replies.' },
 							].map((toggle) => (
-								<label className="flex items-start gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80" key={toggle.key}>
+								<label className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80" key={toggle.key}>
 									<input
 										checked={Boolean(form[toggle.key as keyof SettingsForm])}
 										className="mt-1 h-4 w-4 rounded border-white/20 bg-black/30 text-primary focus:ring-primary/30"
@@ -1044,7 +1037,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 						</div>
 
 						<div className="mt-6 grid gap-4">
-							<label className="flex items-start gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80">
+							<label className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80">
 								<input
 									checked={form.Announce}
 									className="mt-1 h-4 w-4 rounded border-white/20 bg-black/30 text-primary focus:ring-primary/30"
@@ -1061,7 +1054,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 								</span>
 							</label>
 
-							<label className="flex items-start gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80">
+							<label className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80">
 								<input
 									checked={form.DelAnnounce}
 									className="mt-1 h-4 w-4 rounded border-white/20 bg-black/30 text-primary focus:ring-primary/30"
@@ -1074,7 +1067,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 								</span>
 							</label>
 
-							<label className="flex items-start gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80">
+							<label className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80">
 								<input
 									checked={form.PlayerControls}
 									className="mt-1 h-4 w-4 rounded border-white/20 bg-black/30 text-primary focus:ring-primary/30"
@@ -1138,12 +1131,13 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 						<h2 className="mt-2 font-headline text-3xl font-bold tracking-[-0.05em] text-white">Non-DJ limits</h2>
 
 						<div className="mt-6 grid gap-5 md:grid-cols-2">
-							<label className="block">
+							<div className="block">
 								<div className="flex items-center justify-between gap-3">
 									<span className="field-label">Song limit per user</span>
 									<span className="text-sm font-bold text-white">{form.SongUserLimit === 0 ? 'Disabled' : form.SongUserLimit}</span>
 								</div>
 								<input
+									aria-label="Song limit per user"
 									className="dashboard-range mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-white/10"
 									disabled={!canManage || isLoading}
 									max={20}
@@ -1154,6 +1148,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 									value={form.SongUserLimit}
 								/>
 								<input
+									aria-label="Song limit per user (exact number)"
 									className="field-input mt-4"
 									disabled={!canManage || isLoading}
 									min={0}
@@ -1162,13 +1157,14 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 									value={form.SongUserLimit}
 								/>
 								<p className="mt-2 text-sm text-muted">0 means no per-user queue cap.</p>
-							</label>
-							<label className="block">
+							</div>
+							<div className="block">
 								<div className="flex items-center justify-between gap-3">
 									<span className="field-label">Time limit per song</span>
 									<span className="text-sm font-bold text-white">{nonDjLimitMinutes === 0 ? 'Disabled' : `${nonDjLimitMinutes} min`}</span>
 								</div>
 								<input
+									aria-label="Time limit per song in minutes"
 									className="dashboard-range mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-white/10"
 									disabled={!canManage || isLoading}
 									min={0}
@@ -1230,7 +1226,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 									</label>
 								</div>
 								<p className="mt-2 text-sm text-muted">Quick slider for common limits, plus precise HH:MM:SS entry below.</p>
-							</label>
+							</div>
 						</div>
 					</article>
 				</div>
@@ -1267,20 +1263,32 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 						</div>
 
 						{canManage ? (
-							<button className="primary-button mt-6 inline-flex w-full items-center justify-center gap-2" disabled={isSaving || isLoading} onClick={() => void handleSave()} type="button">
-								{isSaving ? <><Spinner className="h-4 w-4" />Saving...</> : 'Save settings'}
+							<button
+								className="primary-button mt-6 inline-flex w-full items-center justify-center gap-2"
+								disabled={isSaving || isLoading}
+								onClick={() => void handleSave()}
+								type="button"
+							>
+								{isSaving ? (
+									<>
+										<Spinner className="h-4 w-4" />
+										Saving…
+									</>
+								) : (
+									'Save settings'
+								)}
 							</button>
 						) : (
-							<div className="mt-6 rounded-[1.4rem] border border-white/10 bg-black/25 px-4 py-3 text-sm text-muted">
+							<div className="mt-6 rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-muted">
 								Only members with Manage Guild can save changes here.
 							</div>
 						)}
 
 						{saveFeedback ? (
-							<div className={`mt-6 rounded-[1.4rem] border p-4 ${getCommandFeedbackToneClasses(saveFeedback.phase)}`}>
+							<div className={`mt-6 rounded-xl border p-4 ${getCommandFeedbackToneClasses(saveFeedback.phase)}`}>
 								<div className="flex items-center justify-between gap-3">
 									<div className="metric-label text-current/70">Save status</div>
-									<span className="text-xs font-extrabold uppercase tracking-[0.2em] text-current">{formatCommandFeedbackPhase(saveFeedback.phase)}</span>
+									<span className="text-xs font-extrabold uppercase tracking-wide text-current">{formatCommandFeedbackPhase(saveFeedback.phase)}</span>
 								</div>
 								<div className="mt-3 text-sm font-bold text-white">{saveFeedback.title}</div>
 								<p className="mt-2 text-sm leading-6 text-current/90">{saveFeedback.message}</p>
@@ -1295,11 +1303,11 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 									</div>
 									<div className="dashboard-stat-row">
 										<span>Received</span>
-										<strong>{saveFeedback.ackTimestamp ? new Date(saveFeedback.ackTimestamp).toLocaleTimeString() : '--'}</strong>
+										<strong>{formatTimeOfDay(saveFeedback.ackTimestamp, language)}</strong>
 									</div>
 									<div className="dashboard-stat-row">
 										<span>Applied</span>
-										<strong>{saveFeedback.resultTimestamp ? new Date(saveFeedback.resultTimestamp).toLocaleTimeString() : '--'}</strong>
+										<strong>{formatTimeOfDay(saveFeedback.resultTimestamp, language)}</strong>
 									</div>
 								</div>
 							</div>
@@ -1354,7 +1362,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 							</div>
 							<div className="dashboard-stat-row">
 								<span>Last update</span>
-								<strong>{settings?.updatedAt ? new Date(settings.updatedAt).toLocaleString() : '--'}</strong>
+								<strong>{formatDateTime(settings?.updatedAt, language)}</strong>
 							</div>
 						</div>
 					</article>

@@ -50,6 +50,7 @@ function Equalizer() {
 
 export default function HomePage() {
 	const [isInviteMenuOpen, setIsInviteMenuOpen] = useState(false);
+	const [isMotionPaused, setIsMotionPaused] = useState(false);
 	const inviteMenuRef = useRef<HTMLDivElement | null>(null);
 
 	useEffect(() => {
@@ -78,8 +79,11 @@ export default function HomePage() {
 
 	return (
 		<SiteShell currentPath="/" home>
-			<div className="landing-stage">
-				<LandingShader />
+			<div className="landing-stage" data-motion={isMotionPaused ? 'paused' : undefined}>
+				<LandingShader paused={isMotionPaused} />
+				<button aria-pressed={isMotionPaused} className="landing-motion-toggle" onClick={() => setIsMotionPaused((current) => !current)} type="button">
+					{isMotionPaused ? 'Play Animations' : 'Pause Animations'}
+				</button>
 				<div className="landing-noise" />
 				<nav aria-label="Landing sections" className="landing-section-rail">
 					<a href="#overview">01</a>
@@ -148,7 +152,7 @@ export default function HomePage() {
 							</div>
 						</div>
 
-						<div className="landing-app-wrap" aria-label="Animated preview of the Lunio dashboard">
+						<div aria-label="Animated preview of the Lunio dashboard" className="landing-app-wrap" role="img">
 							<div className="landing-app-window">
 								<div className="landing-app-topbar">
 									<div className="flex items-center gap-2">
@@ -162,7 +166,7 @@ export default function HomePage() {
 								<div className="landing-app-grid">
 									<aside className="landing-app-sidebar">
 										<div className="flex items-center gap-3">
-											<img alt="Lunio" className="h-9 w-9 rounded-full object-cover" src="/lunio-logo.png" />
+											<img alt="" className="h-9 w-9 rounded-full object-cover" height={36} src="/lunio-logo.png" width={36} />
 											<div>
 												<div className="text-sm font-bold text-white">Lunio</div>
 												<div className="text-xs text-white/46">Live workspace</div>
@@ -226,8 +230,8 @@ export default function HomePage() {
 								More motion where the user needs confidence.
 							</h2>
 							<p className="mt-6 max-w-xl text-base leading-8 text-white/58">
-								The landing page now borrows the product language: live meters, glass surfaces, compact controls, focused transitions, and a shader backdrop that reacts
-								to pointer movement.
+								The landing page now borrows the product language: live meters, glass surfaces, compact controls, focused transitions, and a shader backdrop that
+								reacts to pointer movement.
 							</p>
 						</div>
 

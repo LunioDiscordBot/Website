@@ -97,7 +97,13 @@ export function LoginClient() {
 								<div className="flex items-center gap-4">
 									{user.avatarUrl ? (
 										// eslint-disable-next-line @next/next/no-img-element
-										<img alt={user.username} className="h-14 w-14 rounded-full border border-white/10 object-cover" src={user.avatarUrl} />
+										<img
+											alt={user.username}
+											className="h-14 w-14 rounded-full border border-white/10 object-cover"
+											height={56}
+											src={user.avatarUrl}
+											width={56}
+										/>
 									) : (
 										<div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/10 text-sm font-bold text-white">
 											{(user.globalName || user.username).slice(0, 2).toUpperCase()}
@@ -115,7 +121,7 @@ export function LoginClient() {
 								</div>
 							) : (
 								<div>
-									<div className="font-bold text-white">{checkingAccount ? 'Checking current session...' : messages.login.notSignedIn}</div>
+									<div className="font-bold text-white">{checkingAccount ? 'Checking current session…' : messages.login.notSignedIn}</div>
 									<div className="mt-1 text-white/55">Use Discord to continue. If you just logged out, this state is expected.</div>
 								</div>
 							)}
@@ -126,6 +132,7 @@ export function LoginClient() {
 								<input
 									checked={rememberMe}
 									className="mt-1 h-4 w-4 rounded border-white/20 bg-black/30 text-primary focus:ring-primary/30"
+									name="rememberMe"
 									onChange={(event) => setRememberMe(event.target.checked)}
 									type="checkbox"
 								/>
@@ -145,7 +152,7 @@ export function LoginClient() {
 								</>
 							) : (
 								<button className="primary-button" disabled={checkingAccount} onClick={handleLogin} type="button">
-									{checkingAccount ? 'Checking...' : messages.login.continueWithDiscord}
+									{checkingAccount ? 'Checking…' : messages.login.continueWithDiscord}
 								</button>
 							)}
 						</div>

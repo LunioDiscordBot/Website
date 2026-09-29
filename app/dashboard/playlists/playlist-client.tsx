@@ -426,7 +426,7 @@ export function DashboardPlaylistClient({ botIdFromQuery, guildIdFromQuery }: Pl
 		);
 	};
 
-	const panelClass = 'rounded-[1.55rem] border border-white/10 bg-white/[0.035] shadow-[0_22px_70px_rgba(0,0,0,0.24)]';
+	const panelClass = 'rounded-xl border border-white/10 bg-white/[0.035]';
 	const mutedText = 'text-white/58';
 	const busy = Boolean(busyAction);
 
@@ -436,7 +436,7 @@ export function DashboardPlaylistClient({ botIdFromQuery, guildIdFromQuery }: Pl
 			<section className={`${panelClass} p-5`}>
 				<div className="flex items-center justify-between gap-3">
 					<div>
-						<div className="text-xs font-extrabold uppercase tracking-[0.22em] text-primary">Library</div>
+						<div className="text-xs font-extrabold uppercase tracking-wide text-primary">Library</div>
 						<h2 className="mt-2 font-headline text-3xl font-bold tracking-[-0.05em] text-white">Your playlists</h2>
 					</div>
 					<button className="ghost-button px-4 py-2 text-sm" disabled={busy} onClick={() => void loadPlaylists(selectedPlaylistName)} type="button">
@@ -446,11 +446,11 @@ export function DashboardPlaylistClient({ botIdFromQuery, guildIdFromQuery }: Pl
 
 				<div className="mt-5 grid gap-2">
 					{isLoading ? (
-						<div className="rounded-[1.2rem] border border-white/10 bg-black/20 px-4 py-4 text-sm text-white/58">Loading saved playlists...</div>
+						<div className="rounded-xl border border-white/10 bg-black/20 px-4 py-4 text-sm text-white/58">Loading saved playlists…</div>
 					) : playlists.length ? (
 						playlists.map((playlist) => (
 							<button
-								className={`rounded-[1.2rem] border px-4 py-3 text-left transition ${
+								className={`rounded-xl border px-4 py-3 text-left transition ${
 									selectedPlaylistName === playlist.name ? 'border-primary/30 bg-primary/10 text-white' : 'border-white/8 bg-black/16 text-white/70 hover:border-white/14 hover:bg-white/[0.05]'
 								}`}
 								key={playlist.id || playlist.name}
@@ -465,7 +465,7 @@ export function DashboardPlaylistClient({ botIdFromQuery, guildIdFromQuery }: Pl
 										</div>
 									</div>
 									{playlist.isDefault ? (
-										<span className="rounded-full border border-primary/25 bg-primary/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-primary shadow-[0_0_24px_rgba(0,255,255,0.12)]">
+										<span className="rounded-full border border-primary/25 bg-primary/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-primary">
 											Default
 										</span>
 									) : null}
@@ -473,14 +473,23 @@ export function DashboardPlaylistClient({ botIdFromQuery, guildIdFromQuery }: Pl
 							</button>
 						))
 					) : (
-						<div className="rounded-[1.2rem] border border-white/10 bg-black/20 px-4 py-4 text-sm text-white/58">No playlists yet. Your free default playlist will be created automatically.</div>
+						<div className="rounded-xl border border-white/10 bg-black/20 px-4 py-4 text-sm text-white/58">No playlists yet. Your free default playlist will be created automatically.</div>
 					)}
 				</div>
 
-				<div className="mt-5 rounded-[1.25rem] border border-white/10 bg-black/20 p-4">
-					<div className="text-xs font-extrabold uppercase tracking-[0.2em] text-white/42">Create playlist</div>
+				<div className="mt-5 rounded-xl border border-white/10 bg-black/20 p-4">
+					<div className="text-xs font-extrabold uppercase tracking-wide text-white/42">Create playlist</div>
 					<div className="mt-3 flex gap-2">
-						<input className="field-input min-w-0 flex-1" maxLength={64} onChange={(event) => setNewPlaylistName(event.target.value)} placeholder="Premium playlist name" value={newPlaylistName} />
+						<input
+							aria-label="New playlist name"
+							autoComplete="off"
+							className="field-input mt-0 min-w-0 flex-1"
+							maxLength={64}
+							name="playlistName"
+							onChange={(event) => setNewPlaylistName(event.target.value)}
+							placeholder="e.g. Friday Night Mix…"
+							value={newPlaylistName}
+						/>
 						<button className="primary-button px-4 py-2 text-sm" disabled={busy || !newPlaylistName.trim()} onClick={() => void createPlaylist()} type="button">
 							Create
 						</button>
@@ -492,11 +501,11 @@ export function DashboardPlaylistClient({ botIdFromQuery, guildIdFromQuery }: Pl
 			<section className={`${panelClass} min-w-0 p-5`}>
 				<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
 					<div className="min-w-0">
-						<div className="text-xs font-extrabold uppercase tracking-[0.22em] text-primary">Playlist detail</div>
+						<div className="text-xs font-extrabold uppercase tracking-wide text-primary">Playlist detail</div>
 						<div className="mt-2 flex flex-wrap items-center gap-3">
 							<h2 className="truncate font-headline text-4xl font-bold tracking-[-0.06em] text-white">{selectedPlaylist?.name || selectedSummary?.name || 'Select a playlist'}</h2>
 							{selectedIsDefault ? (
-								<span className="rounded-full border border-primary/25 bg-primary/15 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.18em] text-primary">
+								<span className="rounded-full border border-primary/25 bg-primary/15 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-primary">
 									Default playlist
 								</span>
 							) : null}
@@ -528,48 +537,54 @@ export function DashboardPlaylistClient({ botIdFromQuery, guildIdFromQuery }: Pl
 				</div>
 
 				<div
-					className={`mt-5 rounded-[1.2rem] border px-4 py-3 text-sm ${
+					aria-live="polite"
+					className={`mt-5 rounded-xl border px-4 py-3 text-sm ${
 						feedback.tone === 'error' ? 'border-rose-400/30 bg-rose-500/10 text-rose-100' : feedback.tone === 'success' ? 'border-primary/25 bg-primary/10 text-primary' : 'border-white/10 bg-black/18 text-white/56'
 					}`}
 				>
-					{busyAction ? `${busyAction}...` : feedback.message}
+					{busyAction ? `${busyAction}…` : feedback.message}
 				</div>
 
 				{shareValue ? (
-					<div className="mt-4 rounded-[1.2rem] border border-secondary/20 bg-secondary/10 px-4 py-3">
-						<div className="text-xs font-extrabold uppercase tracking-[0.2em] text-secondary">Share code</div>
+					<div className="mt-4 rounded-xl border border-secondary/20 bg-secondary/10 px-4 py-3">
+						<div className="text-xs font-extrabold uppercase tracking-wide text-secondary">Share code</div>
 						<div className="mt-2 select-all font-mono text-sm text-white">{shareValue}</div>
 					</div>
 				) : null}
 
 				<div className="mt-5 grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
-					<div className="rounded-[1.25rem] border border-white/10 bg-black/18 p-4">
-						<div className="text-xs font-extrabold uppercase tracking-[0.2em] text-white/42">Add a song</div>
+					<div className="rounded-xl border border-white/10 bg-black/18 p-4">
+						<div className="text-xs font-extrabold uppercase tracking-wide text-white/42">Add a song</div>
 						<div className="mt-3">
 							<input
+								aria-label="Search for a song to add"
+								autoComplete="off"
 								className="field-input min-w-0 w-full"
 								disabled={busy || !selectedPlaylistName}
+								name="songQuery"
 								onChange={(event) => setSongQuery(event.target.value)}
-								placeholder="Search by title, artist, or URL"
+								placeholder="Song title, artist, or URL…"
+								spellCheck={false}
+								type="search"
 								value={songQuery}
 							/>
 						</div>
 						<div className="mt-3 text-xs leading-6 text-white/45">
 							{isSongSearchLoading
-								? 'Searching automatically...'
+								? 'Searching automatically…'
 								: songQuery.trim().length >= 3
 									? 'Pick the resolved track you want to save.'
 									: 'Type at least 3 characters to preview matches before saving.'}
 						</div>
 
 						{songSearchError ? (
-							<div className="mt-3 rounded-[1rem] border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-xs leading-6 text-rose-100">{songSearchError}</div>
+							<div className="mt-3 rounded-lg border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-xs leading-6 text-rose-100">{songSearchError}</div>
 						) : null}
 
 						{isSongSearchLoading && !songSearchResults.length && !songSearchPlaylist ? (
 							<div className="mt-3 grid gap-2">
 								{([62, 78, 54] as const).map((width, index) => (
-									<div className="rounded-[1rem] border border-white/8 bg-white/[0.025] px-3 py-3" key={index}>
+									<div className="rounded-lg border border-white/8 bg-white/[0.025] px-3 py-3" key={index}>
 										<div className="h-3 rounded-full bg-white/10 animate-pulse" style={{ width: `${width}%` }} />
 										<div className="mt-2 h-2 rounded-full bg-white/6 animate-pulse" style={{ width: `${Math.max(36, width - 18)}%` }} />
 									</div>
@@ -578,8 +593,8 @@ export function DashboardPlaylistClient({ botIdFromQuery, guildIdFromQuery }: Pl
 						) : null}
 
 						{songSearchPlaylist ? (
-							<div className="mt-3 rounded-[1rem] border border-primary/20 bg-primary/10 px-3 py-3">
-								<div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-primary">Playlist detected</div>
+							<div className="mt-3 rounded-lg border border-primary/20 bg-primary/10 px-3 py-3">
+								<div className="text-[10px] font-extrabold uppercase tracking-wide text-primary">Playlist detected</div>
 								<div className="mt-2 truncate text-sm font-bold text-white">{songSearchPlaylist.title}</div>
 								<div className="mt-1 text-xs text-white/50">
 									{songSearchPlaylist.trackCount} tracks. Playlist saving here expects one song, so pick an individual track below.
@@ -592,11 +607,11 @@ export function DashboardPlaylistClient({ botIdFromQuery, guildIdFromQuery }: Pl
 								{songSearchResults.slice(0, 5).map((result) => {
 									const isSavingThisResult = savingSongUrl === result.url;
 									return (
-										<div className="flex flex-col gap-3 rounded-[1rem] border border-white/8 bg-white/[0.025] px-3 py-3 sm:flex-row sm:items-center sm:justify-between" key={`${result.url}:${result.title}`}>
+										<div className="flex flex-col gap-3 rounded-lg border border-white/8 bg-white/[0.025] px-3 py-3 sm:flex-row sm:items-center sm:justify-between" key={`${result.url}:${result.title}`}>
 											<div className="flex min-w-0 items-center gap-3">
 												{result.artworkUrl ? (
 													// eslint-disable-next-line @next/next/no-img-element
-													<img alt={result.title} className="h-12 w-12 shrink-0 rounded-[0.8rem] border border-white/10 object-cover" src={result.artworkUrl} />
+													<img alt="" className="h-12 w-12 shrink-0 rounded-lg border border-white/10 object-cover" height={48} loading="lazy" src={result.artworkUrl} width={48} />
 												) : null}
 												<div className="min-w-0">
 													<div className="truncate text-sm font-bold text-white">{result.title}</div>
@@ -606,7 +621,7 @@ export function DashboardPlaylistClient({ botIdFromQuery, guildIdFromQuery }: Pl
 												</div>
 											</div>
 											<button className="secondary-button shrink-0 px-3 py-2 text-xs" disabled={busy || isSavingThisResult} onClick={() => void addSong(result)} type="button">
-												{isSavingThisResult ? 'Saving...' : 'Save track'}
+												{isSavingThisResult ? 'Saving…' : 'Save track'}
 											</button>
 										</div>
 									);
@@ -615,10 +630,10 @@ export function DashboardPlaylistClient({ botIdFromQuery, guildIdFromQuery }: Pl
 						) : null}
 					</div>
 
-					<div className="rounded-[1.25rem] border border-white/10 bg-black/18 p-4">
-						<div className="text-xs font-extrabold uppercase tracking-[0.2em] text-white/42">Queue actions</div>
+					<div className="rounded-xl border border-white/10 bg-black/18 p-4">
+						<div className="text-xs font-extrabold uppercase tracking-wide text-white/42">Queue actions</div>
 						<div className="mt-3 flex flex-wrap gap-2">
-							<select className="field-input min-w-[8rem]" onChange={(event) => setLoadFlags(event.target.value as typeof loadFlags)} value={loadFlags}>
+							<select aria-label="Load mode" className="field-select mt-0 min-w-[8rem]" name="loadMode" onChange={(event) => setLoadFlags(event.target.value as typeof loadFlags)} value={loadFlags}>
 								<option value="none">Normal</option>
 								<option value="n">Next</option>
 								<option value="s">Shuffle</option>
@@ -641,9 +656,9 @@ export function DashboardPlaylistClient({ botIdFromQuery, guildIdFromQuery }: Pl
 					{selectedPlaylist?.songs.length ? (
 						<div className="grid gap-2">
 							{selectedPlaylist.songs.map((song, index) => (
-								<div className="flex flex-col gap-3 rounded-[1.15rem] border border-white/8 bg-white/[0.025] px-4 py-3 sm:flex-row sm:items-center sm:justify-between" key={`${song.index}:${song.url}:${song.title}`}>
+								<div className="flex flex-col gap-3 rounded-lg border border-white/8 bg-white/[0.025] px-4 py-3 sm:flex-row sm:items-center sm:justify-between" key={`${song.index}:${song.url}:${song.title}`}>
 									<div className="min-w-0">
-										<div className="text-xs font-black uppercase tracking-[0.18em] text-primary">#{song.index}</div>
+										<div className="text-xs font-black uppercase tracking-wide text-primary">#{song.index}</div>
 										<div className="mt-1 truncate text-sm font-bold text-white">{song.artist} - {song.title}</div>
 										<div className="mt-1 text-xs text-white/42">{formatDuration(song.duration)}</div>
 									</div>
@@ -666,7 +681,7 @@ export function DashboardPlaylistClient({ botIdFromQuery, guildIdFromQuery }: Pl
 										>
 											↓ Down
 										</button>
-										<button className="ghost-button px-3 py-2 text-xs text-rose-200" disabled={busy} onClick={() => void removeSong(song.index)} type="button">
+										<button aria-label={`Remove ${song.title} from playlist`} className="ghost-button px-3 py-2 text-xs text-rose-200" disabled={busy} onClick={() => void removeSong(song.index)} type="button">
 											Remove
 										</button>
 									</div>
@@ -674,7 +689,7 @@ export function DashboardPlaylistClient({ botIdFromQuery, guildIdFromQuery }: Pl
 							))}
 						</div>
 					) : (
-						<div className="rounded-[1.2rem] border border-white/10 bg-black/20 px-4 py-8 text-center text-sm text-white/50">
+						<div className="rounded-xl border border-white/10 bg-black/20 px-4 py-8 text-center text-sm text-white/50">
 							{selectedPlaylistName ? 'This playlist is empty. Add a song above to start building it.' : 'Select or create a playlist to start.'}
 						</div>
 					)}
@@ -682,9 +697,17 @@ export function DashboardPlaylistClient({ botIdFromQuery, guildIdFromQuery }: Pl
 			</section>
 		</div>
 		{showDeleteConfirm ? (
-			<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="delete-playlist-title">
-				<div className="w-full max-w-md rounded-[1.7rem] border border-white/12 bg-[rgba(16,17,20,0.96)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.5)]">
-					<div className="rounded-full border border-rose-400/25 bg-rose-500/10 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.2em] text-rose-200">Delete playlist</div>
+			<div
+				aria-labelledby="delete-playlist-title"
+				aria-modal="true"
+				className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-black/70 px-4 backdrop-blur-sm"
+				onKeyDown={(event) => {
+					if (event.key === 'Escape' && !busy) setShowDeleteConfirm(false);
+				}}
+				role="dialog"
+			>
+				<div className="w-full max-w-md rounded-xl border border-white/12 bg-[rgba(16,17,20,0.96)] p-6">
+					<div className="rounded-full border border-rose-400/25 bg-rose-500/10 px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-rose-200">Delete playlist</div>
 					<h3 id="delete-playlist-title" className="mt-4 font-headline text-3xl font-bold tracking-[-0.05em] text-white">
 						Delete {selectedPlaylistName}?
 					</h3>
@@ -692,11 +715,11 @@ export function DashboardPlaylistClient({ botIdFromQuery, guildIdFromQuery }: Pl
 						This removes the playlist and all saved tracks inside it. This cannot be undone from the dashboard.
 					</p>
 					<div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-						<button className="secondary-button px-5 py-3 text-sm" disabled={busy} onClick={() => setShowDeleteConfirm(false)} type="button">
+						<button autoFocus className="secondary-button px-5 py-3 text-sm" disabled={busy} onClick={() => setShowDeleteConfirm(false)} type="button">
 							Cancel
 						</button>
 						<button className="rounded-full border border-rose-400/30 bg-rose-500/15 px-5 py-3 text-sm font-extrabold text-rose-100 transition hover:border-rose-300/50 hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:opacity-50" disabled={busy} onClick={() => void deletePlaylist()} type="button">
-							{busyAction === 'Deleting playlist' ? 'Deleting...' : 'Delete playlist'}
+							{busyAction === 'Deleting playlist' ? 'Deleting…' : 'Delete Playlist'}
 						</button>
 					</div>
 				</div>

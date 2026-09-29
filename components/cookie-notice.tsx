@@ -30,9 +30,13 @@ export function CookieNotice() {
 	}
 
 	return (
-		<div className="fixed bottom-4 left-4 right-4 z-[70] sm:left-6 sm:right-6 lg:left-auto lg:right-6 lg:max-w-md">
+		<div
+			aria-label="Cookie notice"
+			className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 right-4 z-[70] sm:left-6 sm:right-6 lg:left-auto lg:right-6 lg:max-w-md"
+			role="region"
+		>
 			<div className="panel rounded-[1.6rem] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
-				<div className="text-xs font-extrabold uppercase tracking-[0.22em] text-primary">Cookie Notice</div>
+				<h2 className="text-xs font-extrabold uppercase tracking-[0.22em] text-primary">Cookie Notice</h2>
 				<p className="mt-3 text-sm leading-7 text-muted">
 					Lunio uses cookies to keep you signed in, secure your session, and remember basic site preferences on this device.
 				</p>

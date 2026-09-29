@@ -1,8 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import type { CSSProperties, KeyboardEvent } from 'react';
 import { useDashboardPlayerOptional } from './dashboard-player-provider';
 import { buildDashboardPath } from '@/lib/dashboard-routes';
+
+const SLIDER_COMMIT_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown']);
 
 function formatClock(ms: number | null | undefined) {
 	if (typeof ms !== 'number' || Number.isNaN(ms) || ms < 0) return '--:--';
@@ -98,111 +101,112 @@ export function DashboardMiniPlayerBar() {
 
 	const cannotControl = isBusy || commandFeedback.phase === 'sending';
 
+	const seekMax = Math.max(1, trackDuration);
+	const seekValue = isScrubbing ? scrubValue : displayPosition;
+	const commitOnKeyUp = (commit: () => void) => (event: KeyboardEvent<HTMLInputElement>) => {
+		if (SLIDER_COMMIT_KEYS.has(event.key)) commit();
+	};
+
 	return (
-		<div className="pointer-events-auto fixed inset-x-0 bottom-0 z-40 px-3 pb-3 sm:px-4 sm:pb-4">
-			<div className="mx-auto max-w-[1820px]">
-				<div className="relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-[rgba(12,13,14,0.92)] shadow-[0_24px_80px_rgba(0,0,0,0.5)] backdrop-blur-xl">
-					{/* progress strip across the very top of the bar */}
-					<div className="absolute inset-x-0 top-0 h-[3px] bg-white/5">
-						<div
-							className="h-full bg-gradient-to-r from-primary to-secondary transition-[width] duration-300"
-							style={{ width: `${progressPercent}%` }}
-						/>
+		<div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8">
+			<section aria-label="Now playing" className="dash-card pointer-events-auto relative mx-auto max-w-[1400px] overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
+				<div aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-[var(--dash-track)]">
+					<div className="h-full bg-primary" style={{ width: `${progressPercent}%` }} />
+				</div>
+
+				<div className="flex items-center gap-3 px-3 py-2.5 sm:gap-5 sm:px-4">
+					<Link
+						className="-mx-1 flex min-w-0 flex-1 items-center gap-3 rounded-lg px-1 py-1 transition-colors duration-150 hover:bg-[var(--dash-subtle)]"
+						href={overviewHref}
+						prefetch={false}
+					>
+						{track.artworkUrl ? (
+							// eslint-disable-next-line @next/next/no-img-element
+							<img alt="" className="h-10 w-10 shrink-0 rounded-md object-cover" height={40} src={track.artworkUrl} width={40} />
+						) : (
+							<span
+								aria-hidden="true"
+								className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[var(--dash-active)] text-xs font-bold text-muted"
+							>
+								{track.title.slice(0, 1)}
+							</span>
+						)}
+						<span className="min-w-0 flex-1">
+							<span className="block truncate text-sm font-semibold">{track.title}</span>
+							<span className="block truncate text-xs text-muted">{track.artist}</span>
+						</span>
+						<span className="sr-only">Open player</span>
+					</Link>
+
+					<div className="flex shrink-0 items-center gap-1">
+						<button
+							aria-label="Previous track"
+							className="dash-btn dash-btn-icon hidden border-transparent bg-transparent sm:inline-flex"
+							disabled={cannotControl}
+							onClick={() => void sendCommand('previous')}
+							type="button"
+						>
+							<MiniIcon className="h-4 w-4" name="previous" />
+						</button>
+						<button
+							aria-label={isPaused ? 'Resume' : 'Pause'}
+							className="dash-btn dash-btn-primary dash-btn-icon rounded-full"
+							disabled={cannotControl}
+							onClick={() => void sendCommand(isPaused ? 'resume' : 'pause')}
+							type="button"
+						>
+							<MiniIcon className="h-4 w-4" name={isPaused ? 'play' : 'pause'} />
+						</button>
+						<button
+							aria-label="Skip track"
+							className="dash-btn dash-btn-icon border-transparent bg-transparent"
+							disabled={cannotControl}
+							onClick={() => void sendCommand('skip')}
+							type="button"
+						>
+							<MiniIcon className="h-4 w-4" name="skip" />
+						</button>
 					</div>
 
-					<div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-5 sm:px-5">
-						{/* Now playing */}
-						<Link
-							className="flex min-w-0 flex-1 items-center gap-3 rounded-[1rem] px-2 py-1 -mx-2 transition hover:bg-white/[0.04]"
-							href={overviewHref}
-							title="Open player"
-						>
-							<div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-[0.85rem] border border-white/10 bg-white/[0.04]">
-								{track.artworkUrl ? (
-									// eslint-disable-next-line @next/next/no-img-element
-									<img alt="" className="h-full w-full object-cover" src={track.artworkUrl} />
-								) : (
-									<div className="flex h-full w-full items-center justify-center text-xs font-extrabold uppercase tracking-[0.2em] text-white/40">
-										{track.title.slice(0, 1)}
-									</div>
-								)}
-							</div>
-							<div className="min-w-0 flex-1">
-								<div className="truncate text-sm font-bold text-white">{track.title}</div>
-								<div className="mt-0.5 truncate text-xs text-white/52">{track.artist}</div>
-							</div>
-						</Link>
+					<div className="hidden min-w-0 flex-1 items-center gap-2 md:flex">
+						<span className="text-xs tabular-nums text-muted">{formatClock(seekValue)}</span>
+						<input
+							aria-label="Seek"
+							className="dash-slider min-w-0 flex-1"
+							disabled={cannotControl}
+							max={seekMax}
+							min={0}
+							onChange={(event) => setScrubValue(Number(event.target.value))}
+							onKeyDown={(event) => SLIDER_COMMIT_KEYS.has(event.key) && setIsScrubbing(true)}
+							onKeyUp={commitOnKeyUp(() => void submitSeek())}
+							onPointerDown={() => setIsScrubbing(true)}
+							onPointerUp={() => void submitSeek()}
+							style={{ '--fill': `${Math.min(100, (seekValue / seekMax) * 100)}%` } as CSSProperties}
+							type="range"
+							value={seekValue}
+						/>
+						<span className="text-xs tabular-nums text-muted">{formatClock(trackDuration)}</span>
+					</div>
 
-						{/* Transport controls + scrub */}
-						<div className="flex min-w-0 flex-1 items-center gap-3">
-							<button
-								aria-label="Previous"
-								className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/72 transition hover:border-primary/30 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
-								disabled={cannotControl}
-								onClick={() => void sendCommand('previous')}
-								type="button"
-							>
-								<MiniIcon className="h-4 w-4" name="previous" />
-							</button>
-							<button
-								aria-label={isPaused ? 'Resume' : 'Pause'}
-								className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-primary/40 bg-primary/20 text-white shadow-[0_10px_30px_rgba(0,255,255,0.18)] transition hover:bg-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
-								disabled={cannotControl}
-								onClick={() => void sendCommand(isPaused ? 'resume' : 'pause')}
-								type="button"
-							>
-								<MiniIcon className="h-5 w-5" name={isPaused ? 'play' : 'pause'} />
-							</button>
-							<button
-								aria-label="Skip"
-								className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/72 transition hover:border-primary/30 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
-								disabled={cannotControl}
-								onClick={() => void sendCommand('skip')}
-								type="button"
-							>
-								<MiniIcon className="h-4 w-4" name="skip" />
-							</button>
-
-							<div className="hidden min-w-0 flex-1 items-center gap-2 sm:flex">
-								<span className="text-[11px] font-semibold tabular-nums text-white/55">
-									{formatClock(isScrubbing ? scrubValue : displayPosition)}
-								</span>
-								<input
-									aria-label="Seek"
-									className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-white/10 accent-primary"
-									max={Math.max(1, trackDuration)}
-									min={0}
-									onChange={(event) => setScrubValue(Number(event.target.value))}
-									onMouseDown={() => setIsScrubbing(true)}
-									onMouseUp={() => void submitSeek()}
-									onTouchEnd={() => void submitSeek()}
-									onTouchStart={() => setIsScrubbing(true)}
-									type="range"
-									value={isScrubbing ? scrubValue : displayPosition}
-								/>
-								<span className="text-[11px] font-semibold tabular-nums text-white/55">{formatClock(trackDuration)}</span>
-							</div>
-						</div>
-
-						{/* Volume */}
-						<div className="hidden items-center gap-2 lg:flex">
-							<MiniIcon className="h-4 w-4 text-white/55" name="volume" />
-							<input
-								aria-label="Volume"
-								className="h-1.5 w-28 cursor-pointer appearance-none rounded-full bg-white/10 accent-secondary"
-								max={200}
-								min={1}
-								onChange={(event) => setVolumeDraft(Number(event.target.value))}
-								onMouseUp={() => void submitVolume()}
-								onTouchEnd={() => void submitVolume()}
-								type="range"
-								value={volumeDraft}
-							/>
-							<span className="w-8 text-right text-[11px] font-semibold tabular-nums text-white/55">{volumeDraft}</span>
-						</div>
+					<div className="hidden items-center gap-2 lg:flex">
+						<MiniIcon className="h-4 w-4 text-muted" name="volume" />
+						<input
+							aria-label="Volume"
+							className="dash-slider w-24"
+							disabled={cannotControl}
+							max={200}
+							min={1}
+							onChange={(event) => setVolumeDraft(Number(event.target.value))}
+							onKeyUp={commitOnKeyUp(() => void submitVolume())}
+							onPointerUp={() => void submitVolume()}
+							style={{ '--fill': `${((volumeDraft - 1) / 199) * 100}%` } as CSSProperties}
+							type="range"
+							value={volumeDraft}
+						/>
+						<span className="w-9 text-right text-xs tabular-nums text-muted">{volumeDraft}%</span>
 					</div>
 				</div>
-			</div>
+			</section>
 		</div>
 	);
 }

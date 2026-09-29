@@ -104,7 +104,7 @@ export function RedeemClient({ botId }: { botId: string }) {
 		return (
 			<div className="dashboard-empty-card flex items-center justify-center gap-3">
 				<Spinner className="h-5 w-5 text-primary" />
-				<span>Checking your referral promo progress...</span>
+				<span>Checking your referral promo progress…</span>
 			</div>
 		);
 	}
@@ -206,7 +206,7 @@ export function RedeemClient({ botId }: { botId: string }) {
 					<div className="mt-8 flex flex-wrap gap-3">
 						{status?.ready && !status?.granted ? (
 							<button className="primary-button inline-flex items-center gap-2" disabled={isRedeeming} onClick={() => void onRedeem()} type="button">
-								{isRedeeming ? <><Spinner className="h-4 w-4" />Redeeming...</> : 'Redeem 3 Months Premium'}
+								{isRedeeming ? <><Spinner className="h-4 w-4" />Redeeming…</> : 'Redeem 3 Months Premium'}
 							</button>
 						) : (
 							<a className="primary-button" href="/servers">
@@ -219,7 +219,7 @@ export function RedeemClient({ botId }: { botId: string }) {
 						</button>
 					</div>
 
-					{error ? <div className="mt-5 text-sm text-secondary">{error}</div> : null}
+					{error ? <div role="alert" className="mt-5 text-sm text-secondary">{error}</div> : null}
 				</section>
 
 				<aside className="dashboard-side-card">
