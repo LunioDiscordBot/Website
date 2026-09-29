@@ -22,18 +22,6 @@ const config: Config = {
 				headline: ['var(--font-space)', 'sans-serif'],
 				body: ['var(--font-manrope)', 'sans-serif'],
 			},
-			boxShadow: {
-				cyan: '0 0 30px rgba(0, 255, 255, 0.18)',
-				pink: '0 0 30px rgba(253, 104, 179, 0.18)',
-			},
-			backgroundImage: {
-				'hero-grid':
-					'radial-gradient(circle at top right, rgba(0,255,255,0.14), transparent 30%), radial-gradient(circle at bottom left, rgba(253,104,179,0.12), transparent 25%), linear-gradient(180deg, #0b0b0b 0%, #0e0e0e 46%, #090909 100%)',
-			},
-			borderRadius: {
-				xl2: '1.375rem',
-				xl3: '1.75rem',
-			},
 		},
 	},
 	plugins: [],

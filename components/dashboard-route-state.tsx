@@ -1,7 +1,7 @@
 'use client';
 
-import { useSiteLanguage } from '@/components/site-language-provider';
 import Link from 'next/link';
+import { useSiteLanguage } from '@/components/site-language-provider';
 
 export function DashboardRouteState({
 	title,
@@ -17,20 +17,26 @@ export function DashboardRouteState({
 	const { messages } = useSiteLanguage();
 
 	return (
-		<section className="py-12 sm:py-16">
-			<div className="shell">
-				<div className="mx-auto max-w-3xl rounded-[2rem] border border-white/10 bg-white/[0.03] p-8 text-center shadow-[0_30px_90px_rgba(0,0,0,0.28)] sm:p-10">
-					<div className="eyebrow">{messages.routeState.eyebrow}</div>
-					<h1 className="mt-4 font-headline text-4xl font-bold tracking-[-0.06em] text-white sm:text-5xl">{title}</h1>
-					<p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-muted">{message}</p>
-					<div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-						<Link className="secondary-button px-5 py-3 text-sm" href={primaryHref}>
-							{primaryLabel === 'Return to servers' ? messages.routeState.returnToServers : primaryLabel}
-						</Link>
-						<Link className="ghost-button px-5 py-3 text-sm" href="/">
+		<section className="flex justify-center px-4 py-16 sm:py-24">
+			<div className="dash-card w-full max-w-lg p-8 text-center sm:p-10">
+				<span aria-hidden="true" className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[var(--dash-active)] text-muted">
+					<svg className="h-5 w-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} viewBox="0 0 24 24">
+						<circle cx="12" cy="12" r="8.5" />
+						<path d="M12 8v4.5" />
+						<path d="M12 16h.01" />
+					</svg>
+				</span>
+				<h1 className="mt-5 font-headline text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
+				<p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted">{message}</p>
+				<div className="mt-7 flex flex-wrap items-center justify-center gap-2">
+					<Link className="dash-btn dash-btn-primary h-10 px-4" href={primaryHref} prefetch={false}>
+						{primaryLabel === 'Return to servers' ? messages.routeState.returnToServers : primaryLabel}
+					</Link>
+					{primaryHref !== '/' ? (
+						<Link className="dash-btn h-10 px-4" href="/" prefetch={false}>
 							{messages.routeState.returnHome}
 						</Link>
-					</div>
+					) : null}
 				</div>
 			</div>
 		</section>

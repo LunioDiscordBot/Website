@@ -217,8 +217,50 @@ export interface SearchPlaylistResult {
 	author?: string | null;
 }
 
+export interface PlaylistSong {
+	index: number;
+	title: string;
+	artist: string;
+	duration: number;
+	url: string;
+	artworkUrl: string | null;
+	sourceName?: string | null;
+}
+
+export interface PlaylistSummary {
+	id: string;
+	name: string;
+	songCount: number;
+	duration: number;
+	createdAt: number | null;
+	updatedAt: number | null;
+	timeCreated: string | null;
+	isDefault: boolean;
+}
+
+export interface PlaylistDetail extends PlaylistSummary {
+	songs: PlaylistSong[];
+}
+
+export interface PlaylistListResult {
+	defaultPlaylist: string;
+	maxSongsInPlaylist: number;
+	playlists: PlaylistSummary[];
+}
+
+export interface PlaylistDetailResult {
+	playlist: PlaylistDetail;
+}
+
+export interface PlaylistShareResult {
+	playlist: PlaylistSummary;
+	shareId: string;
+	loadValue: string;
+}
+
 export type BrokerCommandType =
 	| 'GUILD_SETTINGS_UPDATE'
+	| 'PLAYLIST_ACTION'
 	| 'PLAYER_JOIN'
 	| 'PLAYER_LEAVE'
 	| 'PLAYER_PREVIOUS'
@@ -237,7 +279,42 @@ export type BrokerCommandType =
 	| 'PLAYER_BASSBOOST'
 	| 'PLAYER_SPEED'
 	| 'PLAYER_FILTER_TOGGLE'
-	| 'PLAYER_FILTER_RESET';
+	| 'PLAYER_FILTER_RESET'
+	| 'PREMIUM_SUBSCRIPTION_UPDATE';
+
+export type PremiumProvider = 'lemon_squeezy';
+
+export interface PremiumSubscriptionStatus {
+	botId: string;
+	guildId: string;
+	provider: PremiumProvider | null;
+	subscriptionId: string | null;
+	customerId: string | null;
+	managedByUserId: string | null;
+	status: string | null;
+	active: boolean;
+	cancelled: boolean;
+	renewsAt: string | null;
+	endsAt: string | null;
+	trialEndsAt: string | null;
+	transferredAt: string | null;
+	nextTransferAt: string | null;
+	canTransferNow: boolean;
+	portalUrl: string | null;
+	checkoutConfigured: boolean;
+}
+
+export interface PremiumStatusResponse {
+	premium: PremiumSubscriptionStatus;
+}
+
+export interface PremiumCheckoutResponse {
+	checkoutUrl: string;
+}
+
+export interface PremiumPortalResponse {
+	portalUrl: string;
+}
 
 export type CommandAckStatus = 'received';
 export type CommandResultData = Record<string, unknown>;

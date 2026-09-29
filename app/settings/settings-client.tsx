@@ -62,14 +62,14 @@ export function SiteSettingsClient() {
 							return (
 								<button
 									key={option.value}
-									className={`dashboard-panel-card text-left transition ${selected ? 'border-primary/25 bg-primary/10 shadow-[0_0_30px_rgba(0,255,255,0.08)]' : ''}`}
+									className={`dashboard-panel-card text-left transition ${selected ? 'border-primary/25 bg-primary/10' : ''}`}
 									onClick={() => setPreference(option.value)}
 									type="button"
 								>
 									<div className="flex items-start justify-between gap-3">
 										<div className="metric-label">{option.label}</div>
 										<span
-											className={`rounded-full px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.2em] ${
+											className={`rounded-full px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide ${
 												selected ? 'border border-primary/25 bg-primary/10 text-primary' : 'border border-white/10 bg-white/[0.03] text-muted'
 											}`}
 										>
@@ -110,7 +110,7 @@ export function SiteSettingsClient() {
 								<strong>{preference === 'system' ? messages.settings.live : messages.settings.locked}</strong>
 							</div>
 						</div>
-						<div className="mt-5 rounded-[1.4rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-muted">{messages.settings.themeSystemCopy}</div>
+						<div className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-muted">{messages.settings.themeSystemCopy}</div>
 					</article>
 
 					<article className="dashboard-side-card">
@@ -147,13 +147,13 @@ export function SiteSettingsClient() {
 							})}
 						</div>
 
-						<div className="mt-5 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4">
+						<div className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] p-4">
 							<div className="text-sm font-bold text-white">{messages.settings.currentLanguage}</div>
 							<p className="mt-2 text-sm leading-7 text-muted">{messages.settings.languageSystemCopy}</p>
 						</div>
 
 						{!languageSelectionEnabled ? (
-							<div className="mt-5 rounded-[1.4rem] border border-secondary/20 bg-secondary/10 p-4 text-sm leading-7 text-white/85">
+							<div className="mt-5 rounded-xl border border-secondary/20 bg-secondary/10 p-4 text-sm leading-7 text-white/85">
 								Site language is temporarily unavailable until the remaining pages are translated consistently.
 							</div>
 						) : null}
@@ -169,7 +169,7 @@ export function SiteSettingsClient() {
 							onClick={() => void handleLogout()}
 							type="button"
 						>
-							{isLoggingOut ? 'Logging out...' : 'Logout'}
+							{isLoggingOut ? 'Logging out…' : 'Logout'}
 						</button>
 					</article>
 				</aside>

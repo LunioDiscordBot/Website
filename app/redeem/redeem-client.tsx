@@ -104,7 +104,7 @@ export function RedeemClient({ botId }: { botId: string }) {
 		return (
 			<div className="dashboard-empty-card flex items-center justify-center gap-3">
 				<Spinner className="h-5 w-5 text-primary" />
-				<span>Checking your referral promo progress...</span>
+				<span>Checking your referral promo progress…</span>
 			</div>
 		);
 	}
@@ -114,7 +114,7 @@ export function RedeemClient({ botId }: { botId: string }) {
 			<div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,22rem)]">
 				<section className="dashboard-hero-card">
 					<div className="metric-label">Sign in required</div>
-					<h1 className="mt-4 font-headline text-5xl font-bold tracking-[-0.06em] text-white">Redeem your Lunio referral reward.</h1>
+					<h1 className="mt-4 font-headline text-3xl font-bold tracking-tight sm:text-4xl text-white">Redeem your Lunio referral reward.</h1>
 					<p className="mt-6 max-w-2xl text-base leading-8 text-white/58">
 						Sign in with Discord to let Lunio verify the servers you manage and unlock the 3-month premium referral promo.
 					</p>
@@ -155,14 +155,14 @@ export function RedeemClient({ botId }: { botId: string }) {
 	return (
 		<>
 			{showClaimedModal ? (
-				<div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
-					<div className="dashboard-hero-card max-w-2xl border border-primary/25 shadow-[0_32px_120px_rgba(0,0,0,0.48)]">
+				<div aria-labelledby="redeem-claimed-title" aria-modal="true" className="fixed inset-0 z-[90] flex items-center justify-center overscroll-contain bg-black/60 px-4 backdrop-blur-sm" role="dialog">
+					<div className="dashboard-hero-card max-w-2xl border border-primary/25">
 						<div className="metric-label text-primary">Reward unlocked</div>
-						<h2 className="mt-4 font-headline text-4xl font-bold tracking-[-0.06em] text-white sm:text-5xl">3 months of premium have been applied.</h2>
+						<h2 id="redeem-claimed-title" className="mt-4 font-headline text-2xl font-bold tracking-tight text-white sm:text-3xl">3 months of premium have been applied.</h2>
 						<p className="mt-5 max-w-xl text-base leading-8 text-white/62">
 							Your referral reward is active now. Both eligible {botLabel} servers received the 3-month premium boost successfully.
 						</p>
-						<div className="mt-6 rounded-[1.4rem] border border-primary/18 bg-primary/10 p-5 text-sm leading-7 text-white/68">
+						<div className="mt-6 rounded-xl border border-primary/18 bg-primary/10 p-5 text-sm leading-7 text-white/68">
 							{status?.message || `Your ${botLabel} referral reward has been claimed successfully.`}
 						</div>
 						<div className="mt-8 flex flex-wrap gap-3">
@@ -180,7 +180,7 @@ export function RedeemClient({ botId }: { botId: string }) {
 			<div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,24rem)]">
 				<section className="dashboard-hero-card">
 					<div className="metric-label">Referral promo</div>
-					<h1 className="mt-4 font-headline text-5xl font-bold tracking-[-0.06em] text-white">Unlock 3 months of premium for two {botLabel} servers.</h1>
+					<h1 className="mt-4 font-headline text-3xl font-bold tracking-tight sm:text-4xl text-white">Unlock 3 months of premium for two {botLabel} servers.</h1>
 					<p className="mt-6 max-w-2xl text-base leading-8 text-white/58">
 						Invite {botLabel} to two servers you manage. When both eligible servers are linked, you can redeem the referral reward here in one click.
 					</p>
@@ -199,14 +199,14 @@ export function RedeemClient({ botId }: { botId: string }) {
 						</article>
 					</div>
 
-					<div className="mt-8 rounded-[1.5rem] border border-white/8 bg-white/[0.03] p-5 text-sm leading-7 text-white/62">
+					<div className="mt-8 rounded-xl border border-white/8 bg-white/[0.03] p-5 text-sm leading-7 text-white/62">
 						{status?.message || 'No referral progress yet.'}
 					</div>
 
 					<div className="mt-8 flex flex-wrap gap-3">
 						{status?.ready && !status?.granted ? (
 							<button className="primary-button inline-flex items-center gap-2" disabled={isRedeeming} onClick={() => void onRedeem()} type="button">
-								{isRedeeming ? <><Spinner className="h-4 w-4" />Redeeming...</> : 'Redeem 3 Months Premium'}
+								{isRedeeming ? <><Spinner className="h-4 w-4" />Redeeming…</> : 'Redeem 3 Months Premium'}
 							</button>
 						) : (
 							<a className="primary-button" href="/servers">
@@ -219,7 +219,7 @@ export function RedeemClient({ botId }: { botId: string }) {
 						</button>
 					</div>
 
-					{error ? <div className="mt-5 text-sm text-secondary">{error}</div> : null}
+					{error ? <div role="alert" className="mt-5 text-sm text-secondary">{error}</div> : null}
 				</section>
 
 				<aside className="dashboard-side-card">
@@ -238,8 +238,8 @@ export function RedeemClient({ botId }: { botId: string }) {
 							<strong>3 months</strong>
 						</div>
 					</div>
-					<div className="mt-8 rounded-[1.4rem] border border-primary/16 bg-primary/10 p-5 text-sm leading-7 text-white/62">
-						<div className="text-[11px] font-extrabold uppercase tracking-[0.24em] text-primary">Heads up</div>
+					<div className="mt-8 rounded-xl border border-primary/16 bg-primary/10 p-5 text-sm leading-7 text-white/62">
+						<div className="text-[11px] font-extrabold uppercase tracking-wide text-primary">Heads up</div>
 						<div className="mt-3">
 							Both servers need to still have {botLabel}, and you need to be signed in with an account that can manage both servers when you redeem.
 						</div>

@@ -5,12 +5,13 @@ import { Spinner } from '@/components/spinner';
 import { useSiteLanguage } from '@/components/site-language-provider';
 import { buildDashboardPath, buildInvitePath } from '@/lib/dashboard-routes';
 import { getPreferredBotId as getPreferredBotFromList } from '@/lib/bot-preference';
-import { useEffect, useState } from 'react';
-import { apiJson, type AuthGuildsResponse, type BotsResponse } from '@/lib/api';
+import { useEffect, useRef, useState } from 'react';
+import { API_BASE_URL, API_PREFIX, apiJson, type AuthGuildsResponse, type BotsResponse } from '@/lib/api';
 
 const BOT_STORAGE_KEY = 'lunio:web:botId';
 const SERVER_CACHE_KEY = 'lunio:web:servers-cache';
 const SERVER_CACHE_MAX_AGE_MS = 1000 * 60 * 5;
+const SERVER_SKELETON_MIN_MS = 700;
 
 type ServerPickerCache = {
 	botOptions: Array<{ botId: string; label: string }>;
@@ -24,7 +25,7 @@ const getConnectedBotIds = (guild: AuthGuildsResponse['guilds'][number]) => {
 };
 
 export function ServersClient() {
-	const { messages } = useSiteLanguage();
+	const { language, messages } = useSiteLanguage();
 	const [selectedBotId, setSelectedBotId] = useState('');
 	const [botOptions, setBotOptions] = useState<Array<{ botId: string; label: string }>>([]);
 	const [guilds, setGuilds] = useState<AuthGuildsResponse['guilds']>([]);
@@ -33,6 +34,18 @@ export function ServersClient() {
 	const [showSkeleton, setShowSkeleton] = useState(false);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
+	const skeletonTimerRef = useRef<number | null>(null);
+
+	const playSkeleton = () => {
+		if (skeletonTimerRef.current) {
+			window.clearTimeout(skeletonTimerRef.current);
+		}
+		setShowSkeleton(true);
+		skeletonTimerRef.current = window.setTimeout(() => {
+			setShowSkeleton(false);
+			skeletonTimerRef.current = null;
+		}, SERVER_SKELETON_MIN_MS);
+	};
 
 	const persistCache = (nextCache: ServerPickerCache) => {
 		window.sessionStorage.setItem(SERVER_CACHE_KEY, JSON.stringify(nextCache));
@@ -89,6 +102,7 @@ export function ServersClient() {
 		setSelectedBotId(savedBotId);
 		const activeRef = { current: true };
 		const cached = readCache();
+		playSkeleton();
 
 		if (cached) {
 			setBotOptions(cached.botOptions);
@@ -105,17 +119,12 @@ export function ServersClient() {
 
 		return () => {
 			activeRef.current = false;
+			if (skeletonTimerRef.current) {
+				window.clearTimeout(skeletonTimerRef.current);
+				skeletonTimerRef.current = null;
+			}
 		};
 	}, []);
-
-	useEffect(() => {
-		if (!isRefreshing || guilds.length > 0) {
-			setShowSkeleton(false);
-			return;
-		}
-		const timer = window.setTimeout(() => setShowSkeleton(true), 300);
-		return () => window.clearTimeout(timer);
-	}, [isRefreshing, guilds.length]);
 
 	useEffect(() => {
 		const onFocus = () => {
@@ -142,6 +151,7 @@ export function ServersClient() {
 
 	const refreshServerPicker = async () => {
 		const activeRef = { current: true };
+		playSkeleton();
 		await loadServerPickerData(activeRef);
 	};
 
@@ -196,10 +206,7 @@ export function ServersClient() {
 	});
 	const formatLastRefreshed = (timestamp: number | null) => {
 		if (!timestamp) return messages.servers.notRefreshed;
-		return new Date(timestamp).toLocaleTimeString([], {
-			hour: '2-digit',
-			minute: '2-digit',
-		});
+		return new Intl.DateTimeFormat(language, { hour: '2-digit', minute: '2-digit' }).format(timestamp);
 	};
 
 	const getPreferredBotId = (guild: AuthGuildsResponse['guilds'][number]) =>
@@ -214,7 +221,7 @@ export function ServersClient() {
 			<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 				<div className="flex flex-wrap items-center gap-3">
 					<button
-						className={`rounded-full border px-4 py-2 text-xs font-extrabold uppercase tracking-[0.2em] transition ${
+						className={`rounded-full border px-4 py-2 text-xs font-extrabold uppercase tracking-wide transition ${
 							!selectedBotId ? 'border-primary/30 bg-primary/10 text-primary' : 'border-white/10 bg-white/[0.03] text-muted hover:text-white'
 						}`}
 						onClick={() => {
@@ -227,7 +234,7 @@ export function ServersClient() {
 					</button>
 					{botOptions.map((bot) => (
 						<button
-							className={`rounded-full border px-4 py-2 text-xs font-extrabold uppercase tracking-[0.2em] transition ${
+							className={`rounded-full border px-4 py-2 text-xs font-extrabold uppercase tracking-wide transition ${
 								selectedBotId === bot.botId ? 'border-primary/30 bg-primary/10 text-primary' : 'border-white/10 bg-white/[0.03] text-muted hover:text-white'
 							}`}
 							key={bot.botId}
@@ -241,7 +248,7 @@ export function ServersClient() {
 						</button>
 					))}
 					<button
-						className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-extrabold uppercase tracking-[0.2em] text-muted transition hover:text-white disabled:opacity-50"
+						className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-muted transition hover:text-white disabled:opacity-50"
 						disabled={isRefreshing}
 						onClick={() => void refreshServerPicker()}
 						type="button"
@@ -250,13 +257,17 @@ export function ServersClient() {
 					</button>
 				</div>
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-					<div className="text-xs font-bold uppercase tracking-[0.18em] text-muted">
+					<div className="text-xs font-bold uppercase tracking-wide text-muted">
 						{messages.servers.lastRefresh} {formatLastRefreshed(lastRefreshedAt)}
 					</div>
 					<input
-						className="min-w-[16rem] rounded-full border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white outline-none transition placeholder:text-muted focus:border-primary/30"
+						aria-label={messages.servers.searchPlaceholder}
+						autoComplete="off"
+						className="min-w-[16rem] rounded-full border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white transition-colors placeholder:text-muted focus:border-primary/30"
 						onChange={(event) => setSearchQuery(event.target.value)}
-						placeholder={messages.servers.searchPlaceholder}
+						name="serverSearch"
+						placeholder={`${messages.servers.searchPlaceholder}…`}
+						spellCheck={false}
 						type="search"
 						value={searchQuery}
 					/>
@@ -265,17 +276,17 @@ export function ServersClient() {
 
 			{guildsError ? (
 				guildsError === 'Unauthorized' ? (
-					<div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-6">
+					<div className="rounded-xl border border-white/10 bg-white/[0.03] p-6">
 						<div className="text-sm leading-7 text-muted">{messages.servers.unauthorized}</div>
 						<a
 							className="secondary-button mt-5"
-							href={`${process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || 'https://api.luniobot.com'}/v1/auth/discord/login`}
+							href={`${API_BASE_URL}${API_PREFIX}/auth/discord/login?remember=1&returnTo=${encodeURIComponent('/servers')}`}
 						>
 							Sign in with Discord
 						</a>
 					</div>
 				) : (
-					<div className="rounded-[1.5rem] border border-danger/30 bg-danger/10 p-5 text-sm text-red-100">{guildsError}</div>
+					<div className="rounded-xl border border-danger/30 bg-danger/10 p-5 text-sm text-red-100">{guildsError}</div>
 				)
 			) : null}
 
@@ -284,7 +295,7 @@ export function ServersClient() {
 					{Array.from({ length: 6 }).map((_, i) => (
 						<div className="panel p-6" key={i}>
 							<div className="flex items-start justify-between gap-4">
-								<div className="skeleton h-14 w-14 rounded-[1.2rem]" />
+								<div className="skeleton h-14 w-14 rounded-xl" />
 								<div className="skeleton h-8 w-24 rounded-full" />
 							</div>
 							<div className="skeleton mt-5 h-8 w-3/4 rounded-md" />
@@ -295,7 +306,7 @@ export function ServersClient() {
 								<div className="skeleton h-8 w-24 rounded-full" />
 							</div>
 							<div className="mt-6 flex flex-col gap-3">
-								<div className="skeleton h-11 w-full rounded-[1rem]" />
+								<div className="skeleton h-11 w-full rounded-lg" />
 							</div>
 						</div>
 					))}
@@ -310,14 +321,14 @@ export function ServersClient() {
 								<div className="flex items-start justify-between gap-4">
 									{guild.iconUrl ? (
 										// eslint-disable-next-line @next/next/no-img-element
-										<img alt={guild.name} className="h-14 w-14 rounded-[1.2rem] border border-white/10 object-cover" src={guild.iconUrl} />
+										<img alt={guild.name} className="h-14 w-14 rounded-xl border border-white/10 object-cover" height={56} src={guild.iconUrl} width={56} />
 									) : (
-										<div className="flex h-14 w-14 items-center justify-center rounded-[1.2rem] bg-primary/10 font-headline text-xl font-bold text-primary">
+										<div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 font-headline text-xl font-bold text-primary">
 											{guild.name.slice(0, 2).toUpperCase()}
 										</div>
 									)}
 
-									<div className="rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.2em] text-primary">
+									<div className="rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-primary">
 										{getConnectedBotIds(guild).length > 0
 											? messages.servers.botCount
 													.replace('{count}', String(getConnectedBotIds(guild).length))
@@ -331,21 +342,21 @@ export function ServersClient() {
 									{messages.servers.guildId}: {guild.guildId}
 								</p>
 
-								<div className="mt-5 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-extrabold uppercase tracking-[0.18em] text-secondary">
+								<div className="mt-5 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-secondary">
 									{guild.owner ? messages.servers.owner : guild.canManage ? messages.servers.manageable : messages.servers.member}
 								</div>
 
 								<div className="mt-5 flex flex-wrap gap-3">
 									{guild.botStates.map((bot) => (
 										<div
-											className={`flex items-center gap-3 rounded-full border px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] ${
+											className={`flex items-center gap-3 rounded-full border px-3 py-2 text-xs font-bold uppercase tracking-wide ${
 												bot.status === 'connected' ? 'border-primary/20 bg-primary/10 text-primary' : 'border-white/10 bg-white/[0.03] text-muted'
 											}`}
 											key={`${guild.guildId}:${bot.botId}`}
 										>
 											{bot.avatarUrl ? (
 												// eslint-disable-next-line @next/next/no-img-element
-												<img alt={bot.label} className="h-6 w-6 rounded-full border border-white/10 object-cover" src={bot.avatarUrl} />
+												<img alt={bot.label} className="h-6 w-6 rounded-full border border-white/10 object-cover" height={24} src={bot.avatarUrl} width={24} />
 											) : (
 												<div className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-white/10 text-[10px] text-white">
 													{bot.label.slice(0, 1).toUpperCase()}
@@ -383,7 +394,7 @@ export function ServersClient() {
 					</div>
 
 					{!guildsError && sortedGuilds.length === 0 ? (
-						<div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5 text-sm text-muted">
+						<div className="rounded-xl border border-white/10 bg-white/[0.03] p-5 text-sm text-muted">
 							{searchQuery.trim() ? messages.servers.noGuildsSearch : messages.servers.noGuildsBot}
 						</div>
 					) : null}

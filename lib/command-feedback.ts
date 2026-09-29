@@ -2,6 +2,7 @@ import type { AcceptedCommandResponse, BrokerCommandType, CommandFeedback, Comma
 
 const COMMAND_TYPE_LABELS: Record<BrokerCommandType, string> = {
 	GUILD_SETTINGS_UPDATE: 'Guild settings',
+	PLAYLIST_ACTION: 'Playlist action',
 	PLAYER_JOIN: 'Join voice channel',
 	PLAYER_LEAVE: 'Leave voice channel',
 	PLAYER_PREVIOUS: 'Previous track',
@@ -21,6 +22,7 @@ const COMMAND_TYPE_LABELS: Record<BrokerCommandType, string> = {
 	PLAYER_SPEED: 'Playback speed',
 	PLAYER_FILTER_TOGGLE: 'Filter toggle',
 	PLAYER_FILTER_RESET: 'Filter reset',
+	PREMIUM_SUBSCRIPTION_UPDATE: 'Premium subscription',
 };
 
 export const DEFAULT_COMMAND_FEEDBACK: CommandFeedback = {
@@ -73,7 +75,7 @@ export function getCommandFeedbackToneClasses(phase: CommandFeedback['phase']) {
 export function formatShortCommandId(commandId?: string) {
 	if (!commandId) return '--';
 	if (commandId.length <= 14) return commandId;
-	return `${commandId.slice(0, 8)}...${commandId.slice(-4)}`;
+	return `${commandId.slice(0, 8)}…${commandId.slice(-4)}`;
 }
 
 export function buildSendingCommandFeedback(commandType: BrokerCommandType, message = 'Sending this request to Lunio.'): CommandFeedback {

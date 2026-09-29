@@ -10,10 +10,8 @@ export default function RedeemPage() {
 
 	return (
 		<SiteShell currentPath="/redeem">
-			<section className="py-16 sm:py-24">
-				<div className="shell">
-					<RedeemClient botId={botId} />
-				</div>
+			<section className="shell pt-14 sm:pt-20">
+				<RedeemClient botId={botId} />
 			</section>
 		</SiteShell>
 	);

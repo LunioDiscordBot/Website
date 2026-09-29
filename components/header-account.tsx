@@ -34,8 +34,16 @@ export function HeaderAccount() {
 			}
 		};
 
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') setOpen(false);
+		};
+
 		window.addEventListener('mousedown', onPointerDown);
-		return () => window.removeEventListener('mousedown', onPointerDown);
+		window.addEventListener('keydown', onKeyDown);
+		return () => {
+			window.removeEventListener('mousedown', onPointerDown);
+			window.removeEventListener('keydown', onKeyDown);
+		};
 	}, []);
 
 	const logout = async () => {
@@ -55,53 +63,53 @@ export function HeaderAccount() {
 
 	if (!user) {
 		return (
-			<Link className="ghost-button px-4 py-2 text-sm" href="/login" prefetch={false}>
-				Login
+			<Link className="dash-btn" href="/login" prefetch={false}>
+				Log In
 			</Link>
 		);
 	}
 
+	const displayName = user.globalName || user.username;
+
 	return (
 		<div className="relative" ref={containerRef}>
 			<button
-				className="flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-2 py-2 pr-4 transition hover:bg-white/[0.08]"
+				aria-controls="header-account-menu"
+				aria-expanded={open}
+				aria-haspopup="menu"
+				aria-label={`Account menu for ${displayName}`}
+				className="dash-btn gap-2 pl-1.5 pr-3"
 				onClick={() => setOpen((current) => !current)}
 				type="button"
 			>
 				{user.avatarUrl ? (
 					// eslint-disable-next-line @next/next/no-img-element
-					<img alt={user.username} className="h-9 w-9 rounded-full border border-white/10 object-cover" src={user.avatarUrl} />
+					<img alt="" className="h-6 w-6 rounded-full object-cover" height={24} src={user.avatarUrl} width={24} />
 				) : (
-					<div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-primary/10 font-headline text-sm font-bold text-primary">
+					<span aria-hidden="true" className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary">
 						{(user.username ?? 'U').slice(0, 1).toUpperCase()}
-					</div>
+					</span>
 				)}
-				<div className="hidden text-left sm:block">
-					<div className="text-sm font-bold text-white">{user.globalName || user.username}</div>
-					<div className="text-xs text-muted">@{user.username}</div>
-				</div>
+				<span className="max-w-[9rem] truncate">{displayName}</span>
 			</button>
 
 			{open ? (
-				<div className="account-menu absolute right-0 top-[calc(100%+0.75rem)] z-50 w-64 p-2">
-					<div className="account-menu-surface px-4 py-3">
-						<div className="font-bold text-tertiary">{user.globalName || user.username}</div>
-						<div className="mt-1 text-sm text-muted">@{user.username}</div>
+				<div className="account-menu absolute right-0 top-[calc(100%+0.5rem)] z-50 w-60 p-1.5" id="header-account-menu" role="menu">
+					<div className="px-2.5 py-2">
+						<div className="truncate text-sm font-semibold">{displayName}</div>
+						<div className="truncate text-xs text-muted">@{user.username}</div>
 					</div>
-
-					<div className="mt-2 grid gap-1">
-						<Link className="account-menu-action" href="/settings" onClick={() => setOpen(false)} prefetch={false}>
-							Site Settings
-						</Link>
-						<button
-							className="account-menu-action account-menu-action-danger text-left disabled:opacity-50"
-							disabled={busy}
-							onClick={() => void logout()}
-							type="button"
-						>
-							{busy ? 'Logging out...' : 'Logout'}
-						</button>
-					</div>
+					<div className="dash-divider my-1 border-t" />
+					<Link className="account-menu-action" href="/servers" onClick={() => setOpen(false)} prefetch={false} role="menuitem">
+						Dashboard
+					</Link>
+					<Link className="account-menu-action" href="/settings" onClick={() => setOpen(false)} prefetch={false} role="menuitem">
+						Site Settings
+					</Link>
+					<div className="dash-divider my-1 border-t" />
+					<button className="account-menu-action account-menu-action-danger" disabled={busy} onClick={() => void logout()} role="menuitem" type="button">
+						{busy ? 'Logging out…' : 'Log Out'}
+					</button>
 				</div>
 			) : null}
 		</div>

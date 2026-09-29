@@ -6,10 +6,8 @@ import { LoginClient } from './login-client';
 export default function LoginPage() {
 	return (
 		<SiteShell currentPath="/login">
-			<section className="py-16 sm:py-24">
-				<div className="shell">
-					<LoginClient />
-				</div>
+			<section className="shell pt-14 sm:pt-20">
+				<LoginClient />
 			</section>
 		</SiteShell>
 	);

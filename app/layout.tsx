@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Manrope, Space_Grotesk } from 'next/font/google';
 import { CookieNotice } from '@/components/cookie-notice';
 import { SiteLanguageProvider } from '@/components/site-language-provider';
@@ -24,6 +24,13 @@ export const metadata: Metadata = {
 		shortcut: '/lunio-logo.png',
 		apple: '/lunio-logo.png',
 	},
+};
+
+export const viewport: Viewport = {
+	themeColor: [
+		{ media: '(prefers-color-scheme: dark)', color: '#0b0c0d' },
+		{ media: '(prefers-color-scheme: light)', color: '#f5f6f8' },
+	],
 };
 
 const themeBootScript = `
@@ -60,6 +67,9 @@ export default async function RootLayout({
 				<script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
 			</head>
 			<body className={`${manrope.variable} ${spaceGrotesk.variable} bg-background text-text antialiased`}>
+				<a className="skip-link" href="#main-content">
+					Skip to content
+				</a>
 				<SiteLanguageProvider initialLanguage={initialLanguage}>
 					<ThemeProvider>
 						{children}

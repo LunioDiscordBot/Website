@@ -29,15 +29,13 @@ export class ErrorBoundary extends Component<Props, State> {
 			if (this.props.fallback) return this.props.fallback;
 
 			return (
-				<div className="rounded-[1.5rem] border border-danger/30 bg-danger/10 p-6">
-					<div className="font-headline text-xl font-bold text-white">Something went wrong</div>
-					<div className="mt-2 text-sm leading-7 text-muted">{this.state.error.message || 'An unexpected error occurred.'}</div>
-					<button
-						className="secondary-button mt-5"
-						onClick={() => this.setState({ error: null })}
-						type="button"
-					>
-						Try again
+				<div className="rounded-xl border border-danger/35 bg-danger/[0.08] p-5" role="alert">
+					<div className="text-base font-semibold">Something went wrong</div>
+					<div className="mt-1 break-words text-sm leading-6 text-muted">
+						{this.state.error.message || 'An unexpected error occurred.'} Try again, or reload the page if it keeps happening.
+					</div>
+					<button className="dash-btn mt-4" onClick={() => this.setState({ error: null })} type="button">
+						Try Again
 					</button>
 				</div>
 			);

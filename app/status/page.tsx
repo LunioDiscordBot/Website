@@ -4,12 +4,8 @@ import { StatusClient } from './status-client';
 export default function StatusPage() {
 	return (
 		<SiteShell currentPath="/status">
-			<section className="py-10 sm:py-12">
-				<div className="shell">
-					<div className="mt-2">
-						<StatusClient />
-					</div>
-				</div>
+			<section className="shell pt-14 sm:pt-20">
+				<StatusClient />
 			</section>
 		</SiteShell>
 	);

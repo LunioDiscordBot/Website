@@ -1,252 +1,400 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { SiteShell } from '@/components/site-shell';
+import { useSiteLanguage } from '@/components/site-language-provider';
+import { apiJson, type StatsResponse } from '@/lib/api';
 
 const MAIN_INVITE_URL = 'https://discord.com/oauth2/authorize?client_id=945030475779551415&scope=bot+applications.commands&permissions=8';
 const SECONDARY_INVITE_URL = 'https://discord.com/oauth2/authorize?client_id=945474723846950944&scope=bot+applications.commands&permissions=8';
+const SUPPORT_SERVER_URL = 'https://discord.gg/rrqEFukVUZ';
 
-const heroStats = [
-	{
-		label: 'Live reach',
-		value: '3K+',
-		copy: 'Guilds already running Lunio across the live music network.',
-		tone: 'text-primary',
-	},
-	{
-		label: 'Realtime latency',
-		value: '14ms',
-		copy: 'Average response target across the current live playback stack.',
-		tone: 'text-white',
-	},
-	{
-		label: 'Dual production bots',
-		value: '2',
-		copy: 'Lunio and Lunio 2 sharing one connected dashboard ecosystem.',
-		tone: 'text-secondary',
-	},
-];
+type FeatureIconName = 'control' | 'channel' | 'playlist' | 'dashboard' | 'sound' | 'bots';
+const FEATURE_ICONS: FeatureIconName[] = ['control', 'channel', 'playlist', 'dashboard', 'sound', 'bots'];
 
-const featureCards = [
-	{
-		eyebrow: 'Live player',
-		title: 'Realtime control room',
-		copy: 'Transport controls, queue management, repeat, volume, autoplay, and premium tuning all mirror the live bot session.',
-	},
-	{
-		eyebrow: 'Custom channels',
-		title: 'Dedicated request surfaces',
-		copy: 'Give every server its own music panel with modern embed modes, clean queue entry, and proper setup handling.',
-	},
-	{
-		eyebrow: 'Web dashboard',
-		title: 'Server settings without the clutter',
-		copy: 'Guild settings, account preferences, server picker, and future playlists all live in one focused workspace.',
-	},
-	{
-		eyebrow: 'Premium',
-		title: 'Studio controls when you need them',
-		copy: 'Nightcore, vaporwave, bassboost, speed control, autoplay, 24/7 mode, and the premium workflow are already built into the platform.',
-	},
-];
+function FeatureIcon({ name }: { name: FeatureIconName }) {
+	const shared = {
+		className: 'h-5 w-5',
+		viewBox: '0 0 24 24',
+		fill: 'none',
+		stroke: 'currentColor',
+		strokeWidth: 1.8,
+		strokeLinecap: 'round' as const,
+		strokeLinejoin: 'round' as const,
+		'aria-hidden': true,
+	};
+
+	switch (name) {
+		case 'control':
+			return (
+				<svg {...shared}>
+					<circle cx="12" cy="12" r="8.25" />
+					<path d="m10.25 8.75 4.75 3.25-4.75 3.25v-6.5Z" />
+				</svg>
+			);
+		case 'channel':
+			return (
+				<svg {...shared}>
+					<path d="M5 9h14" />
+					<path d="M5 15h14" />
+					<path d="M10 4 8 20" />
+					<path d="M16 4l-2 16" />
+				</svg>
+			);
+		case 'playlist':
+			return (
+				<svg {...shared}>
+					<path d="M4.5 6.5h11" />
+					<path d="M4.5 11h11" />
+					<path d="M4.5 15.5h6" />
+					<path d="M18 9.5v7.25" />
+					<circle cx="16.25" cy="16.75" r="1.75" />
+				</svg>
+			);
+		case 'dashboard':
+			return (
+				<svg {...shared}>
+					<rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+					<path d="M9 4.5v15" />
+					<path d="M12.5 9h5" />
+					<path d="M12.5 13h3" />
+				</svg>
+			);
+		case 'sound':
+			return (
+				<svg {...shared}>
+					<path d="M5 10v4" />
+					<path d="M9 7v10" />
+					<path d="M13 4.5v15" />
+					<path d="M17 8v8" />
+					<path d="M21 11v2" />
+				</svg>
+			);
+		case 'bots':
+			return (
+				<svg {...shared}>
+					<rect x="4" y="8" width="11" height="10" rx="2.5" />
+					<path d="M9 8V5.5" />
+					<path d="M8 13h.01" />
+					<path d="M11 13h.01" />
+					<path d="M18 11h1.5a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H18" />
+				</svg>
+			);
+	}
+}
+
+function formatStat(value: number, locale: string) {
+	return new Intl.NumberFormat(locale, { notation: value >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value);
+}
+
+/** Static, decorative preview of the Overview page. Hidden from assistive tech via role="img". */
+function DashboardPreview({ label }: { label: string }) {
+	const queue = [
+		['Afterglow', 'Signal Bloom', '4:05'],
+		['Glass City', 'Northbound', '3:18'],
+		['Night Swim', 'Low Tide', '3:51'],
+	];
+
+	return (
+		<div aria-label={label} className="site-preview dash-card overflow-hidden" role="img">
+			<div className="grid md:grid-cols-[13rem_minmax(0,1fr)]">
+				<div className="dash-sidebar hidden flex-col gap-1 p-3 md:flex">
+					<div className="flex items-center gap-2 px-2 py-2">
+						{/* eslint-disable-next-line @next/next/no-img-element */}
+						<img alt="" className="h-6 w-6 rounded-full" height={24} src="/lunio-logo.png" width={24} />
+						<span className="text-sm font-bold">Lunio</span>
+					</div>
+					<div className="dash-inset mb-3 mt-1 flex items-center gap-2 px-2 py-1.5">
+						<span className="h-6 w-6 rounded-md bg-secondary/30" />
+						<span className="text-xs font-semibold">Night Owls</span>
+					</div>
+					{['Overview', 'Playlists', 'Server Settings', 'Premium'].map((item, index) => (
+						<span className={`dash-nav-item h-8 text-xs ${index === 0 ? 'site-preview-active' : ''}`} key={item}>
+							<span className={`h-1.5 w-1.5 rounded-full ${index === 0 ? 'bg-primary' : 'bg-muted/50'}`} />
+							{item}
+						</span>
+					))}
+				</div>
+
+				<div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_14rem]">
+					<div className="grid gap-4">
+						<div className="dash-inset p-4">
+							<div className="flex gap-4">
+								<div className="site-preview-art h-20 w-20 shrink-0 rounded-lg sm:h-24 sm:w-24" />
+								<div className="min-w-0 flex-1">
+									<span className="dash-badge">
+										<span className="h-1.5 w-1.5 rounded-full bg-success" />
+										Playing
+									</span>
+									<div className="mt-2 truncate text-lg font-semibold">Midnight Drive</div>
+									<div className="truncate text-sm text-muted">Neon Arcade</div>
+									<div className="mt-4 h-1.5 rounded-full bg-[var(--dash-track)]">
+										<div className="h-full w-[42%] rounded-full bg-primary" />
+									</div>
+									<div className="mt-1.5 flex justify-between text-[11px] tabular-nums text-muted">
+										<span>1:34</span>
+										<span>3:42</span>
+									</div>
+								</div>
+							</div>
+							<div className="dash-divider mt-4 flex items-center justify-center gap-3 border-t pt-4">
+								<span className="h-7 w-7 rounded-md bg-[var(--dash-active)]" />
+								<span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
+									<span className="flex gap-[3px]">
+										<span className="h-3 w-[3px] rounded-sm bg-[rgb(var(--dash-on-primary))]" />
+										<span className="h-3 w-[3px] rounded-sm bg-[rgb(var(--dash-on-primary))]" />
+									</span>
+								</span>
+								<span className="h-7 w-7 rounded-md bg-[var(--dash-active)]" />
+							</div>
+						</div>
+						<div className="dash-inset">
+							<div className="px-4 py-2.5 text-xs font-semibold">Up Next</div>
+							{queue.map(([title, artist, duration], index) => (
+								<div className="dash-divider flex items-center gap-3 border-t px-4 py-2" key={title}>
+									<span className="w-3 text-[11px] tabular-nums text-muted">{index + 1}</span>
+									<span className="h-7 w-7 rounded bg-[var(--dash-active)]" />
+									<span className="min-w-0 flex-1">
+										<span className="block truncate text-xs font-medium">{title}</span>
+										<span className="block truncate text-[11px] text-muted">{artist}</span>
+									</span>
+									<span className="text-[11px] tabular-nums text-muted">{duration}</span>
+								</div>
+							))}
+						</div>
+					</div>
+					<div className="dash-inset hidden p-4 lg:block">
+						<div className="flex items-center justify-between">
+							<span className="text-xs font-semibold">Sound</span>
+							<span className="dash-badge dash-badge-secondary h-5 text-[10px]">Premium</span>
+						</div>
+						{[
+							['Bass Boost', '62%'],
+							['Speed', '50%'],
+						].map(([name, width]) => (
+							<div className="mt-4" key={name}>
+								<div className="text-[11px] font-medium">{name}</div>
+								<div className="mt-2 h-1.5 rounded-full bg-[var(--dash-track)]">
+									<div className="h-full rounded-full bg-primary" style={{ width }} />
+								</div>
+							</div>
+						))}
+						<div className="mt-4 grid grid-cols-2 gap-1.5">
+							{['Nightcore', 'Vaporwave'].map((filter, index) => (
+								<span
+									className={`rounded-md border px-2 py-1.5 text-center text-[10px] font-semibold ${
+										index === 0 ? 'border-primary/40 bg-primary/10 text-primary' : 'border-[var(--dash-border)]'
+									}`}
+									key={filter}
+								>
+									{filter}
+								</span>
+							))}
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+}
 
 export default function HomePage() {
+	const { language, messages } = useSiteLanguage();
+	const home = messages.home;
 	const [isInviteMenuOpen, setIsInviteMenuOpen] = useState(false);
+	const [stats, setStats] = useState<StatsResponse | null>(null);
+	const [statsState, setStatsState] = useState<'loading' | 'ready' | 'error'>('loading');
 	const inviteMenuRef = useRef<HTMLDivElement | null>(null);
+
+	useEffect(() => {
+		let active = true;
+		void apiJson<StatsResponse>('/api/stats')
+			.then((response) => {
+				if (!active) return;
+				setStats(response);
+				setStatsState('ready');
+			})
+			.catch(() => {
+				if (active) setStatsState('error');
+			});
+		return () => {
+			active = false;
+		};
+	}, []);
 
 	useEffect(() => {
 		if (!isInviteMenuOpen) return;
 
 		const handlePointerDown = (event: MouseEvent) => {
-			if (!inviteMenuRef.current?.contains(event.target as Node)) {
-				setIsInviteMenuOpen(false);
-			}
+			if (!inviteMenuRef.current?.contains(event.target as Node)) setIsInviteMenuOpen(false);
 		};
-
 		const handleEscape = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') {
-				setIsInviteMenuOpen(false);
-			}
+			if (event.key === 'Escape') setIsInviteMenuOpen(false);
 		};
 
 		document.addEventListener('mousedown', handlePointerDown);
 		document.addEventListener('keydown', handleEscape);
-
 		return () => {
 			document.removeEventListener('mousedown', handlePointerDown);
 			document.removeEventListener('keydown', handleEscape);
 		};
 	}, [isInviteMenuOpen]);
 
+	const statItems = stats
+		? [
+				{ label: home.statServers, value: stats.totalGuilds },
+				{ label: home.statUsers, value: stats.totalUsers },
+				{ label: home.statPlayers, value: stats.totalPlayers },
+			]
+		: [];
+	const features = [...home.featureCards, ...home.moreFeatures];
+
 	return (
-		<SiteShell currentPath="/" home>
-			<section className="relative overflow-hidden border-b border-white/6">
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(0,255,255,0.12),transparent_22%),radial-gradient(circle_at_72%_18%,rgba(255,91,189,0.12),transparent_20%),linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0))]" />
-				<div className="absolute inset-0 opacity-30 [background-image:radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:26px_26px]" />
+		<SiteShell currentPath="/">
+			<section className="site-hero relative overflow-hidden">
+				<div className="shell relative pb-16 pt-16 text-center sm:pt-24">
+					<p className="dash-badge mx-auto h-7 px-3 text-xs">{home.eyebrow}</p>
+					<h1 className="mx-auto mt-6 max-w-4xl font-headline text-4xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
+						{home.heroLead} <span className="text-primary">{home.heroHighlight}</span> {home.heroTail}
+					</h1>
+					<p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-muted sm:text-lg sm:leading-8">{home.heroCopy}</p>
 
-				<div className="shell relative z-10 py-16 sm:py-20 lg:py-24">
-					<div className="mx-auto max-w-5xl text-center">
-						<div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary shadow-[0_0_40px_rgba(0,255,255,0.16)]">
-							<svg
-								aria-hidden="true"
-								className="h-7 w-7"
-								fill="none"
-								stroke="currentColor"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth="1.8"
-								viewBox="0 0 24 24"
+					<div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+						<div className="relative" ref={inviteMenuRef}>
+							<button
+								aria-controls="invite-menu"
+								aria-expanded={isInviteMenuOpen}
+								aria-haspopup="menu"
+								className="dash-btn dash-btn-primary h-11 px-5 text-[0.9375rem]"
+								onClick={() => setIsInviteMenuOpen((current) => !current)}
+								type="button"
 							>
-								<path d="M8 8v8" />
-								<path d="M12 5v14" />
-								<path d="M16 8v8" />
-								<path d="M5 12h2" />
-								<path d="M17 12h2" />
-							</svg>
+								{home.inviteLunio}
+								<svg
+									aria-hidden="true"
+									className={`h-4 w-4 transition-transform duration-150 ${isInviteMenuOpen ? 'rotate-180' : ''}`}
+									fill="none"
+									stroke="currentColor"
+									strokeWidth={2}
+									viewBox="0 0 24 24"
+								>
+									<path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+								</svg>
+							</button>
+
+							{isInviteMenuOpen ? (
+								<div className="account-menu absolute left-1/2 top-[calc(100%+0.5rem)] z-30 w-72 -translate-x-1/2 p-1.5 text-left" id="invite-menu" role="menu">
+									{[
+										{ href: MAIN_INVITE_URL, title: 'Lunio', copy: home.inviteMainCopy },
+										{ href: SECONDARY_INVITE_URL, title: 'Lunio 2', copy: home.inviteSecondaryCopy },
+									].map((bot) => (
+										<a
+											className="account-menu-action grid h-auto gap-0.5 py-2.5"
+											href={bot.href}
+											key={bot.title}
+											rel="noreferrer"
+											role="menuitem"
+											target="_blank"
+										>
+											<span className="font-semibold" translate="no">
+												{bot.title}
+											</span>
+											<span className="text-xs font-normal text-muted">{bot.copy}</span>
+										</a>
+									))}
+								</div>
+							) : null}
 						</div>
 
-						<h1 className="mx-auto mt-10 max-w-4xl font-headline text-6xl font-bold leading-[0.92] tracking-[-0.08em] text-white sm:text-7xl lg:text-[5.9rem]">
-							Control the
-							<span className="block bg-gradient-to-r from-primary via-cyan-100 to-white bg-clip-text text-transparent">Future of Discord Music.</span>
-						</h1>
+						<Link className="dash-btn h-11 px-5 text-[0.9375rem]" href="/servers" prefetch={false}>
+							{home.openDashboard}
+						</Link>
+					</div>
 
-						<p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-white/58 sm:text-xl">
-							Lunio brings the player, dashboard, custom channel setup, premium controls, and server management into one focused control room without the usual
-							clutter.
-						</p>
-
-						<div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-							<div className="relative" ref={inviteMenuRef}>
-								<button
-									aria-expanded={isInviteMenuOpen}
-									aria-haspopup="menu"
-									className="primary-button min-w-[12rem] gap-3"
-									onClick={() => setIsInviteMenuOpen((current) => !current)}
-									type="button"
-								>
-									Invite
-									<svg
-										aria-hidden="true"
-										className={`h-4 w-4 transition ${isInviteMenuOpen ? 'rotate-180' : ''}`}
-										fill="none"
-										stroke="currentColor"
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth="2"
-										viewBox="0 0 24 24"
-									>
-										<path d="m6 9 6 6 6-6" />
-									</svg>
-								</button>
-
-								{isInviteMenuOpen ? (
-									<div className="absolute left-1/2 top-[calc(100%+0.85rem)] z-30 w-[min(92vw,22rem)] -translate-x-1/2 rounded-[1.4rem] border border-white/10 bg-[rgba(12,13,16,0.96)] p-3 text-left shadow-[0_24px_80px_rgba(0,0,0,0.34)] backdrop-blur-xl">
-										<a
-											className="block rounded-[1.1rem] border border-primary/15 bg-primary/10 px-4 py-4 transition hover:border-primary/25 hover:bg-primary/14"
-											href={MAIN_INVITE_URL}
-											rel="noreferrer"
-											target="_blank"
-										>
-											<div className="text-sm font-bold text-white">Invite Lunio</div>
-											<div className="mt-1 text-sm leading-6 text-white/52">Main production bot for most servers.</div>
-										</a>
-										<a
-											className="mt-3 block rounded-[1.1rem] border border-white/10 bg-white/[0.03] px-4 py-4 transition hover:border-secondary/25 hover:bg-white/[0.05]"
-											href={SECONDARY_INVITE_URL}
-											rel="noreferrer"
-											target="_blank"
-										>
-											<div className="text-sm font-bold text-white">Invite Lunio 2</div>
-											<div className="mt-1 text-sm leading-6 text-white/52">Secondary instance when you want the alternate bot.</div>
-										</a>
+					<div aria-busy={statsState === 'loading'} className="mx-auto mt-12 min-h-[4.5rem] max-w-2xl">
+						{statsState === 'loading' ? (
+							<div aria-hidden="true" className="grid grid-cols-3 gap-6">
+								{[0, 1, 2].map((index) => (
+									<div className="grid justify-items-center gap-2" key={index}>
+										<div className="skeleton h-8 w-20" />
+										<div className="skeleton h-3.5 w-24" />
 									</div>
-								) : null}
+								))}
 							</div>
-							<a className="ghost-button min-w-[12rem]" href="/servers">
-								Open Dashboard
-							</a>
-						</div>
-
-						<div className="mt-14 text-[11px] font-extrabold uppercase tracking-[0.28em] text-white/28">Explore the platform</div>
-						<div className="mt-3 text-white/28">
-							<svg
-								aria-hidden="true"
-								className="mx-auto h-5 w-5"
-								fill="none"
-								stroke="currentColor"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth="1.8"
-								viewBox="0 0 24 24"
-							>
-								<path d="m7 10 5 5 5-5" />
-							</svg>
-						</div>
+						) : statItems.length ? (
+							<dl className="grid grid-cols-3 gap-6">
+								{statItems.map((item) => (
+									<div className="grid" key={item.label}>
+										<dt className="order-2 mt-1 text-sm text-muted">{item.label}</dt>
+										<dd className="order-1 font-headline text-2xl font-bold tabular-nums sm:text-3xl">{formatStat(item.value, language)}</dd>
+									</div>
+								))}
+							</dl>
+						) : null}
 					</div>
 
-					<div className="mt-16 grid gap-4 lg:grid-cols-3">
-						{heroStats.map((stat) => (
-							<article className="rounded-[1.8rem] border border-white/8 bg-white/[0.03] p-6 shadow-[0_24px_70px_rgba(0,0,0,0.2)]" key={stat.label}>
-								<div className="text-xs font-extrabold uppercase tracking-[0.22em] text-white/35">{stat.label}</div>
-								<div className={`mt-4 font-headline text-5xl font-bold tracking-[-0.08em] ${stat.tone}`}>{stat.value}</div>
-								<p className="mt-4 max-w-xs text-sm leading-7 text-white/52">{stat.copy}</p>
-							</article>
-						))}
+					<div className="mx-auto mt-14 max-w-5xl text-left">
+						<DashboardPreview label={home.previewLabel} />
 					</div>
 				</div>
 			</section>
 
-			<section className="py-20 lg:py-24">
-				<div className="shell">
-					<div className="grid gap-10 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.1fr)] xl:items-start">
-						<div className="max-w-xl">
-							<div className="text-xs font-extrabold uppercase tracking-[0.24em] text-white/32">Why Lunio</div>
-							<h2 className="mt-6 font-headline text-5xl font-bold tracking-[-0.07em] text-white sm:text-6xl">
-								Precision for the
-								<span className="block text-secondary">modern music server.</span>
-							</h2>
-							<p className="mt-6 text-base leading-8 text-white/55">
-								Lunio is not trying to be every kind of Discord bot at once. The site, dashboard, music flow, and setup experience are all designed around one goal:
-								making server music control feel polished, responsive, and easy to trust.
-							</p>
-						</div>
+			<section aria-labelledby="features-heading" className="shell py-20">
+				<div className="max-w-2xl">
+					<p className="text-sm font-semibold text-primary">{home.whatCovers}</p>
+					<h2 className="mt-3 font-headline text-3xl font-bold tracking-tight sm:text-4xl" id="features-heading">
+						{home.coversHeading}
+					</h2>
+					<p className="mt-4 text-base leading-7 text-muted">{home.coversCopy}</p>
+				</div>
 
-						<div className="grid gap-4 md:grid-cols-2">
-							{featureCards.map((card, index) => (
-								<article
-									className={`rounded-[1.8rem] border border-white/8 p-6 shadow-[0_22px_60px_rgba(0,0,0,0.18)] ${
-										index === 3
-											? 'bg-[linear-gradient(180deg,rgba(35,9,26,0.92),rgba(19,15,24,0.9))]'
-											: 'bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.02))]'
-									}`}
-									key={card.title}
-								>
-									<div className={`text-xs font-extrabold uppercase tracking-[0.22em] ${index === 3 ? 'text-secondary' : 'text-primary'}`}>{card.eyebrow}</div>
-									<h3 className="mt-5 font-headline text-3xl font-bold tracking-[-0.05em] text-white">{card.title}</h3>
-									<p className="mt-4 text-sm leading-7 text-white/55">{card.copy}</p>
-								</article>
-							))}
-						</div>
-					</div>
+				<div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+					{features.map((feature, index) => (
+						<article className="dash-card p-6" key={feature.title}>
+							<span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+								<FeatureIcon name={FEATURE_ICONS[index] ?? 'control'} />
+							</span>
+							<h3 className="mt-5 text-base font-semibold">{feature.title}</h3>
+							<p className="mt-2 text-sm leading-6 text-muted">{feature.copy}</p>
+						</article>
+					))}
 				</div>
 			</section>
 
-			<section className="pb-20 lg:pb-24">
-				<div className="shell">
-					<div className="mx-auto max-w-5xl rounded-[2.25rem] border border-white/8 bg-[linear-gradient(135deg,rgba(255,255,255,0.03),rgba(255,91,189,0.06))] px-6 py-10 text-center shadow-[0_28px_90px_rgba(0,0,0,0.2)] sm:px-10 sm:py-14">
-						<div className="text-xs font-extrabold uppercase tracking-[0.24em] text-white/32">Community</div>
-						<h2 className="mt-6 font-headline text-5xl font-bold tracking-[-0.06em] text-white sm:text-6xl">
-							Built with the
-							<span className="text-secondary"> community.</span>
-						</h2>
-						<p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-white/58">
-							Join the Lunio support server to get early access to improvements, follow dashboard updates, and help shape the next layer of the product.
-						</p>
-						<div className="mt-10 flex justify-center">
-							<a className="ghost-button min-w-[15rem]" href="https://discord.gg/rrqEFukVUZ" rel="noreferrer" target="_blank">
-								Join Official Support Server
-							</a>
-						</div>
+			<section aria-labelledby="steps-heading" className="shell py-20">
+				<div className="max-w-2xl">
+					<p className="text-sm font-semibold text-primary">{home.stepsEyebrow}</p>
+					<h2 className="mt-3 font-headline text-3xl font-bold tracking-tight sm:text-4xl" id="steps-heading">
+						{home.stepsHeading}
+					</h2>
+				</div>
+				<ol className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+					{home.steps.map((step, index) => (
+						<li className="dash-card p-6" key={step.title}>
+							<span className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--dash-border-strong)] text-sm font-semibold tabular-nums">
+								{index + 1}
+							</span>
+							<h3 className="mt-5 text-base font-semibold">{step.title}</h3>
+							<p className="mt-2 text-sm leading-6 text-muted">{step.copy}</p>
+						</li>
+					))}
+				</ol>
+			</section>
+
+			<section className="shell pt-8">
+				<div className="dash-card site-cta flex flex-col items-start justify-between gap-6 p-8 sm:p-10 lg:flex-row lg:items-center">
+					<div className="max-w-xl">
+						<h2 className="font-headline text-2xl font-bold tracking-tight sm:text-3xl">{home.ctaHeading}</h2>
+						<p className="mt-3 text-base leading-7 text-muted">{home.ctaCopy}</p>
+					</div>
+					<div className="flex flex-wrap gap-3">
+						<Link className="dash-btn dash-btn-primary h-11 px-5" href="/servers" prefetch={false}>
+							{home.openDashboard}
+						</Link>
+						<a className="dash-btn h-11 px-5" href={SUPPORT_SERVER_URL} rel="noreferrer" target="_blank">
+							{home.joinSupport}
+						</a>
 					</div>
 				</div>
 			</section>
