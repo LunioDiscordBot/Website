@@ -7,7 +7,8 @@
 		"build": "next build",
 		"start": "next start --port 25094",
 		"lint": "next lint",
-		"format": "prettier --write ."
+		"format": "prettier --write .",
+		"zip": "git fetch origin main && git archive --format=zip -o ../lunio-web-main.zip origin/main"
 	},
 	"dependencies": {
 		"clsx": "^2.1.1",
