@@ -4,9 +4,11 @@ import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
 import { apiJson, type AuthUser } from '@/lib/api';
 import { buildDashboardPath } from '@/lib/dashboard-routes';
+import { DashboardMiniPlayerBar } from './dashboard-mini-player-bar';
+import { useDashboardPlayerOptional } from './dashboard-player-provider';
 
 type DashboardWorkspaceShellProps = {
-	activeKey: 'overview' | 'servers' | 'guild-settings' | 'account-settings' | 'playlists';
+	activeKey: 'overview' | 'servers' | 'guild-settings' | 'account-settings' | 'playlists' | 'premium';
 	title: string;
 	subtitle?: string;
 	botId?: string | null;
@@ -14,13 +16,15 @@ type DashboardWorkspaceShellProps = {
 	canManageGuild?: boolean;
 	headerActions?: ReactNode;
 	children: ReactNode;
+	/** Pass true on pages that render their own full player UI (e.g. Overview). */
+	hideMiniPlayerBar?: boolean;
 };
 
 type SidebarLink = {
 	key: Exclude<DashboardWorkspaceShellProps['activeKey'], 'servers'> | 'home' | 'commands' | 'status' | 'support';
 	label: string;
 	caption: string;
-	icon: 'home' | 'overview' | 'settings' | 'playlists' | 'commands' | 'status' | 'account' | 'support' | 'collapse' | 'chevron';
+	icon: 'home' | 'overview' | 'settings' | 'playlists' | 'premium' | 'commands' | 'status' | 'account' | 'support' | 'collapse' | 'chevron';
 	href?: string;
 	active?: boolean;
 	disabled?: boolean;
@@ -82,6 +86,14 @@ function DashboardSidebarIcon({ name, className = 'h-5 w-5' }: { name: SidebarLi
 					<path d="M17 17a2 2 0 1 1-2-2 2 2 0 0 1 2 2Z" />
 				</svg>
 			);
+		case 'premium':
+			return (
+				<svg {...sharedProps}>
+					<path d="m12 3.75 7.25 7.25L12 20.25 4.75 11 12 3.75Z" />
+					<path d="M8.25 11h7.5" />
+					<path d="m10.25 7.25 1.75 3.75 1.75-3.75" />
+				</svg>
+			);
 		case 'commands':
 			return (
 				<svg {...sharedProps}>
@@ -128,7 +140,8 @@ function DashboardSidebarIcon({ name, className = 'h-5 w-5' }: { name: SidebarLi
 	}
 }
 
-export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, guildId, canManageGuild, headerActions, children }: DashboardWorkspaceShellProps) {
+export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, guildId, canManageGuild, headerActions, children, hideMiniPlayerBar }: DashboardWorkspaceShellProps) {
+	const dashboardPlayer = useDashboardPlayerOptional();
 	const [authUser, setAuthUser] = useState<AuthUser | null>(null);
 	const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 	const [showSidebarNotice, setShowSidebarNotice] = useState(true);
@@ -179,6 +192,7 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 	const accountHandle = authUser?.username ? `@${authUser.username}` : 'Profile & preferences';
 	const canOpenOverview = Boolean(effectiveBotId && effectiveGuildId);
 	const canOpenGuildSettings = Boolean(effectiveBotId && effectiveGuildId) && (canManageGuild !== false || activeKey === 'guild-settings');
+	const hasMiniPlayerBar = !hideMiniPlayerBar && Boolean(dashboardPlayer?.hasIdentity && dashboardPlayer.player?.currentTrack);
 	const sidebarPrimaryLinks: SidebarLink[] = [
 		{
 			key: 'home',
@@ -209,11 +223,20 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 		{
 			key: 'playlists',
 			label: 'Playlists',
-			caption: 'Coming soon',
+			caption: canOpenOverview ? 'Saved queues' : 'Pick a server first',
 			icon: 'playlists',
+			href: canOpenOverview ? buildDashboardPath(effectiveBotId, effectiveGuildId, 'playlists') : undefined,
 			active: activeKey === 'playlists',
-			disabled: true,
-			comingSoon: true,
+			disabled: !canOpenOverview,
+		},
+		{
+			key: 'premium',
+			label: 'Premium',
+			caption: canOpenGuildSettings ? 'Billing & access' : 'Requires Manage Guild',
+			icon: 'premium',
+			href: canOpenGuildSettings ? buildDashboardPath(effectiveBotId, effectiveGuildId, 'premium') : undefined,
+			active: activeKey === 'premium',
+			disabled: !canOpenGuildSettings,
 		},
 	];
 	const sidebarExploreLinks: SidebarLink[] = [
@@ -452,7 +475,10 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 					</div>
 				</aside>
 
-				<main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto [scrollbar-gutter:stable] bg-[radial-gradient(circle_at_top,rgba(0,255,255,0.08),transparent_28%),radial-gradient(circle_at_75%_10%,rgba(112,0,255,0.12),transparent_20%),linear-gradient(180deg,rgba(255,255,255,0.015),rgba(255,255,255,0))]">
+				<main
+					className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto [scrollbar-gutter:stable] bg-[radial-gradient(circle_at_top,rgba(0,255,255,0.08),transparent_28%),radial-gradient(circle_at_75%_10%,rgba(112,0,255,0.12),transparent_20%),linear-gradient(180deg,rgba(255,255,255,0.015),rgba(255,255,255,0))]"
+					style={{ scrollPaddingBottom: hasMiniPlayerBar ? '10rem' : undefined }}
+				>
 					<header className="sticky top-0 z-10 border-b border-white/7 bg-[rgba(9,10,12,0.72)] px-5 py-4 backdrop-blur-xl sm:px-6 lg:px-8">
 						<div className="mx-auto flex w-full max-w-[1520px] flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
 							<div className="min-w-0">
@@ -492,11 +518,12 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 						</div>
 					</header>
 
-					<div className="px-5 py-5 sm:px-6 lg:px-8 lg:py-6">
+					<div className="px-5 pb-5 pt-5 sm:px-6 lg:px-8 lg:pb-6 lg:pt-6" style={{ paddingBottom: hasMiniPlayerBar ? '10rem' : undefined }}>
 						<div className="mx-auto w-full max-w-[1520px]">{children}</div>
 					</div>
 				</main>
 			</div>
+			{hideMiniPlayerBar ? null : <DashboardMiniPlayerBar />}
 		</div>
 	);
 }

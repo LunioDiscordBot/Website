@@ -5,6 +5,7 @@ import { buildDashboardPath } from '@/lib/dashboard-routes';
 import { getPreferredBotId as getPreferredBotFromList } from '@/lib/bot-preference';
 import { DashboardRouteState } from '@/components/dashboard-route-state';
 import { DashboardPlayerLayout } from './dashboard-player-layout';
+import { useDashboardPlayerOptional } from './dashboard-player-provider';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -534,6 +535,7 @@ function buildQueueSyncedPlayerState(current: GuildPlayerState | null, payload: 
 
 export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFromQuery?: string; guildIdFromQuery?: string }) {
 	const router = useRouter();
+	const sharedDashboardPlayer = useDashboardPlayerOptional();
 	const [form, setForm] = useState<DashboardState>(DEFAULT_STATE);
 	const [botOptions, setBotOptions] = useState<Array<{ botId: string; label: string; avatarUrl?: string | null }>>([]);
 	const [guildOptions, setGuildOptions] = useState<AuthGuild[]>([]);
@@ -725,6 +727,54 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 		setCommandFeedback(DEFAULT_COMMAND_FEEDBACK);
 		setLastKnownRequesterPermissions(null);
 	}, [form.botId, form.guildId]);
+
+	useEffect(() => {
+		if (isScrubbing) return;
+
+		const sharedPlayerState = sharedDashboardPlayer?.player ?? null;
+		const currentBotId = form.botId.trim();
+		const currentGuildId = form.guildId.trim();
+		if (
+			!sharedPlayerState?.currentTrack ||
+			!currentBotId ||
+			!currentGuildId ||
+			sharedDashboardPlayer?.botId !== currentBotId ||
+			sharedDashboardPlayer?.guildId !== currentGuildId
+		) {
+			return;
+		}
+
+		const sharedDuration = sharedPlayerState.currentTrack.duration ?? 0;
+		const sharedPosition = Math.max(0, Number(sharedDashboardPlayer.displayPosition ?? 0));
+		const boundedSharedPosition = sharedDuration > 0 ? Math.min(sharedPosition, sharedDuration) : sharedPosition;
+		const localTrackChanged = getTrackIdentity(player?.currentTrack) !== getTrackIdentity(sharedPlayerState.currentTrack);
+		const localLivePosition = player?.currentTrack ? getLivePlayerPosition(player, player.currentTrack.duration ?? 0) : displayPosition;
+		const localIsBehindSharedPlayer = boundedSharedPosition > localLivePosition + 1500;
+
+		if (player?.currentTrack && !localTrackChanged && !localIsBehindSharedPlayer) {
+			return;
+		}
+
+		setPlayer({
+			...sharedPlayerState,
+			position: boundedSharedPosition,
+			updatedAt: Date.now(),
+		});
+		setPlayerError(sharedDashboardPlayer.playerError);
+		setDisplayPosition(boundedSharedPosition);
+		setScrubValue(boundedSharedPosition);
+	}, [
+		displayPosition,
+		form.botId,
+		form.guildId,
+		isScrubbing,
+		player,
+		sharedDashboardPlayer?.botId,
+		sharedDashboardPlayer?.displayPosition,
+		sharedDashboardPlayer?.guildId,
+		sharedDashboardPlayer?.player,
+		sharedDashboardPlayer?.playerError,
+	]);
 
 	useEffect(() => {
 		const requester = guildMetadata?.requester;
@@ -1139,6 +1189,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 	);
 
 	const resetSearchState = useCallback(() => {
+		setSearchQuery('');
 		setSearchError(null);
 		setSearchPlaylist(null);
 		setSearchResults([]);

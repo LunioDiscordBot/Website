@@ -5,12 +5,13 @@ import { Spinner } from '@/components/spinner';
 import { useSiteLanguage } from '@/components/site-language-provider';
 import { buildDashboardPath, buildInvitePath } from '@/lib/dashboard-routes';
 import { getPreferredBotId as getPreferredBotFromList } from '@/lib/bot-preference';
-import { useEffect, useState } from 'react';
-import { apiJson, type AuthGuildsResponse, type BotsResponse } from '@/lib/api';
+import { useEffect, useRef, useState } from 'react';
+import { API_BASE_URL, API_PREFIX, apiJson, type AuthGuildsResponse, type BotsResponse } from '@/lib/api';
 
 const BOT_STORAGE_KEY = 'lunio:web:botId';
 const SERVER_CACHE_KEY = 'lunio:web:servers-cache';
 const SERVER_CACHE_MAX_AGE_MS = 1000 * 60 * 5;
+const SERVER_SKELETON_MIN_MS = 700;
 
 type ServerPickerCache = {
 	botOptions: Array<{ botId: string; label: string }>;
@@ -33,6 +34,18 @@ export function ServersClient() {
 	const [showSkeleton, setShowSkeleton] = useState(false);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
+	const skeletonTimerRef = useRef<number | null>(null);
+
+	const playSkeleton = () => {
+		if (skeletonTimerRef.current) {
+			window.clearTimeout(skeletonTimerRef.current);
+		}
+		setShowSkeleton(true);
+		skeletonTimerRef.current = window.setTimeout(() => {
+			setShowSkeleton(false);
+			skeletonTimerRef.current = null;
+		}, SERVER_SKELETON_MIN_MS);
+	};
 
 	const persistCache = (nextCache: ServerPickerCache) => {
 		window.sessionStorage.setItem(SERVER_CACHE_KEY, JSON.stringify(nextCache));
@@ -89,6 +102,7 @@ export function ServersClient() {
 		setSelectedBotId(savedBotId);
 		const activeRef = { current: true };
 		const cached = readCache();
+		playSkeleton();
 
 		if (cached) {
 			setBotOptions(cached.botOptions);
@@ -105,17 +119,12 @@ export function ServersClient() {
 
 		return () => {
 			activeRef.current = false;
+			if (skeletonTimerRef.current) {
+				window.clearTimeout(skeletonTimerRef.current);
+				skeletonTimerRef.current = null;
+			}
 		};
 	}, []);
-
-	useEffect(() => {
-		if (!isRefreshing || guilds.length > 0) {
-			setShowSkeleton(false);
-			return;
-		}
-		const timer = window.setTimeout(() => setShowSkeleton(true), 300);
-		return () => window.clearTimeout(timer);
-	}, [isRefreshing, guilds.length]);
 
 	useEffect(() => {
 		const onFocus = () => {
@@ -142,6 +151,7 @@ export function ServersClient() {
 
 	const refreshServerPicker = async () => {
 		const activeRef = { current: true };
+		playSkeleton();
 		await loadServerPickerData(activeRef);
 	};
 
@@ -269,7 +279,7 @@ export function ServersClient() {
 						<div className="text-sm leading-7 text-muted">{messages.servers.unauthorized}</div>
 						<a
 							className="secondary-button mt-5"
-							href={`${process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || 'https://api.luniobot.com'}/v1/auth/discord/login`}
+							href={`${API_BASE_URL}${API_PREFIX}/auth/discord/login?remember=1&returnTo=${encodeURIComponent('/servers')}`}
 						>
 							Sign in with Discord
 						</a>

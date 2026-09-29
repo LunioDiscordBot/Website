@@ -31,7 +31,7 @@ type SelectMenuPosition = {
 type PlayerAction = 'join' | 'leave' | 'previous' | 'skip' | 'shuffle' | 'repeat' | 'pause' | 'resume' | 'stop';
 type PremiumAction = 'autoplay' | 'bassboost' | 'speed' | 'filter' | 'filter/reset';
 type PlayerIconName = 'previous' | 'pause' | 'play' | 'skip' | 'shuffle' | 'repeat' | 'stop' | 'leave' | 'close';
-type DashboardSidebarIconName = 'home' | 'overview' | 'servers' | 'settings' | 'playlists' | 'commands' | 'status' | 'account' | 'support' | 'chevron' | 'collapse';
+type DashboardSidebarIconName = 'home' | 'overview' | 'servers' | 'settings' | 'playlists' | 'premium' | 'commands' | 'status' | 'account' | 'support' | 'chevron' | 'collapse';
 type SidebarLink = {
 	label: string;
 	caption: string;
@@ -201,6 +201,14 @@ function DashboardSidebarIcon({ name, className = 'h-5 w-5' }: { name: Dashboard
 					<path d="M8 14h6" />
 					<path d="M7 18a2 2 0 1 1-2-2 2 2 0 0 1 2 2Z" />
 					<path d="M17 17a2 2 0 1 1-2-2 2 2 0 0 1 2 2Z" />
+				</svg>
+			);
+		case 'premium':
+			return (
+				<svg {...sharedProps}>
+					<path d="m12 3.75 7.25 7.25L12 20.25 4.75 11 12 3.75Z" />
+					<path d="M8.25 11h7.5" />
+					<path d="m10.25 7.25 1.75 3.75 1.75-3.75" />
 				</svg>
 			);
 		case 'commands':
@@ -394,6 +402,8 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 
 	const overviewHref = buildDashboardPath(formBotId, formGuildId);
 	const guildSettingsHref = buildDashboardPath(formBotId, formGuildId, 'settings');
+	const playlistsHref = buildDashboardPath(formBotId, formGuildId, 'playlists');
+	const premiumHref = buildDashboardPath(formBotId, formGuildId, 'premium');
 	const accountDisplayName = authUser ? authUser.globalName || authUser.username : 'Dashboard guest';
 	const accountHandle = authUser?.username ? `@${authUser.username}` : 'Profile & preferences';
 	const searchDisabledReason = !authUser
@@ -528,7 +538,11 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 		premiumStudio.scrollIntoView({ behavior: 'smooth', block: 'start' });
 		window.history.replaceState(null, '', '#premium-studio');
 	};
-	const openSearchModal = () => setIsSearchModalOpen(true);
+	const openSearchModal = () => {
+		lastAutoSearchQueryRef.current = '';
+		onSearchReset();
+		setIsSearchModalOpen(true);
+	};
 	const closeSearchModal = () => setIsSearchModalOpen(false);
 
 	const sidebarPrimaryLinks: SidebarLink[] = [
@@ -541,7 +555,14 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 			href: selectedGuild?.canManage ? guildSettingsHref : undefined,
 			disabled: !selectedGuild?.canManage,
 		},
-		{ label: 'Playlists', caption: 'Coming soon', icon: 'playlists', disabled: true, comingSoon: true },
+		{ label: 'Playlists', caption: 'Saved queues', icon: 'playlists', href: playlistsHref },
+		{
+			label: 'Premium',
+			caption: selectedGuild?.canManage ? 'Billing & access' : 'Requires Manage Guild',
+			icon: 'premium',
+			href: selectedGuild?.canManage ? premiumHref : undefined,
+			disabled: !selectedGuild?.canManage,
+		},
 	];
 	const sidebarExploreLinks: SidebarLink[] = [
 		{ label: 'Commands', caption: 'Public docs', icon: 'commands', href: '/commands' },
@@ -874,7 +895,7 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 												<div className={stageInfoChipClass}>
 													Queue · {queueCount} {queueCount === 1 ? 'track' : 'tracks'}
 												</div>
-												<div className={stageInfoChipClass}>Duration · {formatDuration(queueDuration)}</div>
+												<div className={stageInfoChipClass}>Duration · {formatDuration((currentTrack ? trackDuration : 0) + queueDuration)}</div>
 												<div className={repeatModeChipClass}>Repeat · {(player?.repeatMode ?? 'off').toUpperCase()}</div>
 											</div>
 

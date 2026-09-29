@@ -1,54 +1,52 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { LandingShader } from '@/components/landing-shader';
 import { SiteShell } from '@/components/site-shell';
 
 const MAIN_INVITE_URL = 'https://discord.com/oauth2/authorize?client_id=945030475779551415&scope=bot+applications.commands&permissions=8';
 const SECONDARY_INVITE_URL = 'https://discord.com/oauth2/authorize?client_id=945474723846950944&scope=bot+applications.commands&permissions=8';
 
 const heroStats = [
-	{
-		label: 'Live reach',
-		value: '3K+',
-		copy: 'Guilds already running Lunio across the live music network.',
-		tone: 'text-primary',
-	},
-	{
-		label: 'Realtime latency',
-		value: '14ms',
-		copy: 'Average response target across the current live playback stack.',
-		tone: 'text-white',
-	},
-	{
-		label: 'Dual production bots',
-		value: '2',
-		copy: 'Lunio and Lunio 2 sharing one connected dashboard ecosystem.',
-		tone: 'text-secondary',
-	},
+	{ label: 'Servers', value: '3K+', detail: 'connected across the live network' },
+	{ label: 'Latency', value: '14ms', detail: 'target for realtime playback updates' },
+	{ label: 'Bots', value: '2', detail: 'production instances in one dashboard' },
 ];
 
 const featureCards = [
 	{
-		eyebrow: 'Live player',
-		title: 'Realtime control room',
-		copy: 'Transport controls, queue management, repeat, volume, autoplay, and premium tuning all mirror the live bot session.',
+		eyebrow: 'Live room',
+		title: 'Playback that feels immediate',
+		copy: 'Control queue, repeat, volume, autoplay, filters, and player state from a dashboard surface that mirrors the bot.',
 	},
 	{
-		eyebrow: 'Custom channels',
-		title: 'Dedicated request surfaces',
-		copy: 'Give every server its own music panel with modern embed modes, clean queue entry, and proper setup handling.',
-	},
-	{
-		eyebrow: 'Web dashboard',
-		title: 'Server settings without the clutter',
-		copy: 'Guild settings, account preferences, server picker, and future playlists all live in one focused workspace.',
+		eyebrow: 'Setup',
+		title: 'Server tools without the maze',
+		copy: 'Pick a server, configure request channels, tune defaults, and hand off permissions without leaving the workspace.',
 	},
 	{
 		eyebrow: 'Premium',
-		title: 'Studio controls when you need them',
-		copy: 'Nightcore, vaporwave, bassboost, speed control, autoplay, 24/7 mode, and the premium workflow are already built into the platform.',
+		title: 'Studio controls stay close',
+		copy: 'Bassboost, speed, nightcore, vaporwave, 24/7 mode, and premium checks are surfaced where admins already work.',
 	},
 ];
+
+const timelineItems = [
+	['01', 'Authorize with Discord'],
+	['02', 'Choose a shared server'],
+	['03', 'Open the live control room'],
+	['04', 'Tune playback and settings'],
+];
+
+function Equalizer() {
+	return (
+		<div aria-hidden="true" className="landing-eq">
+			{Array.from({ length: 18 }).map((_, index) => (
+				<span key={index} style={{ animationDelay: `${index * -80}ms` }} />
+			))}
+		</div>
+	);
+}
 
 export default function HomePage() {
 	const [isInviteMenuOpen, setIsInviteMenuOpen] = useState(false);
@@ -80,176 +78,202 @@ export default function HomePage() {
 
 	return (
 		<SiteShell currentPath="/" home>
-			<section className="relative overflow-hidden border-b border-white/6">
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(0,255,255,0.12),transparent_22%),radial-gradient(circle_at_72%_18%,rgba(255,91,189,0.12),transparent_20%),linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0))]" />
-				<div className="absolute inset-0 opacity-30 [background-image:radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:26px_26px]" />
+			<div className="landing-stage">
+				<LandingShader />
+				<div className="landing-noise" />
+				<nav aria-label="Landing sections" className="landing-section-rail">
+					<a href="#overview">01</a>
+					<a href="#experience">02</a>
+					<a href="#flow">03</a>
+				</nav>
 
-				<div className="shell relative z-10 py-16 sm:py-20 lg:py-24">
-					<div className="mx-auto max-w-5xl text-center">
-						<div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary shadow-[0_0_40px_rgba(0,255,255,0.16)]">
-							<svg
-								aria-hidden="true"
-								className="h-7 w-7"
-								fill="none"
-								stroke="currentColor"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth="1.8"
-								viewBox="0 0 24 24"
-							>
-								<path d="M8 8v8" />
-								<path d="M12 5v14" />
-								<path d="M16 8v8" />
-								<path d="M5 12h2" />
-								<path d="M17 12h2" />
-							</svg>
-						</div>
-
-						<h1 className="mx-auto mt-10 max-w-4xl font-headline text-6xl font-bold leading-[0.92] tracking-[-0.08em] text-white sm:text-7xl lg:text-[5.9rem]">
-							Control the
-							<span className="block bg-gradient-to-r from-primary via-cyan-100 to-white bg-clip-text text-transparent">Future of Discord Music.</span>
-						</h1>
-
-						<p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-white/58 sm:text-xl">
-							Lunio brings the player, dashboard, custom channel setup, premium controls, and server management into one focused control room without the usual
-							clutter.
-						</p>
-
-						<div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-							<div className="relative" ref={inviteMenuRef}>
-								<button
-									aria-expanded={isInviteMenuOpen}
-									aria-haspopup="menu"
-									className="primary-button min-w-[12rem] gap-3"
-									onClick={() => setIsInviteMenuOpen((current) => !current)}
-									type="button"
-								>
-									Invite
-									<svg
-										aria-hidden="true"
-										className={`h-4 w-4 transition ${isInviteMenuOpen ? 'rotate-180' : ''}`}
-										fill="none"
-										stroke="currentColor"
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth="2"
-										viewBox="0 0 24 24"
-									>
-										<path d="m6 9 6 6 6-6" />
-									</svg>
-								</button>
-
-								{isInviteMenuOpen ? (
-									<div className="absolute left-1/2 top-[calc(100%+0.85rem)] z-30 w-[min(92vw,22rem)] -translate-x-1/2 rounded-[1.4rem] border border-white/10 bg-[rgba(12,13,16,0.96)] p-3 text-left shadow-[0_24px_80px_rgba(0,0,0,0.34)] backdrop-blur-xl">
-										<a
-											className="block rounded-[1.1rem] border border-primary/15 bg-primary/10 px-4 py-4 transition hover:border-primary/25 hover:bg-primary/14"
-											href={MAIN_INVITE_URL}
-											rel="noreferrer"
-											target="_blank"
-										>
-											<div className="text-sm font-bold text-white">Invite Lunio</div>
-											<div className="mt-1 text-sm leading-6 text-white/52">Main production bot for most servers.</div>
-										</a>
-										<a
-											className="mt-3 block rounded-[1.1rem] border border-white/10 bg-white/[0.03] px-4 py-4 transition hover:border-secondary/25 hover:bg-white/[0.05]"
-											href={SECONDARY_INVITE_URL}
-											rel="noreferrer"
-											target="_blank"
-										>
-											<div className="text-sm font-bold text-white">Invite Lunio 2</div>
-											<div className="mt-1 text-sm leading-6 text-white/52">Secondary instance when you want the alternate bot.</div>
-										</a>
-									</div>
-								) : null}
+				<section className="landing-section landing-hero" id="overview">
+					<div className="shell grid min-h-[calc(100svh-5rem)] gap-10 py-10 lg:grid-cols-[minmax(0,0.92fr)_minmax(24rem,1.08fr)] lg:items-center lg:py-14">
+						<div className="relative z-10 max-w-3xl">
+							<div className="landing-kicker">
+								<span className="landing-kicker-dot" />
+								Realtime Discord music control
 							</div>
-							<a className="ghost-button min-w-[12rem]" href="/servers">
-								Open Dashboard
-							</a>
+
+							<h1 className="mt-7 max-w-4xl font-headline text-5xl font-bold leading-[0.94] tracking-[-0.055em] text-white sm:text-7xl lg:text-[5.7rem]">
+								Lunio feels like a control room, not a command list.
+							</h1>
+
+							<p className="mt-7 max-w-2xl text-base leading-8 text-white/64 sm:text-lg">
+								A polished dashboard for music playback, server setup, premium controls, and live state. Fast enough for admins, clear enough for everyone else.
+							</p>
+
+							<div className="mt-9 flex flex-wrap items-center gap-3">
+								<div className="relative" ref={inviteMenuRef}>
+									<button
+										aria-expanded={isInviteMenuOpen}
+										aria-haspopup="menu"
+										className="landing-primary-action"
+										onClick={() => setIsInviteMenuOpen((current) => !current)}
+										type="button"
+									>
+										Invite Lunio
+										<span aria-hidden="true" className={isInviteMenuOpen ? 'rotate-180 transition' : 'transition'}>
+											v
+										</span>
+									</button>
+
+									{isInviteMenuOpen ? (
+										<div className="landing-invite-menu" role="menu">
+											<a href={MAIN_INVITE_URL} rel="noreferrer" role="menuitem" target="_blank">
+												<strong>Invite Lunio</strong>
+												<span>Main production bot for most servers.</span>
+											</a>
+											<a href={SECONDARY_INVITE_URL} rel="noreferrer" role="menuitem" target="_blank">
+												<strong>Invite Lunio 2</strong>
+												<span>Secondary instance when you want the alternate bot.</span>
+											</a>
+										</div>
+									) : null}
+								</div>
+
+								<a className="landing-secondary-action" href="/servers">
+									Open Dashboard
+								</a>
+							</div>
+
+							<div className="mt-10 grid max-w-2xl gap-3 sm:grid-cols-3">
+								{heroStats.map((stat) => (
+									<div className="landing-stat" key={stat.label}>
+										<div>{stat.label}</div>
+										<strong>{stat.value}</strong>
+										<span>{stat.detail}</span>
+									</div>
+								))}
+							</div>
 						</div>
 
-						<div className="mt-14 text-[11px] font-extrabold uppercase tracking-[0.28em] text-white/28">Explore the platform</div>
-						<div className="mt-3 text-white/28">
-							<svg
-								aria-hidden="true"
-								className="mx-auto h-5 w-5"
-								fill="none"
-								stroke="currentColor"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth="1.8"
-								viewBox="0 0 24 24"
-							>
-								<path d="m7 10 5 5 5-5" />
-							</svg>
+						<div className="landing-app-wrap" aria-label="Animated preview of the Lunio dashboard">
+							<div className="landing-app-window">
+								<div className="landing-app-topbar">
+									<div className="flex items-center gap-2">
+										<span />
+										<span />
+										<span />
+									</div>
+									<div className="landing-app-address">dashboard.luniobot.com/servers</div>
+								</div>
+
+								<div className="landing-app-grid">
+									<aside className="landing-app-sidebar">
+										<div className="flex items-center gap-3">
+											<img alt="Lunio" className="h-9 w-9 rounded-full object-cover" src="/lunio-logo.png" />
+											<div>
+												<div className="text-sm font-bold text-white">Lunio</div>
+												<div className="text-xs text-white/46">Live workspace</div>
+											</div>
+										</div>
+										<div className="mt-8 grid gap-2">
+											{['Player', 'Servers', 'Settings', 'Premium'].map((item, index) => (
+												<div className={index === 0 ? 'landing-nav-row landing-nav-row-active' : 'landing-nav-row'} key={item}>
+													<span />
+													{item}
+												</div>
+											))}
+										</div>
+									</aside>
+
+									<div className="landing-player-surface">
+										<div className="landing-player-header">
+											<div>
+												<div className="landing-micro-label">Now playing</div>
+												<h2>Neon Skyline Radio</h2>
+											</div>
+											<div className="landing-live-pill">Live</div>
+										</div>
+
+										<div className="landing-track-art">
+											<Equalizer />
+										</div>
+
+										<div className="landing-progress">
+											<span />
+										</div>
+
+										<div className="landing-controls" aria-hidden="true">
+											<span>II</span>
+											<span>+</span>
+											<span>Next</span>
+											<span>74%</span>
+										</div>
+									</div>
+
+									<div className="landing-queue-surface">
+										<div className="landing-micro-label">Queue</div>
+										{['Signal Bloom', 'Afterhours Relay', 'Glass Arcade'].map((track, index) => (
+											<div className="landing-queue-row" key={track}>
+												<span>{String(index + 1).padStart(2, '0')}</span>
+												<strong>{track}</strong>
+											</div>
+										))}
+									</div>
+								</div>
+							</div>
 						</div>
 					</div>
+				</section>
 
-					<div className="mt-16 grid gap-4 lg:grid-cols-3">
-						{heroStats.map((stat) => (
-							<article className="rounded-[1.8rem] border border-white/8 bg-white/[0.03] p-6 shadow-[0_24px_70px_rgba(0,0,0,0.2)]" key={stat.label}>
-								<div className="text-xs font-extrabold uppercase tracking-[0.22em] text-white/35">{stat.label}</div>
-								<div className={`mt-4 font-headline text-5xl font-bold tracking-[-0.08em] ${stat.tone}`}>{stat.value}</div>
-								<p className="mt-4 max-w-xs text-sm leading-7 text-white/52">{stat.copy}</p>
-							</article>
-						))}
-					</div>
-				</div>
-			</section>
-
-			<section className="py-20 lg:py-24">
-				<div className="shell">
-					<div className="grid gap-10 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.1fr)] xl:items-start">
-						<div className="max-w-xl">
-							<div className="text-xs font-extrabold uppercase tracking-[0.24em] text-white/32">Why Lunio</div>
-							<h2 className="mt-6 font-headline text-5xl font-bold tracking-[-0.07em] text-white sm:text-6xl">
-								Precision for the
-								<span className="block text-secondary">modern music server.</span>
+				<section className="landing-section" id="experience">
+					<div className="shell grid min-h-[82svh] gap-10 py-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:py-20">
+						<div>
+							<div className="landing-kicker">Why it feels different</div>
+							<h2 className="mt-5 max-w-2xl font-headline text-5xl font-bold leading-[0.96] tracking-[-0.05em] text-white sm:text-6xl">
+								More motion where the user needs confidence.
 							</h2>
-							<p className="mt-6 text-base leading-8 text-white/55">
-								Lunio is not trying to be every kind of Discord bot at once. The site, dashboard, music flow, and setup experience are all designed around one goal:
-								making server music control feel polished, responsive, and easy to trust.
+							<p className="mt-6 max-w-xl text-base leading-8 text-white/58">
+								The landing page now borrows the product language: live meters, glass surfaces, compact controls, focused transitions, and a shader backdrop that reacts
+								to pointer movement.
 							</p>
 						</div>
 
-						<div className="grid gap-4 md:grid-cols-2">
+						<div className="grid gap-4 md:grid-cols-3">
 							{featureCards.map((card, index) => (
-								<article
-									className={`rounded-[1.8rem] border border-white/8 p-6 shadow-[0_22px_60px_rgba(0,0,0,0.18)] ${
-										index === 3
-											? 'bg-[linear-gradient(180deg,rgba(35,9,26,0.92),rgba(19,15,24,0.9))]'
-											: 'bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.02))]'
-									}`}
-									key={card.title}
-								>
-									<div className={`text-xs font-extrabold uppercase tracking-[0.22em] ${index === 3 ? 'text-secondary' : 'text-primary'}`}>{card.eyebrow}</div>
-									<h3 className="mt-5 font-headline text-3xl font-bold tracking-[-0.05em] text-white">{card.title}</h3>
-									<p className="mt-4 text-sm leading-7 text-white/55">{card.copy}</p>
+								<article className="landing-feature" key={card.title} style={{ animationDelay: `${index * 120}ms` }}>
+									<div className="landing-micro-label">{card.eyebrow}</div>
+									<h3>{card.title}</h3>
+									<p>{card.copy}</p>
 								</article>
 							))}
 						</div>
 					</div>
-				</div>
-			</section>
+				</section>
 
-			<section className="pb-20 lg:pb-24">
-				<div className="shell">
-					<div className="mx-auto max-w-5xl rounded-[2.25rem] border border-white/8 bg-[linear-gradient(135deg,rgba(255,255,255,0.03),rgba(255,91,189,0.06))] px-6 py-10 text-center shadow-[0_28px_90px_rgba(0,0,0,0.2)] sm:px-10 sm:py-14">
-						<div className="text-xs font-extrabold uppercase tracking-[0.24em] text-white/32">Community</div>
-						<h2 className="mt-6 font-headline text-5xl font-bold tracking-[-0.06em] text-white sm:text-6xl">
-							Built with the
-							<span className="text-secondary"> community.</span>
-						</h2>
-						<p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-white/58">
-							Join the Lunio support server to get early access to improvements, follow dashboard updates, and help shape the next layer of the product.
-						</p>
-						<div className="mt-10 flex justify-center">
-							<a className="ghost-button min-w-[15rem]" href="https://discord.gg/rrqEFukVUZ" rel="noreferrer" target="_blank">
-								Join Official Support Server
-							</a>
+				<section className="landing-section" id="flow">
+					<div className="shell grid min-h-[76svh] gap-10 py-16 lg:grid-cols-[1fr_0.95fr] lg:items-center lg:py-20">
+						<div className="landing-flow-board">
+							{timelineItems.map(([number, label]) => (
+								<div className="landing-flow-row" key={label}>
+									<span>{number}</span>
+									<strong>{label}</strong>
+									<i />
+								</div>
+							))}
+						</div>
+
+						<div>
+							<div className="landing-kicker">From invite to playback</div>
+							<h2 className="mt-5 font-headline text-5xl font-bold leading-[0.98] tracking-[-0.05em] text-white sm:text-6xl">A website that behaves like an app.</h2>
+							<p className="mt-6 text-base leading-8 text-white/58">
+								Full-height sections reduce the scroll-page feeling while keeping the content crawlable and accessible. The rail gives orientation, the shader gives
+								depth, and the product preview makes the dashboard the first signal.
+							</p>
+							<div className="mt-9 flex flex-wrap gap-3">
+								<a className="landing-primary-action" href="/servers">
+									Try the Dashboard
+								</a>
+								<a className="landing-secondary-action" href="https://discord.gg/rrqEFukVUZ" rel="noreferrer" target="_blank">
+									Join Support
+								</a>
+							</div>
 						</div>
 					</div>
-				</div>
-			</section>
+				</section>
+			</div>
 		</SiteShell>
 	);
 }
