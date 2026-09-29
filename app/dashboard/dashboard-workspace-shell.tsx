@@ -394,7 +394,7 @@ export function DashboardWorkspaceShell({ activeKey, title, subtitle, botId, gui
 					</Link>
 					<button
 						aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-						className="dash-btn dash-btn-icon ml-auto hidden border-transparent bg-transparent text-muted hover:text-text lg:inline-flex"
+						className={`dash-btn dash-btn-icon hidden border-transparent bg-transparent text-muted hover:text-text lg:inline-flex ${collapsed ? '' : 'ml-auto'}`}
 						onClick={() => setIsSidebarCollapsed((current) => !current)}
 						title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
 						type="button"
