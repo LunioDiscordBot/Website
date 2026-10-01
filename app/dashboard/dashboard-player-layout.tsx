@@ -672,7 +672,15 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 										{queueCount ? ` · ${formatDuration(queueDuration)}` : ''}
 									</span>
 								</div>
-								{repeatMode !== 'off' ? <span className="dash-badge dash-badge-primary">Repeat {repeatMode}</span> : null}
+								<div className="flex shrink-0 items-center gap-2">
+									{repeatMode !== 'off' ? <span className="dash-badge dash-badge-primary">Repeat {repeatMode}</span> : null}
+									{queueTracks.length ? (
+										<button className="dash-btn h-8 px-3" onClick={openSearch} type="button">
+											<PlayerControlIcon className="h-4 w-4" name="plus" />
+											Add Tracks
+										</button>
+									) : null}
+								</div>
 							</div>
 
 							{queueTracks.length ? (
