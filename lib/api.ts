@@ -284,6 +284,15 @@ export type BrokerCommandType =
 
 export type PremiumProvider = 'stripe';
 
+export type PremiumInterval = 'month' | 'year';
+
+export interface PremiumPlan {
+	interval: PremiumInterval;
+	/** Smallest currency unit, e.g. cents. */
+	unitAmount: number;
+	currency: string;
+}
+
 export interface PremiumSubscriptionStatus {
 	botId: string;
 	guildId: string;
@@ -304,6 +313,9 @@ export interface PremiumSubscriptionStatus {
 	checkoutConfigured: boolean;
 	/** True while the API uses Stripe test-mode keys (no real charges). */
 	testMode?: boolean;
+	plans?: PremiumPlan[];
+	/** Free-trial length for this server's next checkout; 0 when it already used its trial. */
+	trialDays?: number;
 }
 
 export interface PremiumStatusResponse {

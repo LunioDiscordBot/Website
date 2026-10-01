@@ -3,7 +3,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Spinner } from '@/components/spinner';
 import { LoadingIndicator } from '@/components/loading-indicator';
-import { apiJson, buildBotScopedPath, type AuthGuildsResponse, type PremiumCheckoutResponse, type PremiumPortalResponse, type PremiumStatusResponse } from '@/lib/api';
+import {
+	apiJson,
+	buildBotScopedPath,
+	type AuthGuildsResponse,
+	type PremiumCheckoutResponse,
+	type PremiumInterval,
+	type PremiumPlan,
+	type PremiumPortalResponse,
+	type PremiumStatusResponse,
+} from '@/lib/api';
+import { useSiteLanguage } from '@/components/site-language-provider';
 
 type DashboardPremiumClientProps = {
 	botId: string;
@@ -18,7 +28,13 @@ function formatDate(value: string | null | undefined) {
 	}).format(new Date(value));
 }
 
+function formatPrice(plan: PremiumPlan, locale: string) {
+	return new Intl.NumberFormat(locale, { style: 'currency', currency: plan.currency.toUpperCase() }).format(plan.unitAmount / 100);
+}
+
 export function DashboardPremiumClient({ botId, guildId }: DashboardPremiumClientProps) {
+	const { language } = useSiteLanguage();
+	const [billingInterval, setBillingInterval] = useState<PremiumInterval>('month');
 	const [premium, setPremium] = useState<PremiumStatusResponse['premium'] | null>(null);
 	const [guilds, setGuilds] = useState<AuthGuildsResponse['guilds']>([]);
 	const [targetGuildId, setTargetGuildId] = useState('');
@@ -105,7 +121,7 @@ export function DashboardPremiumClient({ botId, guildId }: DashboardPremiumClien
 		try {
 			const response = await apiJson<PremiumCheckoutResponse>(buildBotScopedPath(botId, guildId, '/premium/checkout'), {
 				method: 'POST',
-				body: JSON.stringify({}),
+				body: JSON.stringify({ interval: billingInterval }),
 			});
 			window.location.href = response.checkoutUrl;
 		} catch (nextError) {
@@ -160,6 +176,12 @@ export function DashboardPremiumClient({ botId, guildId }: DashboardPremiumClien
 	const canManage = selectedGuild?.canManage ?? false;
 	const active = Boolean(premium?.active);
 	const isConfigured = premium?.checkoutConfigured ?? true;
+	const plans = premium?.plans ?? [];
+	const monthlyPlan = plans.find((plan) => plan.interval === 'month');
+	const yearlyPlan = plans.find((plan) => plan.interval === 'year');
+	const selectedPlan = plans.find((plan) => plan.interval === billingInterval) ?? monthlyPlan ?? yearlyPlan ?? null;
+	const trialDays = premium?.trialDays ?? 0;
+	const yearlySavings = monthlyPlan && yearlyPlan ? monthlyPlan.unitAmount * 12 - yearlyPlan.unitAmount : 0;
 
 	return (
 		<div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
@@ -209,15 +231,60 @@ export function DashboardPremiumClient({ botId, guildId }: DashboardPremiumClien
 					</div>
 				) : null}
 
+				{!active && plans.length ? (
+					<fieldset className="mt-8">
+						<legend className="text-sm font-medium">Billing</legend>
+						<div className="mt-3 grid gap-3 sm:grid-cols-2">
+							{[monthlyPlan, yearlyPlan].map((plan) =>
+								plan ? (
+									<label
+										className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors duration-150 ${
+											selectedPlan?.interval === plan.interval
+												? 'border-primary/60 bg-primary/[0.06]'
+												: 'border-[var(--dash-border)] hover:border-[var(--dash-border-strong)]'
+										}`}
+										key={plan.interval}
+									>
+										<input
+											checked={selectedPlan?.interval === plan.interval}
+											className="mt-1 h-4 w-4 accent-[rgb(var(--color-primary))]"
+											name="premiumInterval"
+											onChange={() => setBillingInterval(plan.interval)}
+											type="radio"
+											value={plan.interval}
+										/>
+										<span className="min-w-0">
+											<span className="block text-sm font-semibold">{plan.interval === 'month' ? 'Monthly' : 'Yearly'}</span>
+											<span className="mt-0.5 block text-sm tabular-nums text-muted">
+												{formatPrice(plan, language)} / {plan.interval === 'month' ? 'month' : 'year'}
+											</span>
+											{plan.interval === 'year' && yearlySavings > 0 ? (
+												<span className="mt-2 inline-flex rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+													Save {formatPrice({ ...plan, unitAmount: yearlySavings }, language)}
+												</span>
+											) : null}
+										</span>
+									</label>
+								) : null
+							)}
+						</div>
+						{trialDays > 0 ? (
+							<p className="mt-3 text-sm text-muted">
+								Includes a {trialDays}-day free trial. You won’t be charged until it ends, and you can cancel any time before then.
+							</p>
+						) : null}
+					</fieldset>
+				) : null}
+
 				<div className="mt-8 flex flex-wrap gap-3">
 					<button
 						className="primary-button inline-flex items-center gap-2"
-						disabled={!canManage || active || isCheckoutLoading || isLoading}
+						disabled={!canManage || active || isCheckoutLoading || isLoading || !selectedPlan}
 						onClick={() => void startCheckout()}
 						type="button"
 					>
 						{isCheckoutLoading ? <Spinner className="h-4 w-4" /> : null}
-						Subscribe for 1.99/month
+						{trialDays > 0 ? `Start ${trialDays}-Day Free Trial` : selectedPlan ? `Subscribe for ${formatPrice(selectedPlan, language)}` : 'Subscribe'}
 					</button>
 					<button
 						className="secondary-button inline-flex items-center gap-2"
