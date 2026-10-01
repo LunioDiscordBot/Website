@@ -54,6 +54,44 @@ export function DashboardPremiumClient({ botId, guildId }: DashboardPremiumClien
 		void load();
 	}, [botId, guildId]);
 
+	// Stripe redirects back with ?checkout=success|cancelled. The webhook that activates premium can land a few
+	// seconds after the redirect, so re-check the status briefly instead of showing "Inactive" right away.
+	useEffect(() => {
+		const params = new URLSearchParams(window.location.search);
+		const checkout = params.get('checkout');
+		if (!checkout) return;
+
+		params.delete('checkout');
+		const query = params.toString();
+		window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
+
+		if (checkout === 'cancelled') {
+			setNotice('Checkout was cancelled. No payment was taken.');
+			return;
+		}
+		if (checkout !== 'success') return;
+
+		setNotice('Payment received. Activating premium for this server…');
+		let attempts = 0;
+		const interval = window.setInterval(async () => {
+			attempts += 1;
+			try {
+				const response = await apiJson<PremiumStatusResponse>(buildBotScopedPath(botId, guildId, '/premium'));
+				setPremium(response.premium);
+				if (response.premium.active) {
+					setNotice('Premium is active for this server. Thanks for supporting Lunio!');
+					window.clearInterval(interval);
+					return;
+				}
+			} catch {}
+			if (attempts >= 10) {
+				setNotice('Payment received, but activation is taking longer than usual. Refresh in a minute, or contact support if it stays inactive.');
+				window.clearInterval(interval);
+			}
+		}, 3000);
+		return () => window.clearInterval(interval);
+	}, [botId, guildId]);
+
 	useEffect(() => {
 		if (transferTargets.length && !transferTargets.some((guild) => guild.guildId === targetGuildId)) {
 			setTargetGuildId(transferTargets[0].guildId);
@@ -132,7 +170,7 @@ export function DashboardPremiumClient({ botId, guildId }: DashboardPremiumClien
 					Website premium is tied to one Discord server at a time. Checkout, billing changes, cancellation, and the once-per-month server move all live here.
 				</p>
 
-				{isLoading ? <LoadingIndicator className="mt-8" label="Checking premium status..." /> : null}
+				{isLoading ? <LoadingIndicator className="mt-8" label="Checking premium status…" /> : null}
 				<div aria-busy={isLoading} className="mt-8 grid gap-4 md:grid-cols-3">
 					<div className="dashboard-stat-row">
 						<span>Status</span>
@@ -160,9 +198,14 @@ export function DashboardPremiumClient({ botId, guildId }: DashboardPremiumClien
 						{notice}
 					</div>
 				) : null}
+				{isConfigured && premium?.testMode ? (
+					<div className="mt-6 rounded-xl border border-amber-400/35 bg-amber-400/10 px-4 py-3 text-sm">
+						Stripe test mode: checkout uses test cards only and no real money is charged.
+					</div>
+				) : null}
 				{!isConfigured ? (
 					<div className="mt-6 rounded-xl border border-secondary/25 bg-secondary/10 px-4 py-3 text-sm text-secondary">
-						Lemon Squeezy is not configured on the API server yet. Add the API key, store ID, variant ID, and webhook secret before real checkout can open.
+						Stripe isn’t configured on the API server yet. Set STRIPE_SECRET_KEY, STRIPE_PREMIUM_PRICE_ID, and STRIPE_WEBHOOK_SECRET, then restart the API.
 					</div>
 				) : null}
 

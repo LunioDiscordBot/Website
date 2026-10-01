@@ -282,7 +282,7 @@ export type BrokerCommandType =
 	| 'PLAYER_FILTER_RESET'
 	| 'PREMIUM_SUBSCRIPTION_UPDATE';
 
-export type PremiumProvider = 'lemon_squeezy';
+export type PremiumProvider = 'stripe';
 
 export interface PremiumSubscriptionStatus {
 	botId: string;
@@ -302,6 +302,8 @@ export interface PremiumSubscriptionStatus {
 	canTransferNow: boolean;
 	portalUrl: string | null;
 	checkoutConfigured: boolean;
+	/** True while the API uses Stripe test-mode keys (no real charges). */
+	testMode?: boolean;
 }
 
 export interface PremiumStatusResponse {
