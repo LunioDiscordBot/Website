@@ -5,6 +5,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 
 import type { AuthGuild } from '@/lib/api';
 import { buildDashboardPath } from '@/lib/dashboard-routes';
 import { Avatar, ShellIcon } from './dashboard-workspace-shell';
+import { ListSkeleton } from '@/components/loading-skeleton';
 
 type ActiveKey = 'overview' | 'servers' | 'guild-settings' | 'account-settings' | 'playlists' | 'premium';
 
@@ -196,7 +197,7 @@ export function DashboardServerSwitcher({
 					{!isSignedIn ? (
 						<p className="px-2.5 py-3 text-sm text-muted">Sign in to see your servers.</p>
 					) : guildsState === 'loading' || guildsState === 'idle' ? (
-						<p className="px-2.5 py-3 text-sm text-muted">Loading servers…</p>
+						<ListSkeleton className="px-1 py-2" label="Loading servers..." rows={3} />
 					) : guildsState === 'error' ? (
 						<p className="px-2.5 py-3 text-sm text-muted">Couldn’t load your servers. Open the server list to try again.</p>
 					) : visibleGuilds.length ? (

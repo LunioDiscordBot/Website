@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Spinner } from '@/components/spinner';
+import { LoadingIndicator } from '@/components/loading-indicator';
 import { apiJson, buildBotScopedPath, type AuthGuildsResponse, type PremiumCheckoutResponse, type PremiumPortalResponse, type PremiumStatusResponse } from '@/lib/api';
 
 type DashboardPremiumClientProps = {
@@ -30,10 +31,7 @@ export function DashboardPremiumClient({ botId, guildId }: DashboardPremiumClien
 	const [error, setError] = useState<string | null>(null);
 
 	const selectedGuild = useMemo(() => guilds.find((guild) => guild.guildId === guildId) ?? null, [guildId, guilds]);
-	const transferTargets = useMemo(
-		() => guilds.filter((guild) => guild.guildId !== guildId && guild.canManage && guild.connectedBots.includes(botId)),
-		[botId, guildId, guilds]
-	);
+	const transferTargets = useMemo(() => guilds.filter((guild) => guild.guildId !== guildId && guild.canManage && guild.connectedBots.includes(botId)), [botId, guildId, guilds]);
 
 	const load = async () => {
 		setIsLoading(true);
@@ -134,23 +132,34 @@ export function DashboardPremiumClient({ botId, guildId }: DashboardPremiumClien
 					Website premium is tied to one Discord server at a time. Checkout, billing changes, cancellation, and the once-per-month server move all live here.
 				</p>
 
-				<div className="mt-8 grid gap-4 md:grid-cols-3">
+				{isLoading ? <LoadingIndicator className="mt-8" label="Checking premium status..." /> : null}
+				<div aria-busy={isLoading} className="mt-8 grid gap-4 md:grid-cols-3">
 					<div className="dashboard-stat-row">
 						<span>Status</span>
-						<strong>{isLoading ? 'Loading' : active ? 'Active' : 'Inactive'}</strong>
+						<strong>{isLoading ? <span aria-hidden="true" className="skeleton block h-4 w-16" /> : active ? 'Active' : 'Inactive'}</strong>
 					</div>
 					<div className="dashboard-stat-row">
 						<span>Renews</span>
-						<strong>{formatDate(premium?.renewsAt)}</strong>
+						<strong>{isLoading ? <span aria-hidden="true" className="skeleton block h-4 w-24" /> : formatDate(premium?.renewsAt)}</strong>
 					</div>
 					<div className="dashboard-stat-row">
 						<span>Move again</span>
-						<strong>{premium?.canTransferNow ? 'Now' : formatDate(premium?.nextTransferAt)}</strong>
+						<strong>
+							{isLoading ? <span aria-hidden="true" className="skeleton block h-4 w-24" /> : premium?.canTransferNow ? 'Now' : formatDate(premium?.nextTransferAt)}
+						</strong>
 					</div>
 				</div>
 
-				{error ? <div role="alert" className="mt-6 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-red-100">{error}</div> : null}
-				{notice ? <div role="status" className="mt-6 rounded-xl border border-primary/25 bg-primary/10 px-4 py-3 text-sm text-primary">{notice}</div> : null}
+				{error ? (
+					<div role="alert" className="mt-6 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-red-100">
+						{error}
+					</div>
+				) : null}
+				{notice ? (
+					<div role="status" className="mt-6 rounded-xl border border-primary/25 bg-primary/10 px-4 py-3 text-sm text-primary">
+						{notice}
+					</div>
+				) : null}
 				{!isConfigured ? (
 					<div className="mt-6 rounded-xl border border-secondary/25 bg-secondary/10 px-4 py-3 text-sm text-secondary">
 						Lemon Squeezy is not configured on the API server yet. Add the API key, store ID, variant ID, and webhook secret before real checkout can open.
@@ -158,16 +167,33 @@ export function DashboardPremiumClient({ botId, guildId }: DashboardPremiumClien
 				) : null}
 
 				<div className="mt-8 flex flex-wrap gap-3">
-					<button className="primary-button inline-flex items-center gap-2" disabled={!canManage || active || isCheckoutLoading || isLoading} onClick={() => void startCheckout()} type="button">
+					<button
+						className="primary-button inline-flex items-center gap-2"
+						disabled={!canManage || active || isCheckoutLoading || isLoading}
+						onClick={() => void startCheckout()}
+						type="button"
+					>
 						{isCheckoutLoading ? <Spinner className="h-4 w-4" /> : null}
 						Subscribe for 1.99/month
 					</button>
-					<button className="secondary-button inline-flex items-center gap-2" disabled={!canManage || !premium?.subscriptionId || isPortalLoading || isLoading} onClick={() => void openPortal()} type="button">
+					<button
+						className="secondary-button inline-flex items-center gap-2"
+						disabled={!canManage || !premium?.subscriptionId || isPortalLoading || isLoading}
+						onClick={() => void openPortal()}
+						type="button"
+					>
 						{isPortalLoading ? <Spinner className="h-4 w-4" /> : null}
 						Open billing portal
 					</button>
-					<button className="secondary-button" disabled={isLoading} onClick={() => void load()} type="button">
-						Refresh status
+					<button className="secondary-button inline-flex items-center gap-2" disabled={isLoading} onClick={() => void load()} type="button">
+						{isLoading ? (
+							<>
+								<Spinner />
+								Refreshing…
+							</>
+						) : (
+							'Refresh status'
+						)}
 					</button>
 				</div>
 
@@ -178,7 +204,9 @@ export function DashboardPremiumClient({ botId, guildId }: DashboardPremiumClien
 				<article className="dashboard-side-card">
 					<div className="metric-label">Server transfer</div>
 					<h3 className="mt-2 font-headline text-3xl font-bold tracking-[-0.05em] text-white">Move premium</h3>
-					<p className="mt-3 text-sm leading-6 text-muted">Move the website subscription to another connected server you manage. This is limited to once every 30 days.</p>
+					<p className="mt-3 text-sm leading-6 text-muted">
+						Move the website subscription to another connected server you manage. This is limited to once every 30 days.
+					</p>
 					<label className="sr-only" htmlFor="premium-transfer-target">
 						Server to move Premium to
 					</label>

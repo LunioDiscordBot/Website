@@ -6,6 +6,7 @@ import { useTheme } from '@/components/theme-provider';
 import { clearAuthClientState } from '@/lib/auth-storage';
 import { API_BASE_URL, API_PREFIX } from '@/lib/api';
 import { THEME_OPTIONS } from '@/lib/theme';
+import { ThinkingOrb } from '@/components/thinking-orb';
 
 export function SiteSettingsClient() {
 	const { language, messages, options: languageOptions, setLanguage } = useSiteLanguage();
@@ -169,7 +170,14 @@ export function SiteSettingsClient() {
 							onClick={() => void handleLogout()}
 							type="button"
 						>
-							{isLoggingOut ? 'Logging out…' : 'Logout'}
+							{isLoggingOut ? (
+								<>
+									<ThinkingOrb />
+									Logging out…
+								</>
+							) : (
+								'Logout'
+							)}
 						</button>
 					</article>
 				</aside>

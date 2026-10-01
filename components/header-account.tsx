@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { apiJson, API_BASE_URL, API_PREFIX, type AuthUser } from '@/lib/api';
 import { clearAuthClientState } from '@/lib/auth-storage';
+import { ThinkingOrb } from './thinking-orb';
 
 export function HeaderAccount() {
 	const [user, setUser] = useState<AuthUser | null>(null);
@@ -108,7 +109,14 @@ export function HeaderAccount() {
 					</Link>
 					<div className="dash-divider my-1 border-t" />
 					<button className="account-menu-action account-menu-action-danger" disabled={busy} onClick={() => void logout()} role="menuitem" type="button">
-						{busy ? 'Logging out…' : 'Log Out'}
+						{busy ? (
+							<>
+								<ThinkingOrb />
+								Logging out…
+							</>
+						) : (
+							'Log Out'
+						)}
 					</button>
 				</div>
 			) : null}

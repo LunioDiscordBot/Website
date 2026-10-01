@@ -138,7 +138,14 @@ export function LoginClient() {
 								{messages.login.openServers}
 							</a>
 							<button className="dash-btn h-11 w-full" disabled={busy} onClick={() => void handleLogout()} type="button">
-								{busy ? messages.login.loggingOut : messages.login.signOut}
+								{busy ? (
+									<>
+										<Spinner />
+										{messages.login.loggingOut}
+									</>
+								) : (
+									messages.login.signOut
+								)}
 							</button>
 						</>
 					) : (

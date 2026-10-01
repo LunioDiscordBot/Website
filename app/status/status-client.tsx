@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Spinner } from '@/components/spinner';
+import { ThinkingOrb } from '@/components/thinking-orb';
+import { ListSkeleton } from '@/components/loading-skeleton';
 import {
 	apiJson,
 	formatCompactNumber,
@@ -383,9 +384,13 @@ export function StatusClient() {
 
 			<section aria-live="polite" className="dash-card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
 				<div className="flex items-center gap-3">
-					<span className={`relative flex h-3 w-3 shrink-0 rounded-full ${TONE_DOT[globalTone]}`}>
-						{globalTone === 'ok' ? <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full bg-success/60" /> : null}
-					</span>
+					{isInitialLoading ? (
+						<ThinkingOrb />
+					) : (
+						<span className={`relative flex h-3 w-3 shrink-0 rounded-full ${TONE_DOT[globalTone]}`}>
+							{globalTone === 'ok' ? <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full bg-success/60" /> : null}
+						</span>
+					)}
 					<div>
 						<h2 className="text-lg font-semibold">{isInitialLoading ? 'Checking status…' : (HEALTH_HEADLINE[globalHealth] ?? globalHealth)}</h2>
 						{state.error ? <p className="mt-0.5 text-sm text-danger">{state.error}</p> : null}
@@ -398,7 +403,16 @@ export function StatusClient() {
 				{summaryStats.map((stat) => (
 					<div className="dash-card p-5" key={stat.label}>
 						<dt className="text-sm text-muted">{stat.label}</dt>
-						<dd className="mt-2 font-headline text-2xl font-bold tabular-nums">{stat.value}</dd>
+						<dd className="mt-2 font-headline text-2xl font-bold tabular-nums">
+							{isInitialLoading ? (
+								<>
+									<span className="sr-only">Loading...</span>
+									<span aria-hidden="true" className="skeleton block h-8 w-20" />
+								</>
+							) : (
+								stat.value
+							)}
+						</dd>
 					</div>
 				))}
 			</dl>
@@ -413,10 +427,11 @@ export function StatusClient() {
 					</div>
 
 					{!state.error && state.instances.length === 0 ? (
-						<div className="dash-card flex items-center gap-3 px-5 py-8 text-sm text-muted">
-							{isInitialLoading ? <Spinner className="h-4 w-4 text-primary" /> : null}
-							{isInitialLoading ? 'Loading instances…' : 'No instances are reporting right now.'}
-						</div>
+						isInitialLoading ? (
+							<ListSkeleton action artwork={false} label="Loading instances..." rows={3} />
+						) : (
+							<div className="dash-card px-5 py-8 text-sm text-muted">No instances are reporting right now.</div>
+						)
 					) : null}
 
 					{state.instances.map((instance) => {

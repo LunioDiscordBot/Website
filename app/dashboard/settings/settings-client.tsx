@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Spinner } from '@/components/spinner';
+import { SettingsSkeleton } from '@/components/loading-skeleton';
 import { buildDashboardPath } from '@/lib/dashboard-routes';
 import { getPreferredBotId as getPreferredBotFromList } from '@/lib/bot-preference';
 import { DashboardRouteState } from '@/components/dashboard-route-state';
@@ -332,7 +333,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 	const [settings, setSettings] = useState<GuildSettings | null>(null);
 	const [metadata, setMetadata] = useState<GuildMetadata | null>(null);
 	const [form, setForm] = useState<SettingsForm>(EMPTY_FORM);
-	const [isLoading, setIsLoading] = useState(false);
+	const [isLoading, setIsLoading] = useState(Boolean(botIdFromQuery && guildIdFromQuery));
 	const [isSaving, setIsSaving] = useState(false);
 	const [isRefreshingMetadata, setIsRefreshingMetadata] = useState(false);
 	const [notice, setNotice] = useState<string | null>(null);
@@ -397,6 +398,7 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 
 	useEffect(() => {
 		if (!botId || !guildId) {
+			setIsLoading(false);
 			setSettings(null);
 			setMetadata(null);
 			setForm(EMPTY_FORM);
@@ -767,10 +769,14 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 								onClick={() => void refreshMetadata()}
 								type="button"
 							>
-								<svg aria-hidden="true" className={`h-4 w-4 ${isRefreshingMetadata ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24">
-									<path d="M20 12a8 8 0 1 1-2.34-5.66" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-									<path d="M20 4v6h-6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-								</svg>
+								{isRefreshingMetadata ? (
+									<Spinner className="h-4 w-4" />
+								) : (
+									<svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+										<path d="M20 12a8 8 0 1 1-2.34-5.66" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+										<path d="M20 4v6h-6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+									</svg>
+								)}
 								{isRefreshingMetadata ? 'Refreshing…' : 'Fetch channels & roles'}
 							</button>
 							<Link className="ghost-button px-4 py-2 text-sm" href="/servers">
@@ -827,11 +833,20 @@ export function DashboardSettingsClient({ botIdFromQuery, guildIdFromQuery }: { 
 				<div className="dashboard-empty-card">Open settings from the server picker or the dashboard so the selected guild and bot are already attached.</div>
 			) : null}
 
-			{error ? <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-5 text-sm text-red-100">{error}</div> : null}
+			{error ? (
+				<div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-5 text-sm text-red-100">
+					{error}
+				</div>
+			) : null}
 
-			{notice ? <div role="status" className="rounded-xl border border-primary/20 bg-primary/10 p-5 text-sm text-primary">{notice}</div> : null}
+			{notice ? (
+				<div role="status" className="rounded-xl border border-primary/20 bg-primary/10 p-5 text-sm text-primary">
+					{notice}
+				</div>
+			) : null}
 
-			<section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+			{isLoading ? <SettingsSkeleton /> : null}
+			<section className={isLoading ? 'hidden' : 'grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]'}>
 				<div className="grid gap-6">
 					<article className="dashboard-panel-card">
 						<div className="flex flex-wrap items-start justify-between gap-4">

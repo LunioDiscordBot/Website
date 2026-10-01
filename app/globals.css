@@ -191,10 +191,10 @@ h3 {
 
 @keyframes skeleton-shimmer {
 	0% {
-		background-position: 200% 0;
+		transform: translateX(-100%);
 	}
 	100% {
-		background-position: -200% 0;
+		transform: translateX(100%);
 	}
 }
 
@@ -228,9 +228,15 @@ h3 {
 /* ─── Components ──────────────────────────────────────────────────── */
 @layer components {
 	.skeleton {
-		@apply rounded-md;
-		background: linear-gradient(90deg, var(--dash-subtle) 25%, var(--dash-active) 50%, var(--dash-subtle) 75%);
-		background-size: 200% 100%;
+		@apply relative overflow-hidden rounded-md;
+		background: var(--dash-active);
+	}
+
+	.skeleton::after {
+		position: absolute;
+		inset: 0;
+		content: '';
+		background: linear-gradient(90deg, transparent, rgb(var(--color-text) / 0.07), transparent);
 		animation: skeleton-shimmer 1.6s ease-in-out infinite;
 	}
 
@@ -293,14 +299,11 @@ h3 {
 	.site-preview-art {
 		background:
 			radial-gradient(circle at 30% 30%, rgb(var(--color-primary) / 0.55), transparent 60%),
-			radial-gradient(circle at 75% 70%, rgb(var(--color-secondary) / 0.5), transparent 55%),
-			var(--dash-active);
+			radial-gradient(circle at 75% 70%, rgb(var(--color-secondary) / 0.5), transparent 55%), var(--dash-active);
 	}
 
 	.site-cta {
-		background:
-			radial-gradient(ellipse 50% 90% at 100% 0%, rgb(var(--color-primary) / 0.1), transparent 70%),
-			var(--dash-card);
+		background: radial-gradient(ellipse 50% 90% at 100% 0%, rgb(var(--color-primary) / 0.1), transparent 70%), var(--dash-card);
 	}
 
 	/* Legacy component classes — flat, token-driven ───────────────── */
@@ -714,7 +717,6 @@ h3 {
 		content-visibility: auto;
 		contain-intrinsic-size: auto 3.5rem;
 	}
-
 }
 
 /* ─── Light mode overrides ────────────────────────────────────────── */
@@ -805,8 +807,10 @@ html[data-theme='light'] .hover\:text-white:hover {
 	color: rgb(var(--color-text)) !important;
 }
 
-
 @media (prefers-reduced-motion: reduce) {
+	.skeleton::after {
+		display: none;
+	}
 	/* Collapse non-essential motion. Spinners keep turning as loading feedback. */
 	*:not(.animate-spin),
 	*::before,

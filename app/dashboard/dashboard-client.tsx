@@ -305,6 +305,7 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 	const [playerError, setPlayerError] = useState<string | null>(null);
 	const [commandFeedback, setCommandFeedback] = useState<CommandFeedback>(DEFAULT_COMMAND_FEEDBACK);
 	const [isBusy, setIsBusy] = useState(false);
+	const [isRefreshingState, setIsRefreshingState] = useState(false);
 	const [displayPosition, setDisplayPosition] = useState(0);
 	const [scrubValue, setScrubValue] = useState(0);
 	const [isScrubbing, setIsScrubbing] = useState(false);
@@ -373,6 +374,15 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 
 	const refreshDashboardState = async (botId = form.botId.trim(), guildId = form.guildId.trim()) => {
 		await Promise.allSettled([refreshPlayerState(botId, guildId), refreshGuildMetadata(botId, guildId)]);
+	};
+	const refreshManually = async () => {
+		if (isRefreshingState) return;
+		setIsRefreshingState(true);
+		try {
+			await refreshDashboardState();
+		} finally {
+			setIsRefreshingState(false);
+		}
 	};
 
 	const applyOptimisticPlayerUpdate = (updater: (current: GuildPlayerState) => GuildPlayerState) => {
@@ -1091,7 +1101,8 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 			volumeDraft={volumeDraft}
 			isSearchLoading={isSearchLoading}
 			onBassboostDraftChange={setBassboostDraft}
-			onRefreshState={() => void refreshDashboardState()}
+			isRefreshingState={isRefreshingState}
+			onRefreshState={() => void refreshManually()}
 			onRemoveQueuedTrack={(index) => void removeQueuedTrack(index)}
 			onScrubChange={setScrubValue}
 			onScrubStart={() => setIsScrubbing(true)}

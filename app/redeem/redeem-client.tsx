@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Spinner } from '@/components/spinner';
+import { LoadingIndicator } from '@/components/loading-indicator';
 import { apiJson, type ReferralPromoStatusResponse } from '@/lib/api';
 
 type LoadState = 'loading' | 'ready' | 'unauthorized' | 'error';
@@ -102,9 +103,8 @@ export function RedeemClient({ botId }: { botId: string }) {
 
 	if (state === 'loading') {
 		return (
-			<div className="dashboard-empty-card flex items-center justify-center gap-3">
-				<Spinner className="h-5 w-5 text-primary" />
-				<span>Checking your referral promo progress…</span>
+			<div className="dashboard-empty-card">
+				<LoadingIndicator className="flex-col justify-center py-4 text-center" label="Checking your referral promo progress..." size={64} />
 			</div>
 		);
 	}
@@ -155,10 +155,17 @@ export function RedeemClient({ botId }: { botId: string }) {
 	return (
 		<>
 			{showClaimedModal ? (
-				<div aria-labelledby="redeem-claimed-title" aria-modal="true" className="fixed inset-0 z-[90] flex items-center justify-center overscroll-contain bg-black/60 px-4 backdrop-blur-sm" role="dialog">
+				<div
+					aria-labelledby="redeem-claimed-title"
+					aria-modal="true"
+					className="fixed inset-0 z-[90] flex items-center justify-center overscroll-contain bg-black/60 px-4 backdrop-blur-sm"
+					role="dialog"
+				>
 					<div className="dashboard-hero-card max-w-2xl border border-primary/25">
 						<div className="metric-label text-primary">Reward unlocked</div>
-						<h2 id="redeem-claimed-title" className="mt-4 font-headline text-2xl font-bold tracking-tight text-white sm:text-3xl">3 months of premium have been applied.</h2>
+						<h2 id="redeem-claimed-title" className="mt-4 font-headline text-2xl font-bold tracking-tight text-white sm:text-3xl">
+							3 months of premium have been applied.
+						</h2>
 						<p className="mt-5 max-w-xl text-base leading-8 text-white/62">
 							Your referral reward is active now. Both eligible {botLabel} servers received the 3-month premium boost successfully.
 						</p>
@@ -206,7 +213,14 @@ export function RedeemClient({ botId }: { botId: string }) {
 					<div className="mt-8 flex flex-wrap gap-3">
 						{status?.ready && !status?.granted ? (
 							<button className="primary-button inline-flex items-center gap-2" disabled={isRedeeming} onClick={() => void onRedeem()} type="button">
-								{isRedeeming ? <><Spinner className="h-4 w-4" />Redeeming…</> : 'Redeem 3 Months Premium'}
+								{isRedeeming ? (
+									<>
+										<Spinner className="h-4 w-4" />
+										Redeeming…
+									</>
+								) : (
+									'Redeem 3 Months Premium'
+								)}
 							</button>
 						) : (
 							<a className="primary-button" href="/servers">
@@ -219,7 +233,11 @@ export function RedeemClient({ botId }: { botId: string }) {
 						</button>
 					</div>
 
-					{error ? <div role="alert" className="mt-5 text-sm text-secondary">{error}</div> : null}
+					{error ? (
+						<div role="alert" className="mt-5 text-sm text-secondary">
+							{error}
+						</div>
+					) : null}
 				</section>
 
 				<aside className="dashboard-side-card">

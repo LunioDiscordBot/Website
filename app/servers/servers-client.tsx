@@ -31,7 +31,7 @@ export function ServersClient() {
 	const [guilds, setGuilds] = useState<AuthGuildsResponse['guilds']>([]);
 	const [guildsError, setGuildsError] = useState<string | null>(null);
 	const [isRefreshing, setIsRefreshing] = useState(false);
-	const [showSkeleton, setShowSkeleton] = useState(false);
+	const [showSkeleton, setShowSkeleton] = useState(true);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
 	const skeletonTimerRef = useRef<number | null>(null);
@@ -154,6 +154,7 @@ export function ServersClient() {
 		playSkeleton();
 		await loadServerPickerData(activeRef);
 	};
+	const isGuildListLoading = showSkeleton || (isRefreshing && guilds.length === 0);
 
 	const visibleGuilds = guilds.filter((guild) => {
 		const actionableBotStates = guild.botStates.filter((bot) => bot.status === 'connected' || (bot.status === 'invite' && guild.canManage));
@@ -253,7 +254,14 @@ export function ServersClient() {
 						onClick={() => void refreshServerPicker()}
 						type="button"
 					>
-						{isRefreshing ? <><Spinner className="h-3 w-3" />{messages.servers.refreshing}</> : messages.servers.refresh}
+						{isRefreshing ? (
+							<>
+								<Spinner className="h-3 w-3" />
+								{messages.servers.refreshing}
+							</>
+						) : (
+							messages.servers.refresh
+						)}
 					</button>
 				</div>
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -278,10 +286,7 @@ export function ServersClient() {
 				guildsError === 'Unauthorized' ? (
 					<div className="rounded-xl border border-white/10 bg-white/[0.03] p-6">
 						<div className="text-sm leading-7 text-muted">{messages.servers.unauthorized}</div>
-						<a
-							className="secondary-button mt-5"
-							href={`${API_BASE_URL}${API_PREFIX}/auth/discord/login?remember=1&returnTo=${encodeURIComponent('/servers')}`}
-						>
+						<a className="secondary-button mt-5" href={`${API_BASE_URL}${API_PREFIX}/auth/discord/login?remember=1&returnTo=${encodeURIComponent('/servers')}`}>
 							Sign in with Discord
 						</a>
 					</div>
@@ -290,30 +295,33 @@ export function ServersClient() {
 				)
 			) : null}
 
-			{showSkeleton ? (
-				<div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-					{Array.from({ length: 6 }).map((_, i) => (
-						<div className="panel p-6" key={i}>
-							<div className="flex items-start justify-between gap-4">
-								<div className="skeleton h-14 w-14 rounded-xl" />
-								<div className="skeleton h-8 w-24 rounded-full" />
+			{isGuildListLoading ? (
+				<div role="status">
+					<span className="sr-only">{messages.servers.refreshing}</span>
+					<div aria-hidden="true" className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+						{Array.from({ length: 6 }).map((_, i) => (
+							<div className="panel p-6" key={i}>
+								<div className="flex items-start justify-between gap-4">
+									<div className="skeleton h-14 w-14 rounded-xl" />
+									<div className="skeleton h-8 w-24 rounded-full" />
+								</div>
+								<div className="skeleton mt-5 h-8 w-3/4 rounded-md" />
+								<div className="skeleton mt-2 h-4 w-1/2 rounded-md" />
+								<div className="skeleton mt-5 h-7 w-20 rounded-full" />
+								<div className="mt-5 flex gap-3">
+									<div className="skeleton h-8 w-24 rounded-full" />
+									<div className="skeleton h-8 w-24 rounded-full" />
+								</div>
+								<div className="mt-6 flex flex-col gap-3">
+									<div className="skeleton h-11 w-full rounded-lg" />
+								</div>
 							</div>
-							<div className="skeleton mt-5 h-8 w-3/4 rounded-md" />
-							<div className="skeleton mt-2 h-4 w-1/2 rounded-md" />
-							<div className="skeleton mt-5 h-7 w-20 rounded-full" />
-							<div className="mt-5 flex gap-3">
-								<div className="skeleton h-8 w-24 rounded-full" />
-								<div className="skeleton h-8 w-24 rounded-full" />
-							</div>
-							<div className="mt-6 flex flex-col gap-3">
-								<div className="skeleton h-11 w-full rounded-lg" />
-							</div>
-						</div>
-					))}
+						))}
+					</div>
 				</div>
 			) : null}
 
-			{!showSkeleton ? (
+			{!isGuildListLoading ? (
 				<>
 					<div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
 						{sortedGuilds.map((guild) => (
@@ -356,7 +364,13 @@ export function ServersClient() {
 										>
 											{bot.avatarUrl ? (
 												// eslint-disable-next-line @next/next/no-img-element
-												<img alt={bot.label} className="h-6 w-6 rounded-full border border-white/10 object-cover" height={24} src={bot.avatarUrl} width={24} />
+												<img
+													alt={bot.label}
+													className="h-6 w-6 rounded-full border border-white/10 object-cover"
+													height={24}
+													src={bot.avatarUrl}
+													width={24}
+												/>
 											) : (
 												<div className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-white/10 text-[10px] text-white">
 													{bot.label.slice(0, 1).toUpperCase()}

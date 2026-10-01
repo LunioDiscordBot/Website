@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { Spinner } from '@/components/spinner';
+import { ThinkingOrb } from '@/components/thinking-orb';
+import { ListSkeleton } from '@/components/loading-skeleton';
 import { useSiteLanguage } from '@/components/site-language-provider';
 import { buildDashboardPath } from '@/lib/dashboard-routes';
 import { formatTimeOfDay } from '@/lib/format';
@@ -246,6 +248,7 @@ export type DashboardPlayerLayoutProps = {
 	isSearchLoading: boolean;
 	onBassboostDraftChange: (value: number) => void;
 	onRefreshState: () => void;
+	isRefreshingState: boolean;
 	onRemoveQueuedTrack: (index: number) => void;
 	onScrubChange: (value: number) => void;
 	onScrubStart: () => void;
@@ -305,6 +308,7 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 		isSearchLoading,
 		onBassboostDraftChange,
 		onRefreshState,
+		isRefreshingState,
 		onRemoveQueuedTrack,
 		onScrubChange,
 		onScrubStart,
@@ -407,8 +411,15 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 				<PlayerControlIcon className="h-4 w-4" name="search" />
 				Search Tracks
 			</button>
-			<button aria-label="Refresh player state" className="dash-btn dash-btn-icon" onClick={onRefreshState} title="Refresh player state" type="button">
-				<PlayerControlIcon className="h-4 w-4" name="refresh" />
+			<button
+				aria-label={isRefreshingState ? 'Refreshing player state' : 'Refresh player state'}
+				className="dash-btn dash-btn-icon"
+				disabled={isRefreshingState}
+				onClick={onRefreshState}
+				title="Refresh player state"
+				type="button"
+			>
+				{isRefreshingState ? <ThinkingOrb /> : <PlayerControlIcon className="h-4 w-4" name="refresh" />}
 			</button>
 			{botOptions.length > 1 ? (
 				<>
@@ -451,8 +462,15 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 							<div className="text-sm font-semibold">{notice.title}</div>
 							<p className="mt-0.5 break-words text-sm text-muted">{notice.body}</p>
 						</div>
-						<button className="dash-btn" onClick={onRefreshState} type="button">
-							Refresh State
+						<button className="dash-btn" disabled={isRefreshingState} onClick={onRefreshState} type="button">
+							{isRefreshingState ? (
+								<>
+									<ThinkingOrb />
+									Refreshing…
+								</>
+							) : (
+								'Refresh State'
+							)}
 						</button>
 					</div>
 				) : null}
@@ -923,32 +941,20 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 								/>
 							</div>
 							<p aria-live="polite" className="mt-2 flex min-h-5 items-center gap-2 text-xs text-muted">
-								{isSearchLoading ? <Spinner className="h-3 w-3 shrink-0" /> : null}
+								{isSearchLoading ? <ThinkingOrb state="searching" /> : null}
 								{searchDisabledReason ??
 									(searchQuery.trim().length >= 3 ? (isSearchLoading ? 'Searching…' : 'Results update as you type.') : 'Type at least 3 characters.')}
 							</p>
 						</form>
 
-						<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-3">
+						<div aria-busy={isSearchLoading} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-3">
 							{searchError ? (
 								<div className="rounded-lg border border-danger/35 bg-danger/[0.08] px-3 py-2.5 text-sm" role="alert">
 									{searchError}
 								</div>
 							) : null}
 
-							{isSearchLoading && !searchResults.length && !searchPlaylist && !searchError ? (
-								<ul aria-hidden="true" className="grid gap-1">
-									{[62, 78, 54, 70].map((titleWidth) => (
-										<li className="flex items-center gap-3 px-2 py-2" key={titleWidth}>
-											<div className="skeleton h-10 w-10 shrink-0 rounded-md" />
-											<div className="min-w-0 flex-1 space-y-2">
-												<div className="skeleton h-3 rounded" style={{ width: `${titleWidth}%` }} />
-												<div className="skeleton h-2.5 rounded" style={{ width: `${titleWidth - 20}%` }} />
-											</div>
-										</li>
-									))}
-								</ul>
-							) : null}
+							{isSearchLoading && !searchResults.length && !searchPlaylist && !searchError ? <ListSkeleton action label="Loading track matches..." /> : null}
 
 							{searchPlaylist ? (
 								<div className={`dash-inset mb-3 flex items-center gap-3 p-3 ${isSearchLoading ? 'opacity-50' : ''}`}>
@@ -963,13 +969,20 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 									</div>
 									<button
 										className="dash-btn dash-btn-primary"
-										disabled={isBusy || Boolean(searchDisabledReason) || queueingSearchUrl === searchPlaylist.url}
+										disabled={isBusy || isSearchLoading || Boolean(searchDisabledReason) || queueingSearchUrl === searchPlaylist.url}
 										onClick={async () => {
 											if (await onSearchResultAdd(searchPlaylist.url)) closeSearch();
 										}}
 										type="button"
 									>
-										{queueingSearchUrl === searchPlaylist.url ? 'Adding…' : 'Add Playlist'}
+										{queueingSearchUrl === searchPlaylist.url ? (
+											<>
+												<ThinkingOrb />
+												Adding…
+											</>
+										) : (
+											'Add Playlist'
+										)}
 									</button>
 								</div>
 							) : null}
@@ -994,13 +1007,20 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 												</div>
 												<button
 													className="dash-btn h-8 px-3 text-xs"
-													disabled={isBusy || Boolean(searchDisabledReason) || isQueueingThisResult}
+													disabled={isBusy || isSearchLoading || Boolean(searchDisabledReason) || isQueueingThisResult}
 													onClick={async () => {
 														if (await onSearchResultAdd(result.url, result.trackData ?? null)) closeSearch();
 													}}
 													type="button"
 												>
-													{isQueueingThisResult ? 'Adding…' : 'Add to Queue'}
+													{isQueueingThisResult ? (
+														<>
+															<ThinkingOrb className="h-4 w-4" />
+															Adding…
+														</>
+													) : (
+														'Add to Queue'
+													)}
 												</button>
 											</li>
 										);
