@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { commitOnPointerRelease } from '@/lib/slider-commit';
 import { Spinner } from '@/components/spinner';
 import { ThinkingOrb } from '@/components/thinking-orb';
 import { ListSkeleton } from '@/components/loading-skeleton';
@@ -53,11 +54,13 @@ function sliderFill(value: number, min: number, max: number): CSSProperties {
 	return { '--fill': `${Math.max(0, Math.min(100, percent))}%` } as CSSProperties;
 }
 
-function onSliderKeyUp(commit: () => void) {
+function onSliderKeyUp(commit: (value: number) => void) {
 	return (event: KeyboardEvent<HTMLInputElement>) => {
-		if (SLIDER_COMMIT_KEYS.has(event.key)) commit();
+		if (SLIDER_COMMIT_KEYS.has(event.key)) commit(Number(event.currentTarget.value));
 	};
 }
+
+const PENDING_COMMAND_PHASES = new Set<CommandFeedback['phase']>(['sending', 'accepted', 'received']);
 
 export function PlayerControlIcon({ name, className = 'h-5 w-5' }: { name: PlayerIconName; className?: string }) {
 	const sharedProps = {
@@ -259,8 +262,8 @@ export type DashboardPlayerLayoutProps = {
 	onSendCommand: (action: PlayerAction) => void;
 	onSendPremiumControl: (action: PremiumAction, body: Record<string, unknown>) => void;
 	onSpeedDraftChange: (value: number) => void;
-	onSubmitSeek: () => void;
-	onSubmitVolume: () => void;
+	onSubmitSeek: (position?: number) => void;
+	onSubmitVolume: (volume?: number) => void;
 	onSwitchBot: (botId: string) => void;
 	onVolumeDraftChange: (value: number) => void;
 };
@@ -334,6 +337,7 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 	const guildSettingsHref = buildDashboardPath(formBotId, formGuildId, 'settings');
 	const isPlayerConnected = player?.state === 'CONNECTED';
 	const repeatMode = player?.repeatMode ?? 'off';
+	const isRepeatPending = commandFeedback.commandType === 'PLAYER_REPEAT' && PENDING_COMMAND_PHASES.has(commandFeedback.phase);
 	const statusTone = activityState === 'Live' ? 'live' : activityState === 'Paused' ? 'paused' : activityState === 'Idle' ? 'idle' : 'offline';
 	const statusLabel = activityState === 'Live' ? 'Playing' : activityState === 'Idle' ? 'Connected' : activityState;
 	const seekMax = Math.max(trackDuration, 1000);
@@ -506,15 +510,17 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 											aria-label="Seek"
 											aria-valuetext={`${formatClock(seekValue)} of ${formatClock(trackDuration)}`}
 											className="dash-slider"
-											disabled={isBusy || !currentTrack || !canUsePlayerDjControls}
+											disabled={!currentTrack || !canUsePlayerDjControls}
 											max={seekMax}
 											min={0}
 											name="seek"
 											onChange={(event) => onScrubChange(Number(event.target.value))}
 											onKeyDown={(event) => SLIDER_COMMIT_KEYS.has(event.key) && onScrubStart()}
 											onKeyUp={onSliderKeyUp(onSubmitSeek)}
-											onPointerDown={onScrubStart}
-											onPointerUp={onSubmitSeek}
+											onPointerDown={(event) => {
+												onScrubStart();
+												commitOnPointerRelease(event, onSubmitSeek);
+											}}
 											step={1000}
 											style={sliderFill(seekValue, 0, seekMax)}
 											type="range"
@@ -572,15 +578,16 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 											<PlayerControlIcon name="skip" />
 										</button>
 										<button
+											aria-busy={isRepeatPending}
 											aria-label={`Repeat: ${repeatMode}. Change repeat mode`}
 											aria-pressed={repeatMode !== 'off'}
 											className="dash-btn dash-btn-icon relative h-10 w-10 border-transparent bg-transparent"
-											disabled={isBusy || !currentTrack || !canUsePlayerDjControls}
+											disabled={isBusy || isRepeatPending || !currentTrack || !canUsePlayerDjControls}
 											onClick={() => onSendCommand('repeat')}
-											title={`Repeat: ${repeatMode}`}
+											title={isRepeatPending ? 'Updating repeat mode…' : `Repeat: ${repeatMode}`}
 											type="button"
 										>
-											<PlayerControlIcon className="h-[18px] w-[18px]" name="repeat" />
+											<PlayerControlIcon className={`h-[18px] w-[18px] ${isRepeatPending ? 'animate-pulse' : ''}`} name="repeat" />
 											{repeatMode === 'track' ? (
 												<span aria-hidden="true" className="absolute right-1 top-1 text-[9px] font-bold leading-none">
 													1
@@ -612,7 +619,7 @@ export function DashboardPlayerLayout(props: DashboardPlayerLayoutProps) {
 											name="volume"
 											onChange={(event) => onVolumeDraftChange(Number(event.target.value))}
 											onKeyUp={onSliderKeyUp(onSubmitVolume)}
-											onPointerUp={onSubmitVolume}
+											onPointerDown={(event) => commitOnPointerRelease(event, onSubmitVolume)}
 											step={1}
 											style={sliderFill(volumeDraft, 1, 200)}
 											type="range"

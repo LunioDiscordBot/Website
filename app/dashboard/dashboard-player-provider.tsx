@@ -109,19 +109,68 @@ export function getNextRepeatMode(repeatMode: GuildPlayerState['repeatMode'], ha
 	return 'off';
 }
 
-function normalizeFetchedPlayerState(state: GuildPlayerState | null, current: GuildPlayerState | null = null): GuildPlayerState | null {
+// Within this drift a fetched position counts as polling lag and the locally interpolated one wins. A bigger gap is a
+// real seek (dashboard or Discord) and the fetched position must win, including backwards.
+export const POSITION_DRIFT_TOLERANCE_MS = 3000;
+// How long a command's expected result overrides incoming state that the bot sent before applying the command.
+const PENDING_INTENT_TTL_MS = 8000;
+
+export type PendingPlayerIntent = {
+	issuedAt: number;
+	repeatMode?: GuildPlayerState['repeatMode'];
+	seekPosition?: number;
+	trackKey?: string | null;
+};
+
+/** Freeze the interpolated position into `position`, so bumping `updatedAt` doesn't rewind the progress bar. */
+export function rebasePlayerPosition(player: GuildPlayerState): Pick<GuildPlayerState, 'position' | 'updatedAt'> {
+	return {
+		position: player.currentTrack ? getLivePlayerPosition(player, player.currentTrack.duration ?? 0) : 0,
+		updatedAt: Date.now(),
+	};
+}
+
+export function buildPendingPlayerIntent(player: GuildPlayerState | null, intent: Omit<PendingPlayerIntent, 'issuedAt' | 'trackKey'>): PendingPlayerIntent {
+	return { ...intent, issuedAt: Date.now(), trackKey: getTrackIdentity(player?.currentTrack) };
+}
+
+/**
+ * Keep a command's expected result until the bot confirms it. Snapshots sent in between (position ticks, the
+ * intermediate step of a repeat change) would otherwise flip the controls back for a moment.
+ */
+export function applyPendingPlayerIntent(state: GuildPlayerState | null, intent: PendingPlayerIntent | null): GuildPlayerState | null {
+	if (!state || !intent) return state;
+	const now = Date.now();
+	if (now - intent.issuedAt > PENDING_INTENT_TTL_MS) return state;
+	let next = state;
+	if (intent.repeatMode && next.repeatMode !== intent.repeatMode) {
+		next = { ...next, repeatMode: intent.repeatMode };
+	}
+	if (typeof intent.seekPosition === 'number' && next.currentTrack && getTrackIdentity(next.currentTrack) === intent.trackKey) {
+		const expected = intent.seekPosition + (next.paused ? 0 : now - intent.issuedAt);
+		const live = getLivePlayerPosition(next, next.currentTrack.duration ?? 0);
+		if (Math.abs(live - expected) > POSITION_DRIFT_TOLERANCE_MS) {
+			next = { ...next, position: expected, updatedAt: now };
+		}
+	}
+	return next;
+}
+
+export function normalizeFetchedPlayerState(state: GuildPlayerState | null, current: GuildPlayerState | null = null, force = false): GuildPlayerState | null {
 	if (!state) return null;
-	if (!isIncomingPlayerStateNewer(current, Number(state.revision ?? 0), Number(state.updatedAt ?? 0))) {
+	if (!force && !isIncomingPlayerStateNewer(current, Number(state.revision ?? 0), Number(state.updatedAt ?? 0))) {
 		return current;
 	}
 	const sameTrack = getTrackIdentity(state.currentTrack) !== null && getTrackIdentity(state.currentTrack) === getTrackIdentity(current?.currentTrack);
 	const currentLivePosition = sameTrack && current?.currentTrack ? getLivePlayerPosition(current, current.currentTrack.duration ?? 0) : 0;
 	const fetchedPosition = state.currentTrack ? Math.max(0, Number(state.position ?? 0)) : 0;
+	const keepLivePosition =
+		!force && sameTrack && !state.paused && !(current?.paused ?? false) && Math.abs(fetchedPosition - currentLivePosition) < POSITION_DRIFT_TOLERANCE_MS;
 	return {
 		...state,
 		revision: Number(state.revision ?? 0),
 		updatedAt: Date.now(),
-		position: state.currentTrack ? (sameTrack && !state.paused && !(current?.paused ?? false) ? Math.max(fetchedPosition, currentLivePosition) : fetchedPosition) : 0,
+		position: state.currentTrack ? (keepLivePosition ? Math.max(fetchedPosition, currentLivePosition) : fetchedPosition) : 0,
 		filters: normalizePlayerFilters(state.filters, DEFAULT_PLAYER_FILTERS),
 	};
 }
@@ -241,10 +290,10 @@ export type DashboardPlayerContextValue = {
 
 	sendCommand: (action: PlayerAction, overrides?: Record<string, unknown>) => Promise<void>;
 	sendPremiumControl: (action: PremiumAction, body: Record<string, unknown>) => Promise<void>;
-	submitSeek: () => Promise<void>;
+	submitSeek: (position?: number) => Promise<void>;
 	submitVolume: (next?: number) => Promise<void>;
 	removeQueuedTrack: (index: number) => Promise<void>;
-	refreshPlayerState: () => Promise<void>;
+	refreshPlayerState: (options?: { force?: boolean }) => Promise<void>;
 	refreshGuildMetadata: () => Promise<void>;
 	refreshDashboardState: () => Promise<void>;
 	applyOptimisticPlayerUpdate: (updater: (current: GuildPlayerState) => GuildPlayerState) => void;
@@ -293,15 +342,17 @@ export function DashboardPlayerProvider({ botId, guildId, userId, children }: Da
 
 	const requesterVoiceChannelId = metadata?.requester?.currentVoiceChannelId ?? null;
 
+	const pendingIntentRef = useRef<PendingPlayerIntent | null>(null);
+
 	const applyOptimisticPlayerUpdate = useCallback((updater: (current: GuildPlayerState) => GuildPlayerState) => {
 		setPlayer((current) => (current ? updater(current) : current));
 	}, []);
 
-	const refreshPlayerState = useCallback(async () => {
+	const refreshPlayerState = useCallback(async (options?: { force?: boolean }) => {
 		if (!trimmedBotId || !trimmedGuildId) return;
 		try {
 			const state = await apiJson<GuildPlayerState | null>(buildBotScopedPath(trimmedBotId, trimmedGuildId, '/player'));
-			setPlayer((current) => normalizeFetchedPlayerState(state, current));
+			setPlayer((current) => applyPendingPlayerIntent(normalizeFetchedPlayerState(state, current, options?.force === true), pendingIntentRef.current));
 			setPlayerError(null);
 		} catch (error) {
 			setPlayer(null);
@@ -376,11 +427,11 @@ export function DashboardPlayerProvider({ botId, guildId, userId, children }: Da
 				if (payload.botId !== trimmedBotId) return;
 				if ('guildId' in payload && payload.guildId !== trimmedGuildId) return;
 				if (payload.type === 'PLAYER_STATE_UPDATE') {
-					setPlayer((current) => buildRealtimePlayerState(current, payload));
+					setPlayer((current) => applyPendingPlayerIntent(buildRealtimePlayerState(current, payload), pendingIntentRef.current));
 					setPlayerError(null);
 				}
 				if (payload.type === 'QUEUE_UPDATE') {
-					setPlayer((current) => buildQueueSyncedPlayerState(current, payload));
+					setPlayer((current) => applyPendingPlayerIntent(buildQueueSyncedPlayerState(current, payload), pendingIntentRef.current));
 				}
 				if (payload.type === 'COMMAND_ACK') {
 					setCommandFeedback((current) =>
@@ -502,8 +553,9 @@ export function DashboardPlayerProvider({ botId, guildId, userId, children }: Da
 			if (type === 'seek') body.position = scrubValue;
 			Object.assign(body, overrides ?? {});
 
-			if (type === 'pause') applyOptimisticPlayerUpdate((current) => ({ ...current, paused: true, updatedAt: Date.now() }));
-			if (type === 'resume') applyOptimisticPlayerUpdate((current) => ({ ...current, paused: false, updatedAt: Date.now() }));
+			// Optimistic updates rebase the position: bumping updatedAt alone would rewind the progress bar.
+			if (type === 'pause') applyOptimisticPlayerUpdate((current) => ({ ...current, ...rebasePlayerPosition(current), paused: true }));
+			if (type === 'resume') applyOptimisticPlayerUpdate((current) => ({ ...current, ...rebasePlayerPosition(current), paused: false }));
 			if (type === 'stop')
 				applyOptimisticPlayerUpdate((current) => ({
 					...current,
@@ -515,23 +567,23 @@ export function DashboardPlayerProvider({ botId, guildId, userId, children }: Da
 					updatedAt: Date.now(),
 				}));
 			if (type === 'leave') setPlayer(null);
-			if (type === 'repeat') {
-				applyOptimisticPlayerUpdate((current) => ({
-					...current,
-					repeatMode: getNextRepeatMode(current.repeatMode, Boolean(current.currentTrack), current.queue.length),
-					updatedAt: Date.now(),
-				}));
+			let intent: PendingPlayerIntent | null = null;
+			if (type === 'repeat' && player) {
+				intent = buildPendingPlayerIntent(player, { repeatMode: getNextRepeatMode(player.repeatMode, Boolean(player.currentTrack), player.queue.length) });
+				const repeatMode = intent.repeatMode;
+				applyOptimisticPlayerUpdate((current) => ({ ...current, ...rebasePlayerPosition(current), repeatMode: repeatMode ?? current.repeatMode }));
 			}
 			if (type === 'volume') {
 				const volumeValue = Number(body.volume ?? volumeDraft);
 				applyOptimisticPlayerUpdate((current) => ({
 					...current,
+					...rebasePlayerPosition(current),
 					volume: Number.isFinite(volumeValue) ? volumeValue : current.volume,
-					updatedAt: Date.now(),
 				}));
 			}
 			if (type === 'seek') {
 				const seekValue = Number(overrides?.position ?? body.position ?? scrubValue);
+				if (Number.isFinite(seekValue)) intent = buildPendingPlayerIntent(player, { seekPosition: seekValue });
 				applyOptimisticPlayerUpdate((current) => ({
 					...current,
 					position: Number.isFinite(seekValue) ? seekValue : current.position,
@@ -542,10 +594,14 @@ export function DashboardPlayerProvider({ botId, guildId, userId, children }: Da
 				const queueIndex = Number(overrides?.index ?? body.index);
 				applyOptimisticPlayerUpdate((current) => ({
 					...current,
+					...rebasePlayerPosition(current),
 					queue: current.queue.filter((_, index) => index !== queueIndex),
-					updatedAt: Date.now(),
 				}));
 			}
+			if (intent) pendingIntentRef.current = intent;
+			const clearIntent = () => {
+				if (intent && pendingIntentRef.current === intent) pendingIntentRef.current = null;
+			};
 
 			try {
 				const accepted = await apiJson<AcceptedCommandResponse>(buildBotScopedPath(trimmedBotId, trimmedGuildId, `/player/${type}`), {
@@ -557,20 +613,38 @@ export function DashboardPlayerProvider({ botId, guildId, userId, children }: Da
 					await pollCommand(accepted.commandId);
 					await refreshDashboardState();
 				} else {
-					void pollCommand(accepted.commandId);
+					// Once Lunio answers, its state is the truth again; a failed command must undo the optimistic update.
+					void pollCommand(accepted.commandId).then((status) => {
+						clearIntent();
+						void refreshPlayerState({ force: status?.result?.success === false });
+					});
 					window.setTimeout(() => {
 						void refreshPlayerState();
 					}, 1200);
 				}
 			} catch (error) {
+				clearIntent();
 				const message = error instanceof Error ? error.message : 'Unable to send player command';
 				setCommandFeedback(buildFailedCommandFeedback(message, commandType));
-				await refreshDashboardState();
+				await Promise.allSettled([refreshPlayerState({ force: true }), refreshGuildMetadata()]);
 			} finally {
 				setIsBusy(false);
 			}
 		},
-		[trimmedBotId, trimmedGuildId, trimmedUserId, requesterVoiceChannelId, volumeDraft, scrubValue, applyOptimisticPlayerUpdate, pollCommand, refreshDashboardState, refreshPlayerState]
+		[
+			trimmedBotId,
+			trimmedGuildId,
+			trimmedUserId,
+			requesterVoiceChannelId,
+			volumeDraft,
+			scrubValue,
+			player,
+			applyOptimisticPlayerUpdate,
+			pollCommand,
+			refreshDashboardState,
+			refreshGuildMetadata,
+			refreshPlayerState,
+		]
 	);
 
 	const sendPremiumControl = useCallback(
@@ -603,13 +677,20 @@ export function DashboardPlayerProvider({ botId, guildId, userId, children }: Da
 		[trimmedBotId, trimmedGuildId, trimmedUserId, requesterVoiceChannelId, pollCommand, refreshPlayerState, refreshDashboardState]
 	);
 
-	const submitSeek = useCallback(async () => {
-		const safePosition = Math.max(1000, Math.floor(scrubValue));
-		setPlayer((current) => (current ? { ...current, position: safePosition, updatedAt: Date.now() } : current));
-		setIsScrubbing(false);
-		setDisplayPosition(safePosition);
-		await sendCommand('seek', { position: safePosition });
-	}, [scrubValue, sendCommand]);
+	const submitSeek = useCallback(
+		async (position?: number) => {
+			const duration = player?.currentTrack?.duration ?? 0;
+			// Lunio rejects positions under 1s or at/after the track end.
+			const maxPosition = duration > 2000 ? duration - 1000 : Number.POSITIVE_INFINITY;
+			const safePosition = Math.min(maxPosition, Math.max(1000, Math.floor(typeof position === 'number' ? position : scrubValue)));
+			setScrubValue(safePosition);
+			setPlayer((current) => (current ? { ...current, position: safePosition, updatedAt: Date.now() } : current));
+			setIsScrubbing(false);
+			setDisplayPosition(safePosition);
+			await sendCommand('seek', { position: safePosition });
+		},
+		[player?.currentTrack?.duration, scrubValue, sendCommand]
+	);
 
 	const submitVolume = useCallback(
 		async (next?: number) => {
