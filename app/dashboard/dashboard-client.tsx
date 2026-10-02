@@ -5,9 +5,16 @@ import { getPreferredBotId as getPreferredBotFromList } from '@/lib/bot-preferen
 import { DashboardRouteState } from '@/components/dashboard-route-state';
 import { DashboardPlayerLayout } from './dashboard-player-layout';
 import { DashboardWorkspaceShell } from './dashboard-workspace-shell';
-import { useDashboardPlayerOptional } from './dashboard-player-provider';
+import {
+	applyPendingPlayerIntent,
+	buildPendingPlayerIntent,
+	normalizeFetchedPlayerState,
+	rebasePlayerPosition,
+	useDashboardPlayerOptional,
+	type PendingPlayerIntent,
+} from './dashboard-player-provider';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
 	apiJson,
 	buildBotScopedPath,
@@ -150,25 +157,6 @@ function isIncomingPlayerStateNewer(current: GuildPlayerState | null, incomingRe
 	if (incomingRevision > current.revision) return true;
 	if (incomingRevision < current.revision) return false;
 	return incomingUpdatedAt >= current.updatedAt;
-}
-
-function normalizeFetchedPlayerState(state: GuildPlayerState | null, current: GuildPlayerState | null = null): GuildPlayerState | null {
-	if (!state) return null;
-	if (!isIncomingPlayerStateNewer(current, Number(state.revision ?? 0), Number(state.updatedAt ?? 0))) {
-		return current;
-	}
-
-	const sameTrack = getTrackIdentity(state.currentTrack) !== null && getTrackIdentity(state.currentTrack) === getTrackIdentity(current?.currentTrack);
-	const currentLivePosition = sameTrack && current?.currentTrack ? getLivePlayerPosition(current, current.currentTrack.duration ?? 0) : 0;
-	const fetchedPosition = state.currentTrack ? Math.max(0, Number(state.position ?? 0)) : 0;
-
-	return {
-		...state,
-		revision: Number(state.revision ?? 0),
-		updatedAt: Date.now(),
-		position: state.currentTrack ? (sameTrack && !state.paused && !(current?.paused ?? false) ? Math.max(fetchedPosition, currentLivePosition) : fetchedPosition) : 0,
-		filters: normalizePlayerFilters(state.filters, DEFAULT_PLAYER_FILTERS),
-	};
 }
 
 function isSearchTrackResult(value: unknown): value is SearchTrackResult {
@@ -346,11 +334,13 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 		router.push(buildDashboardPath(nextBotId, form.guildId));
 	};
 
-	const refreshPlayerState = async (botId = form.botId.trim(), guildId = form.guildId.trim()) => {
+	const pendingIntentRef = useRef<PendingPlayerIntent | null>(null);
+
+	const refreshPlayerState = async (botId = form.botId.trim(), guildId = form.guildId.trim(), options?: { force?: boolean }) => {
 		if (!botId || !guildId) return;
 		try {
 			const state = await apiJson<GuildPlayerState | null>(buildBotScopedPath(botId, guildId, '/player'));
-			setPlayer((current) => normalizeFetchedPlayerState(state, current));
+			setPlayer((current) => applyPendingPlayerIntent(normalizeFetchedPlayerState(state, current, options?.force === true), pendingIntentRef.current));
 			setPlayerError(null);
 		} catch (error) {
 			setPlayer(null);
@@ -490,27 +480,30 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 			return;
 		}
 
-		const sharedDuration = sharedPlayerState.currentTrack.duration ?? 0;
-		const sharedPosition = Math.max(0, Number(sharedDashboardPlayer.displayPosition ?? 0));
-		const boundedSharedPosition = sharedDuration > 0 ? Math.min(sharedPosition, sharedDuration) : sharedPosition;
-		const localTrackChanged = getTrackIdentity(player?.currentTrack) !== getTrackIdentity(sharedPlayerState.currentTrack);
-		const localLivePosition = player?.currentTrack ? getLivePlayerPosition(player, player.currentTrack.duration ?? 0) : displayPosition;
-		const localIsBehindSharedPlayer = boundedSharedPosition > localLivePosition + 1500;
-
-		if (player?.currentTrack && !localTrackChanged && !localIsBehindSharedPlayer) {
+		// Adopt the shared state only when it carries a newer server revision. Comparing positions here snapped the
+		// progress bar back after a backwards seek, and dropped optimistic updates such as a repeat toggle.
+		if (player?.currentTrack && Number(sharedPlayerState.revision ?? 0) <= Number(player.revision ?? 0)) {
 			return;
 		}
 
-		setPlayer({
-			...sharedPlayerState,
-			position: boundedSharedPosition,
-			updatedAt: Date.now(),
-		});
+		const sharedDuration = sharedPlayerState.currentTrack.duration ?? 0;
+		const sharedPosition = Math.max(0, Number(sharedDashboardPlayer.displayPosition ?? 0));
+		const boundedSharedPosition = sharedDuration > 0 ? Math.min(sharedPosition, sharedDuration) : sharedPosition;
+		const nextPlayer = applyPendingPlayerIntent(
+			{
+				...sharedPlayerState,
+				position: boundedSharedPosition,
+				updatedAt: Date.now(),
+			},
+			pendingIntentRef.current
+		);
+
+		setPlayer(nextPlayer);
 		setPlayerError(sharedDashboardPlayer.playerError);
-		setDisplayPosition(boundedSharedPosition);
-		setScrubValue(boundedSharedPosition);
+		const nextPosition = nextPlayer?.currentTrack ? getLivePlayerPosition(nextPlayer, sharedDuration) : boundedSharedPosition;
+		setDisplayPosition(nextPosition);
+		setScrubValue(nextPosition);
 	}, [
-		displayPosition,
 		form.botId,
 		form.guildId,
 		isScrubbing,
@@ -585,11 +578,11 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 				if (payload.botId !== form.botId.trim()) return;
 				if ('guildId' in payload && payload.guildId !== form.guildId.trim()) return;
 				if (payload.type === 'PLAYER_STATE_UPDATE') {
-					setPlayer((current) => buildRealtimePlayerState(current, payload));
+					setPlayer((current) => applyPendingPlayerIntent(buildRealtimePlayerState(current, payload), pendingIntentRef.current));
 					setPlayerError(null);
 				}
 				if (payload.type === 'QUEUE_UPDATE') {
-					setPlayer((current) => buildQueueSyncedPlayerState(current, payload));
+					setPlayer((current) => applyPendingPlayerIntent(buildQueueSyncedPlayerState(current, payload), pendingIntentRef.current));
 				}
 				if (payload.type === 'COMMAND_ACK') {
 					setCommandFeedback((current) =>
@@ -711,17 +704,18 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 		if (type === 'seek') body.position = Number(form.seek);
 		Object.assign(body, overrides ?? {});
 
+		// Optimistic updates rebase the position: bumping updatedAt alone would rewind the progress bar.
 		if (type === 'pause')
 			applyOptimisticPlayerUpdate((current) => ({
 				...current,
+				...rebasePlayerPosition(current),
 				paused: true,
-				updatedAt: Date.now(),
 			}));
 		if (type === 'resume')
 			applyOptimisticPlayerUpdate((current) => ({
 				...current,
+				...rebasePlayerPosition(current),
 				paused: false,
-				updatedAt: Date.now(),
 			}));
 		if (type === 'stop')
 			applyOptimisticPlayerUpdate((current) => ({
@@ -734,23 +728,27 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 				updatedAt: Date.now(),
 			}));
 		if (type === 'leave') setPlayer(null);
-		if (type === 'repeat') {
+		let intent: PendingPlayerIntent | null = null;
+		if (type === 'repeat' && player) {
+			intent = buildPendingPlayerIntent(player, { repeatMode: getNextRepeatMode(player.repeatMode, Boolean(player.currentTrack), player.queue.length) });
+			const repeatMode = intent.repeatMode;
 			applyOptimisticPlayerUpdate((current) => ({
 				...current,
-				repeatMode: getNextRepeatMode(current.repeatMode, Boolean(current.currentTrack), current.queue.length),
-				updatedAt: Date.now(),
+				...rebasePlayerPosition(current),
+				repeatMode: repeatMode ?? current.repeatMode,
 			}));
 		}
 		if (type === 'volume') {
 			const volumeValue = Number(body.volume ?? form.volume);
 			applyOptimisticPlayerUpdate((current) => ({
 				...current,
+				...rebasePlayerPosition(current),
 				volume: Number.isFinite(volumeValue) ? volumeValue : current.volume,
-				updatedAt: Date.now(),
 			}));
 		}
 		if (type === 'seek') {
 			const seekValue = Number(overrides?.position ?? body.position ?? form.seek);
+			if (Number.isFinite(seekValue)) intent = buildPendingPlayerIntent(player, { seekPosition: seekValue });
 			applyOptimisticPlayerUpdate((current) => ({
 				...current,
 				position: Number.isFinite(seekValue) ? seekValue : current.position,
@@ -761,10 +759,14 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 			const queueIndex = Number(overrides?.index ?? body.index);
 			applyOptimisticPlayerUpdate((current) => ({
 				...current,
+				...rebasePlayerPosition(current),
 				queue: current.queue.filter((_, index) => index !== queueIndex),
-				updatedAt: Date.now(),
 			}));
 		}
+		if (intent) pendingIntentRef.current = intent;
+		const clearIntent = () => {
+			if (intent && pendingIntentRef.current === intent) pendingIntentRef.current = null;
+		};
 
 		try {
 			const accepted = await apiJson<AcceptedCommandResponse>(buildBotScopedPath(form.botId.trim(), form.guildId.trim(), `/player/${type}`), {
@@ -776,22 +778,33 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 				await pollCommand(accepted.commandId);
 				await refreshDashboardState(form.botId.trim(), form.guildId.trim());
 			} else {
-				void pollCommand(accepted.commandId);
+				// Once Lunio answers, its state is the truth again; a failed command must undo the optimistic update.
+				void pollCommand(accepted.commandId).then((status) => {
+					clearIntent();
+					void refreshPlayerState(form.botId.trim(), form.guildId.trim(), { force: status?.result?.success === false });
+				});
 				window.setTimeout(() => {
 					void refreshPlayerState(form.botId.trim(), form.guildId.trim());
 				}, 1200);
 			}
 		} catch (error) {
+			clearIntent();
 			const message = error instanceof Error ? error.message : 'Unable to send player command';
 			setCommandFeedback(buildFailedCommandFeedback(message, commandType));
-			await refreshDashboardState(form.botId.trim(), form.guildId.trim());
+			await Promise.allSettled([
+				refreshPlayerState(form.botId.trim(), form.guildId.trim(), { force: true }),
+				refreshGuildMetadata(form.botId.trim(), form.guildId.trim()),
+			]);
 		} finally {
 			setIsBusy(false);
 		}
 	};
 
-	const submitSliderSeek = async () => {
-		const safePosition = Math.max(1000, Math.floor(scrubValue));
+	const submitSliderSeek = async (position = scrubValue) => {
+		// Lunio rejects positions under 1s or at/after the track end.
+		const maxPosition = trackDuration > 2000 ? trackDuration - 1000 : Number.POSITIVE_INFINITY;
+		const safePosition = Math.min(maxPosition, Math.max(1000, Math.floor(position)));
+		setScrubValue(safePosition);
 		setForm((current) => ({ ...current, seek: String(safePosition) }));
 		setPlayer((current) => (current ? { ...current, position: safePosition, updatedAt: Date.now() } : current));
 		setIsScrubbing(false);
@@ -1113,8 +1126,8 @@ export function DashboardClient({ botIdFromQuery, guildIdFromQuery }: { botIdFro
 			onSendCommand={(action) => void sendCommand(action)}
 			onSendPremiumControl={(action, body) => void sendPremiumControl(action, body)}
 			onSpeedDraftChange={setSpeedDraft}
-			onSubmitSeek={() => void submitSliderSeek()}
-			onSubmitVolume={() => void submitVolume()}
+			onSubmitSeek={(position) => void submitSliderSeek(position)}
+			onSubmitVolume={(volume) => void submitVolume(volume)}
 			onSwitchBot={switchBot}
 			onVolumeDraftChange={handleVolumeDraftChange}
 		/>

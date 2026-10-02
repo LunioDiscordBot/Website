@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { CSSProperties, KeyboardEvent } from 'react';
 import { useDashboardPlayerOptional } from './dashboard-player-provider';
 import { buildDashboardPath } from '@/lib/dashboard-routes';
+import { commitOnPointerRelease } from '@/lib/slider-commit';
 
 const SLIDER_COMMIT_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown']);
 
@@ -103,8 +104,8 @@ export function DashboardMiniPlayerBar() {
 
 	const seekMax = Math.max(1, trackDuration);
 	const seekValue = isScrubbing ? scrubValue : displayPosition;
-	const commitOnKeyUp = (commit: () => void) => (event: KeyboardEvent<HTMLInputElement>) => {
-		if (SLIDER_COMMIT_KEYS.has(event.key)) commit();
+	const commitOnKeyUp = (commit: (value: number) => void) => (event: KeyboardEvent<HTMLInputElement>) => {
+		if (SLIDER_COMMIT_KEYS.has(event.key)) commit(Number(event.currentTarget.value));
 	};
 
 	return (
@@ -173,14 +174,15 @@ export function DashboardMiniPlayerBar() {
 						<input
 							aria-label="Seek"
 							className="dash-slider min-w-0 flex-1"
-							disabled={cannotControl}
 							max={seekMax}
 							min={0}
 							onChange={(event) => setScrubValue(Number(event.target.value))}
 							onKeyDown={(event) => SLIDER_COMMIT_KEYS.has(event.key) && setIsScrubbing(true)}
-							onKeyUp={commitOnKeyUp(() => void submitSeek())}
-							onPointerDown={() => setIsScrubbing(true)}
-							onPointerUp={() => void submitSeek()}
+							onKeyUp={commitOnKeyUp((value) => void submitSeek(value))}
+							onPointerDown={(event) => {
+								setIsScrubbing(true);
+								commitOnPointerRelease(event, (value) => void submitSeek(value));
+							}}
 							style={{ '--fill': `${Math.min(100, (seekValue / seekMax) * 100)}%` } as CSSProperties}
 							type="range"
 							value={seekValue}
@@ -197,8 +199,8 @@ export function DashboardMiniPlayerBar() {
 							max={200}
 							min={1}
 							onChange={(event) => setVolumeDraft(Number(event.target.value))}
-							onKeyUp={commitOnKeyUp(() => void submitVolume())}
-							onPointerUp={() => void submitVolume()}
+							onKeyUp={commitOnKeyUp((value) => void submitVolume(value))}
+							onPointerDown={(event) => commitOnPointerRelease(event, (value) => void submitVolume(value))}
 							style={{ '--fill': `${((volumeDraft - 1) / 199) * 100}%` } as CSSProperties}
 							type="range"
 							value={volumeDraft}
