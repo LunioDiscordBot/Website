@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
 import { Manrope, Space_Grotesk } from 'next/font/google';
 import { CookieNotice } from '@/components/cookie-notice';
 import { SiteLanguageProvider } from '@/components/site-language-provider';
@@ -61,11 +62,12 @@ export default async function RootLayout({
 	children: React.ReactNode;
 }>) {
 	const initialLanguage = await getServerSiteLanguage();
+	const nonce = (await headers()).get('x-nonce') ?? undefined;
 
 	return (
 		<html lang={initialLanguage} suppressHydrationWarning data-scroll-behavior="smooth">
 			<head>
-				<script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+				<script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeBootScript }} />
 			</head>
 			<body className={`${manrope.variable} ${spaceGrotesk.variable} bg-background text-text antialiased`}>
 				<a className="skip-link" href="#main-content">
