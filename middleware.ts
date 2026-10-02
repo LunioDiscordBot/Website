@@ -1,24 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-
-function getDashboardBaseUrl() {
-	return process.env.APP_BASE_URL ?? 'https://dashboard.luniobot.com';
-}
-
-function getPublicBaseUrl() {
-	const configured = process.env.PUBLIC_SITE_URL;
-	if (configured) {
-		return configured;
-	}
-
-	try {
-		const dashboardUrl = new URL(getDashboardBaseUrl());
-		const publicHost = dashboardUrl.hostname.replace(/^dashboard\./, '');
-		return `${dashboardUrl.protocol}//${publicHost}`;
-	} catch {
-		return 'https://luniobot.com';
-	}
-}
+import { DASHBOARD_PATH_PREFIXES, getDashboardBaseUrl, getPublicBaseUrl, PUBLIC_PAGE_PATHS } from './lib/site-url';
 
 function buildRedirectUrl(baseUrl: string, pathname: string, search: string) {
 	const url = new URL(pathname, baseUrl);
@@ -28,8 +10,8 @@ function buildRedirectUrl(baseUrl: string, pathname: string, search: string) {
 	return url;
 }
 
-const dashboardOnlyPrefixes = ['/dashboard', '/servers', '/login', '/settings', '/invite'];
-const publicOnlyPaths = new Set(['/', '/commands', '/status', '/tos', '/privacy', '/withdrawal']);
+const dashboardOnlyPrefixes: readonly string[] = DASHBOARD_PATH_PREFIXES;
+const publicOnlyPaths = new Set<string>(PUBLIC_PAGE_PATHS);
 
 function routeRequest(request: NextRequest, requestHeaders: Headers) {
 	const next = () => NextResponse.next({ request: { headers: requestHeaders } });
