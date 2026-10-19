@@ -12,7 +12,8 @@ function load(filename, env = {}) {
 	const source = ts.transpileModule(readFileSync(path.join(__dirname, '..', filename), 'utf8'), {
 		compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
 	}).outputText;
-	vm.runInNewContext(source, { exports, require, Buffer, Headers, URL, crypto: webcrypto, process: { env } });
+	const localRequire = (name) => (name.startsWith('.') ? load(path.join(path.dirname(filename), `${name}.ts`), env) : require(name));
+	vm.runInNewContext(source, { exports, require: localRequire, Buffer, Headers, URL, crypto: webcrypto, process: { env } });
 	return exports;
 }
 

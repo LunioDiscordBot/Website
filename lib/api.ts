@@ -51,6 +51,18 @@ export interface NodesResponse {
 	instances: BotInstance[];
 }
 
+export type StatusHealth = 'Operational' | 'Recovering' | 'Degraded' | 'Offline' | 'Unknown';
+export type StatusInstance = BotInstance & { health: StatusHealth; reason: string };
+export interface StatusResponse {
+	checkedAt: number;
+	heartbeatTimeoutMs: number;
+	botId: string | null;
+	health: StatusHealth;
+	bots: Array<{ botId: string; label: string; health: StatusHealth; reason: string }>;
+	instances: StatusInstance[];
+	stats: StatsResponse;
+}
+
 export interface BotsResponse {
 	bots: Array<{
 		botId: string;
